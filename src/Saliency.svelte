@@ -1,10 +1,35 @@
 <script>
   import { onMount } from 'svelte';
   import Tooltip from './Tooltip.svelte';
-  export let width = 300;
+  export let width = 400;
 
   let saliencyDiv = null;
   let saliencyComponent = null;
+  let saliencyRow = null;
+  let tooltip = null;
+  let saliencies = null;
+
+  let tooltipLeft = 0;
+  let tooltipTop = 0;
+  let tooltipHtml = 'tooltip';
+  let tooltipWidth = 65;
+  let tooltipShow = false;
+
+  const newJSONUploaded = (evt) => {
+    // Load the file
+    let files = evt.target.files;
+    let file = files[0];
+
+    // Read the file
+    let reader = new FileReader();
+    reader.onload = async (evt) => {
+      // Renew the data and frame count
+      saliencies = await d3.json(evt.target.result);
+    }
+    reader.readAsDataURL(file);
+  }
+
+  
 
   const drawSaliencies = (saliencies, key) => {
     if (saliencyDiv === null) {
@@ -15,7 +40,6 @@
 
     // Create a divering color scale from red to green
     let largestAbs = d3.max(saliencies.map(d => Math.abs(d[key])));
-    console.log(largestAbs);
 
     let colorScale = d3.scaleLinear()
       .domain([-largestAbs, 0, largestAbs])
@@ -32,27 +56,50 @@
       .style('background', d => colorScale(+d[key]))
       .text(d => d.token);
     
+    // Mouseover function
     divs.on('mouseover', (event, d) => {
-        let curDiv = d3.select(event.currentTarget);
-        let curI = divs.nodes().indexOf(event.currentTarget);
-        container.selectAll('div.token')
-          .filter((d, i) => i !== curI)
-          .transition()
-          .duration(300)
-          .ease(d3.easeQuadInOut)
-          .style('opacity', 0.3);
-      });
+      let node = event.currentTarget;
+      let curDiv = d3.select(node);
+      let curI = divs.nodes().indexOf(event.currentTarget);
+      tooltipShow = true;
 
+      // container.selectAll('div.token')
+      //   .filter((d, i) => i !== curI)
+      //   .transition()
+      //   .duration(300)
+      //   .ease(d3.easeQuadInOut)
+      //   .style('opacity', 0.3);
+      
+      // Highlight the hovered over div
+      curDiv.style('border', '1px solid rgba(0, 0, 0, 1)');
+      
+      // Toggle the tooltip
+      let position = node.getBoundingClientRect();
+      let tooltipCenterX = node.offsetLeft + position.width / 2;
+      let tooltipCenterY = node.offsetTop - 40;
+
+      tooltipHtml = d3.format('.4f')(+d[key]);
+      tooltipLeft = tooltipCenterX - tooltipWidth / 2;
+      tooltipTop = tooltipCenterY;
+    });
+
+    // Mouseleave function
     divs.on('mouseleave', (event, d) => {
-        container.selectAll('div.token')
-          .transition()
-          .duration(300)
-          .ease(d3.easeQuadInOut)
-          .style('opacity', 1);
+        let node = event.currentTarget;
+        let curDiv = d3.select(node);
+        tooltipShow = false;
+
+        // container.selectAll('div.token')
+        //   .transition()
+        //   .duration(300)
+        //   .ease(d3.easeQuadInOut)
+        //   .style('opacity', 1);
+        
+        curDiv.style('border', '1px solid rgba(0, 0, 0, 0)');
       })
     
     // Add a svg element
-    let rightSVG = d3.select(saliencyComponent)
+    let rightSVG = d3.select(saliencyRow)
       .append('svg')
       .attr('height', 400)
       .attr('width', 100);
@@ -107,7 +154,7 @@
 
   onMount(async () => {
     console.log('loading');
-    let saliencies = await d3.json('/data/saliency_list.json');
+    saliencies = await d3.json('/data/saliency_list.json');
     console.log('loaded');
 
     drawSaliencies(saliencies, 'grad_1');
@@ -119,6 +166,11 @@
   $light-gray: gray;
 
   .saliency-component {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .saliency-row {
     display: flex;
     flex-direction: row;
     justify-content: center;
@@ -135,10 +187,23 @@
 
   :global(.token) {
     padding: 0 3px;
+    border: 1px solid rgba(0, 0, 0, 0);
     cursor: pointer;
 
     &:not(:last-of-type) {
-      margin: 2px 5px 2px 0;
+      margin: 2px 4px 2px 0;
+    }
+  }
+
+  .control-panel {
+    display: flex;
+    flex-direction: row-reverse;
+    margin: 10px 0;
+    padding: 0 100px 0 0;
+
+    .input {
+      margin: 0 10px;
+      width: 200px;
     }
   }
 
@@ -146,8 +211,40 @@
 
 <div class='saliency-component' bind:this={saliencyComponent}>
 
-  <div class='saliency' style='width: {width}px' bind:this={saliencyDiv}>
-    <Tooltip left=20 right=20/>
+  <div class='saliency-row' bind:this={saliencyRow}>
+    <div class='saliency' style='width: {width}px' bind:this={saliencyDiv}>
+      <Tooltip bind:this={tooltip}
+        left={tooltipLeft}
+        top={tooltipTop}
+        tooltipHtml={tooltipHtml}
+        width={tooltipWidth}
+        tooltipShow={tooltipShow}
+        />
+    </div>
   </div>
+
+  <div class='control-panel'>
+    <button class="button">Submit</button>
+
+    <input class="input" type="text" placeholder="JSON Saliency Key">
+
+    <div class="file is-normal-small">
+      <label class="file-label">
+        <input class="file-input is-normal-small" type="file" name="resume"
+          accept='.json'
+          on:change={newJSONUploaded}>
+        <span class="file-cta is-normal-small no-top-border-radius">
+          <span class="file-icon">
+            <i class="fas fa-upload"></i>
+          </span>
+          <span class="file-label">
+            JSON
+          </span>
+        </span>
+      </label>
+    </div>
+
+  </div>
+  
 
 </div>

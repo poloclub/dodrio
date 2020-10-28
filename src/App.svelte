@@ -7,10 +7,10 @@
     display: flex;
     width: 100%;
     justify-content: space-around;
-    margin-top: 50px;
+    margin-top: 20px;
   }
 </style>
 
 <div class='saliency'>
-  <Saliency width={800}/>
+  <Saliency width={950}/>
 </div>
