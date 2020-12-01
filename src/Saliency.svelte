@@ -7,7 +7,6 @@
   let saliencyComponent = null;
   let saliencyRow = null;
   let tooltip = null;
-  let saliencies = null;
 
   let tooltipLeft = 0;
   let tooltipTop = 0;
@@ -15,10 +14,16 @@
   let tooltipWidth = 65;
   let tooltipShow = false;
 
+  // HTML input
+  let saliencyKey = 'grad_0'
+  let saliencies = null;
+  let filename = 'saliency_list.json';
+
   const newJSONUploaded = (evt) => {
     // Load the file
     let files = evt.target.files;
     let file = files[0];
+    filename = file.name;
 
     // Read the file
     let reader = new FileReader();
@@ -29,7 +34,18 @@
     reader.readAsDataURL(file);
   }
 
-  
+  const submitClicked = (evt) => {
+    // Remove the preivious views
+    d3.select(saliencyDiv)
+      .selectAll('*')
+      .remove();
+
+    d3.select(saliencyRow)
+      .select('svg')
+      .remove();
+
+    drawSaliencies(saliencies, saliencyKey);
+  }
 
   const drawSaliencies = (saliencies, key) => {
     if (saliencyDiv === null) {
@@ -43,8 +59,8 @@
 
     let colorScale = d3.scaleLinear()
       .domain([-largestAbs, 0, largestAbs])
-      .range([d3.rgb('#eb2f06'), d3.rgb('#ffffff'), d3.rgb('#78e08f')]);
-
+      .range([d3.rgb('#eb2f06'), d3.rgb('#ffffff'), d3.rgb('#458FC1')]);
+    
     let container = d3.select(saliencyDiv);
 
     // Add tokens
@@ -122,7 +138,7 @@
       .attr('offset', 0.5);
     
     legentGradientDef.append('stop')
-      .attr('stop-color', '#78e08f')
+      .attr('stop-color', '#4690C2')
       .attr('offset', 1);
     
     // Draw the legend
@@ -157,7 +173,7 @@
     saliencies = await d3.json('/data/saliency_list.json');
     console.log('loaded');
 
-    drawSaliencies(saliencies, 'grad_1');
+    drawSaliencies(saliencies, saliencyKey);
   })
 
 </script>
@@ -203,8 +219,17 @@
 
     .input {
       margin: 0 10px;
-      width: 200px;
+      width: 170px;
     }
+  }
+
+  .large {
+    font-size: 1em;
+    padding-left: 1em;
+    padding-right: 1em;
+    padding-top: 1.2em;
+    padding-bottom: 1.2em;
+    margin-right: 10px;
   }
 
 </style>
@@ -224,13 +249,14 @@
   </div>
 
   <div class='control-panel'>
-    <button class="button">Submit</button>
+    <button class="button" on:click={submitClicked}>Submit</button>
 
-    <input class="input" type="text" placeholder="JSON Saliency Key">
+    <input class="input" type="text" placeholder="JSON Saliency Key"
+      bind:value={saliencyKey}>
 
     <div class="file is-normal-small">
       <label class="file-label">
-        <input class="file-input is-normal-small" type="file" name="resume"
+        <input class="file-input is-normal-small" type="file" name="json"
           accept='.json'
           on:change={newJSONUploaded}>
         <span class="file-cta is-normal-small no-top-border-radius">
@@ -243,6 +269,12 @@
         </span>
       </label>
     </div>
+
+    {#if filename !== null}
+      <div class="tag is-light is-large large">
+        {filename}
+      </div>
+    {/if}
 
   </div>
   
