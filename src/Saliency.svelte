@@ -37,7 +37,7 @@
   const submitClicked = (evt) => {
     // Remove the preivious views
     d3.select(saliencyDiv)
-      .selectAll('*')
+      .selectAll('.token')
       .remove();
 
     d3.select(saliencyRow)
