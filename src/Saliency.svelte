@@ -5,6 +5,7 @@
   export let width = 400;
 
   let saliencyDiv = null;
+  let saliencySvg = null;
   let saliencyComponent = null;
   let saliencyRow = null;
   let tooltip = null;
@@ -14,6 +15,13 @@
   let tooltipHtml = 'tooltip';
   let tooltipWidth = 65;
   let tooltipShow = false;
+
+  let saliencySVGPadding = {
+    top: 10,
+    left: 10,
+    right: 10,
+    bottom: 20
+  };
 
   // HTML input
   let saliencyKey = 'negative'
@@ -46,6 +54,228 @@
       .remove();
 
     drawSaliencies(saliencies, saliencyKey);
+  }
+  
+  const drawSaliencyLegend = (saliencyRow, largestAbs) => {
+    // Add a svg element
+    let rightSVG = d3.select(saliencyRow)
+      .append('svg')
+      .attr('height', 400)
+      .attr('width', 100);
+    
+    // Define the gradient
+    let legentGradientDef = rightSVG.append('defs')
+      .append('linearGradient')
+      .attr('x1', 0)
+      .attr('y1', 1)
+      .attr('x2', 0)
+      .attr('y2', 0)
+      .attr('id', 'legend-gradient');
+    
+    legentGradientDef.append('stop')
+      .attr('stop-color', '#eb2f06')
+      .attr('offset', 0);
+
+    legentGradientDef.append('stop')
+      .attr('stop-color', '#ffffff')
+      .attr('offset', 0.5);
+    
+    legentGradientDef.append('stop')
+      .attr('stop-color', '#4690C2')
+      .attr('offset', 1);
+    
+    // Draw the legend
+    let legendWidth = 20;
+    let legendHeight = 300;
+    let legendGroup = rightSVG.append('g')
+      .attr('class', 'legend')
+      .attr('transform', `translate(${30}, ${5})`)
+
+    legendGroup.append('rect')
+      .attr('x', 0)
+      .attr('y', 0)
+      .attr('width', legendWidth)
+      .attr('height', legendHeight)
+      .style('fill', 'url(#legend-gradient)')
+      .style('stroke', 'black');
+    
+    // Draw the legend axis
+    let legendScale = d3.scaleLinear()
+      .domain([-largestAbs, largestAbs])
+      .range([legendHeight, 0])
+      .nice();
+    
+    legendGroup.append("g")
+      .attr('transform', `translate(${legendWidth}, ${0})`)
+      .call(d3.axisRight(legendScale).ticks(10))
+  }
+
+
+  const drawSalienciesSVG = (saliencies, key) => {
+    if (saliencySvg === null) {
+      return;
+    }
+
+    console.log(saliencies);
+
+    // Create a divering color scale from red to green
+    let largestAbs = d3.max(saliencies.map(d => Math.abs(d[key])));
+    let svgWidth = 950;
+    let svgHeight = 600;
+    const tokenPadding = {
+      left: 3,
+      right: 2,
+      top: 4,
+      bottom: 0
+    };
+    const tokenGap = 4;
+    const rowGap = 30;
+
+    let colorScale = d3.scaleLinear()
+      .domain([-largestAbs, 0, largestAbs])
+      .range([d3.rgb('#eb2f06'), d3.rgb('#ffffff'), d3.rgb('#458FC1')]);
+    
+    let container = d3.select(saliencySvg)
+      .attr('height', svgHeight)
+      .attr('width', svgWidth)
+      .append('g')
+      .attr('class', 'main-svg')
+      .attr('transform', `translate(${saliencySVGPadding.left}, ${saliencySVGPadding.top})`);
+    
+    d3.select(saliencySvg)
+      .append('rect')
+      .attr('class', 'svg-border-rect')
+      .attr('height', svgHeight)
+      .attr('width', svgWidth)
+      .style('stroke', 'black')
+      .style('fill', 'none');
+    
+    let containerWidth = svgWidth - saliencySVGPadding.left - saliencySVGPadding.right;
+    
+    let textGroup = container.append('g')
+      .attr('class', 'text-group');
+
+    let tokenGroups = textGroup.selectAll('g.token')
+      .data(saliencies)
+      .enter()
+      .append('g')
+      .attr('class', 'token')
+      .attr('id', (_, i) => `token-${i}`);
+
+    let tokenTexts = tokenGroups.append('text')
+      .attr('class', 'text-token')
+      .attr('x', tokenPadding.left)
+      .attr('y', tokenPadding.top)
+      .text(d => d.token);
+    
+    // After the text elements are created, we need to query again to get the
+    // length and width of these elements
+    let textTokenWidths = {};
+    let textTokenPositions = {};
+    let textTokenHeight = null;
+
+    tokenTexts.each(function(_, i) {
+      let bbox = this.getBBox();
+      textTokenWidths[i] = +Number(bbox.width).toFixed(2);
+
+      if (textTokenHeight == null) {
+        textTokenHeight = bbox.height;
+      }
+    });
+
+    let tokenRects = tokenGroups.append('rect')
+      .attr('class', 'text-background')
+      .attr('width', (_, i) => textTokenWidths[i] + tokenPadding.left + tokenPadding.right)
+      .attr('height', textTokenHeight + tokenPadding.top + tokenPadding.bottom)
+      .style('fill', d => colorScale(+d[key]))
+      .lower();
+
+    // console.log(textTokenWidths);
+    // Change the positions of tokens based on their width
+    let curPos = {x: 0, y: 0};
+    let tokenNum = Object.keys(textTokenWidths).length;
+
+    // Change the position of the text token
+    tokenGroups.each(function(_, i) {
+      d3.select(this)
+        .attr('transform', `translate(${curPos.x}, ${curPos.y})`);
+        //.attr('x', curPos.x)
+        //.attr('y', curPos.y);
+      
+      // Record the new position
+      textTokenPositions[i] = {x: curPos.x, y: curPos.y};
+
+      // Update the next position
+      let curLineLength = curPos.x + textTokenWidths[i] + tokenPadding.left + tokenPadding.right + tokenGap;
+      if (i + 1 < tokenNum) {
+        curLineLength += textTokenWidths[i + 1];
+      }
+
+      // Shift to next row if needed
+      if (curLineLength > containerWidth) {
+        curPos.y += rowGap;  
+        curPos.x = 0;
+      } else {
+        curPos.x = curPos.x + textTokenWidths[i] + tokenPadding.left + tokenPadding.right + tokenGap;
+      }
+    });
+
+    console.log(textTokenPositions);
+    // Add color highlights
+
+
+    // Resize the SVG based on the content height
+    svgHeight = (curPos.y + textTokenHeight + tokenPadding.top +
+                 tokenPadding.bottom + saliencySVGPadding.bottom);
+    console.log(curPos.y , textTokenHeight, rowGap);
+    d3.select(saliencySvg)
+      .attr('height', svgHeight)
+      .select('.svg-border-rect')
+      .attr('height', svgHeight);
+    
+    // Mouseover function
+    // textTokens.on('mouseover', (event, d) => {
+    //   let node = event.currentTarget;
+    //   let curDiv = d3.select(node);
+    //   let curI = divs.nodes().indexOf(event.currentTarget);
+    //   tooltipShow = true;
+
+    //   // container.selectAll('div.token')
+    //   //   .filter((d, i) => i !== curI)
+    //   //   .transition()
+    //   //   .duration(300)
+    //   //   .ease(d3.easeQuadInOut)
+    //   //   .style('opacity', 0.3);
+      
+    //   // Highlight the hovered over div
+    //   curDiv.style('border', '1px solid rgba(0, 0, 0, 1)');
+      
+    //   // Toggle the tooltip
+    //   let position = node.getBoundingClientRect();
+    //   let tooltipCenterX = node.offsetLeft + position.width / 2;
+    //   let tooltipCenterY = node.offsetTop - 40;
+
+    //   tooltipHtml = d3.format('.4f')(+d[key]);
+    //   tooltipLeft = tooltipCenterX - tooltipWidth / 2;
+    //   tooltipTop = tooltipCenterY;
+    // });
+
+    // // Mouseleave function
+    // textTokens.on('mouseleave', (event, d) => {
+    //     let node = event.currentTarget;
+    //     let curDiv = d3.select(node);
+    //     tooltipShow = false;
+
+    //     // container.selectAll('div.token')
+    //     //   .transition()
+    //     //   .duration(300)
+    //     //   .ease(d3.easeQuadInOut)
+    //     //   .style('opacity', 1);
+        
+    //     curDiv.style('border', '1px solid rgba(0, 0, 0, 0)');
+    //   })
+    
+      drawSaliencyLegend(saliencyRow, largestAbs);
   }
 
   const drawSaliencies = (saliencies, key) => {
@@ -115,58 +345,7 @@
         curDiv.style('border', '1px solid rgba(0, 0, 0, 0)');
       })
     
-    // Add a svg element
-    let rightSVG = d3.select(saliencyRow)
-      .append('svg')
-      .attr('height', 400)
-      .attr('width', 100);
-    
-    // Define the gradient
-    let legentGradientDef = rightSVG.append('defs')
-      .append('linearGradient')
-      .attr('x1', 0)
-      .attr('y1', 1)
-      .attr('x2', 0)
-      .attr('y2', 0)
-      .attr('id', 'legend-gradient');
-    
-    legentGradientDef.append('stop')
-      .attr('stop-color', '#eb2f06')
-      .attr('offset', 0);
-
-    legentGradientDef.append('stop')
-      .attr('stop-color', '#ffffff')
-      .attr('offset', 0.5);
-    
-    legentGradientDef.append('stop')
-      .attr('stop-color', '#4690C2')
-      .attr('offset', 1);
-    
-    // Draw the legend
-    let legendWidth = 20;
-    let legendHeight = 300;
-    let legendGroup = rightSVG.append('g')
-      .attr('class', 'legend')
-      .attr('transform', `translate(${30}, ${5})`)
-
-    legendGroup.append('rect')
-      .attr('x', 0)
-      .attr('y', 0)
-      .attr('width', legendWidth)
-      .attr('height', legendHeight)
-      .style('fill', 'url(#legend-gradient)')
-      .style('stroke', 'black');
-    
-    // Draw the legend axis
-    let legendScale = d3.scaleLinear()
-      .domain([-largestAbs, largestAbs])
-      .range([legendHeight, 0])
-      .nice();
-    
-    legendGroup.append("g")
-      .attr('transform', `translate(${legendWidth}, ${0})`)
-      .call(d3.axisRight(legendScale).ticks(10));
-
+    drawSaliencyLegend(saliencyRow, largestAbs);
   }
 
   onMount(async () => {
@@ -175,6 +354,7 @@
     console.log('loaded');
 
     drawSaliencies(saliencies, saliencyKey);
+    drawSalienciesSVG(saliencies, saliencyKey);
   })
 
 </script>
@@ -212,6 +392,11 @@
     }
   }
 
+  :global(.saliency-svg .text-token) {
+    font-size: 1em;
+    dominant-baseline: hanging;
+  }
+
   .control-panel {
     display: flex;
     flex-direction: row-reverse;
@@ -236,6 +421,8 @@
 </style>
 
 <div class='saliency-component' bind:this={saliencyComponent}>
+
+  <svg class='saliency-svg' bind:this={saliencySvg}></svg>
 
   <div class='saliency-row' bind:this={saliencyRow}>
     <div class='saliency' style='width: {width}px' bind:this={saliencyDiv}>
