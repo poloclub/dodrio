@@ -110,46 +110,7 @@
       .call(d3.axisRight(legendScale).ticks(10))
   }
 
-
-  const getScreenBBox = (targetel) => {
-
-    while (targetel.getScreenCTM == null && targetel.parentNode != null) {
-      targetel = targetel.parentNode
-    }
-
-    let bbox = {},
-        matrix = targetel.getScreenCTM(),
-        tbbox = targetel.getBBox(),
-        width = tbbox.width,
-        height = tbbox.height,
-        x = tbbox.x,
-        y = tbbox.y,
-        point = saliencySvg.createSVGPoint();
-
-    point.x = x
-    point.y = y
-    bbox.nw = point.matrixTransform(matrix)
-    point.x += width
-    bbox.ne = point.matrixTransform(matrix)
-    point.y += height
-    bbox.se = point.matrixTransform(matrix)
-    point.x -= width
-    bbox.sw = point.matrixTransform(matrix)
-    point.y -= height / 2
-    bbox.w = point.matrixTransform(matrix)
-    point.x += width
-    bbox.e = point.matrixTransform(matrix)
-    point.x -= width / 2
-    point.y -= height / 2
-    bbox.n = point.matrixTransform(matrix)
-    point.y += height
-    bbox.s = point.matrixTransform(matrix)
-
-    return bbox
-  }
-
-
-  const drawSalienciesSVG = (saliencies, key) => {
+  const drawSaliencies = (saliencies, key) => {
     if (saliencySvg === null) {
       return;
     }
@@ -241,7 +202,8 @@
       textTokenPositions[i] = {x: curPos.x, y: curPos.y};
 
       // Update the next position
-      let curLineLength = curPos.x + textTokenWidths[i] + tokenPadding.left + tokenPadding.right + tokenGap;
+      let curLineLength = curPos.x + textTokenWidths[i] + tokenPadding.left +
+                          tokenPadding.right + tokenGap;
       if (i + 1 < tokenNum) {
         curLineLength += textTokenWidths[i + 1];
       }
@@ -297,113 +259,7 @@
       // Hide the tooltip
       tooltipShow = false;
     })
-
-
-    // textTokens.on('mouseover', (event, d) => {
-    //   let node = event.currentTarget;
-    //   let curDiv = d3.select(node);
-    //   let curI = divs.nodes().indexOf(event.currentTarget);
-    //   tooltipShow = true;
-      
-    //   // Highlight the hovered over div
-    //   curDiv.style('border', '1px solid rgba(0, 0, 0, 1)');
-      
-    //   // Toggle the tooltip
-    //   let position = node.getBoundingClientRect();
-    //   let tooltipCenterX = node.offsetLeft + position.width / 2;
-    //   let tooltipCenterY = node.offsetTop - 40;
-
-    //   tooltipHtml = d3.format('.4f')(+d[key]);
-    //   tooltipLeft = tooltipCenterX - tooltipWidth / 2;
-    //   tooltipTop = tooltipCenterY;
-    // });
-
-    // // Mouseleave function
-    // textTokens.on('mouseleave', (event, d) => {
-    //     let node = event.currentTarget;
-    //     let curDiv = d3.select(node);
-    //     tooltipShow = false;
-
-    //     // container.selectAll('div.token')
-    //     //   .transition()
-    //     //   .duration(300)
-    //     //   .ease(d3.easeQuadInOut)
-    //     //   .style('opacity', 1);
-        
-    //     curDiv.style('border', '1px solid rgba(0, 0, 0, 0)');
-    //   })
-    
       drawSaliencyLegend(saliencyRow, largestAbs);
-  }
-
-  const drawSaliencies = (saliencies, key) => {
-    if (saliencyDiv === null) {
-      return;
-    }
-
-    console.log(saliencies);
-
-    // Create a divering color scale from red to green
-    let largestAbs = d3.max(saliencies.map(d => Math.abs(d[key])));
-
-    let colorScale = d3.scaleLinear()
-      .domain([-largestAbs, 0, largestAbs])
-      .range([d3.rgb('#eb2f06'), d3.rgb('#ffffff'), d3.rgb('#458FC1')]);
-    
-    let container = d3.select(saliencyDiv);
-
-    // Add tokens
-    let divs = container.selectAll('div.token')
-      .data(saliencies)
-      .enter()
-      .append('div')
-      .attr('class', 'token')
-      .style('background', d => colorScale(+d[key]))
-      .text(d => d.token);
-    
-    // Mouseover function
-    divs.on('mouseover', (event, d) => {
-      let node = event.currentTarget;
-      let curDiv = d3.select(node);
-      let curI = divs.nodes().indexOf(event.currentTarget);
-      tooltipShow = true;
-
-      // container.selectAll('div.token')
-      //   .filter((d, i) => i !== curI)
-      //   .transition()
-      //   .duration(300)
-      //   .ease(d3.easeQuadInOut)
-      //   .style('opacity', 0.3);
-      
-      // Highlight the hovered over div
-      curDiv.style('border', '1px solid rgba(0, 0, 0, 1)');
-      
-      // Toggle the tooltip
-      let position = node.getBoundingClientRect();
-      let tooltipCenterX = node.offsetLeft + position.width / 2;
-      let tooltipCenterY = node.offsetTop - 40;
-
-      tooltipHtml = d3.format('.4f')(+d[key]);
-      tooltipLeft = tooltipCenterX - tooltipWidth / 2;
-      tooltipTop = tooltipCenterY;
-    });
-
-    // Mouseleave function
-    divs.on('mouseleave', (event, d) => {
-        let node = event.currentTarget;
-        let curDiv = d3.select(node);
-        tooltipShow = false;
-
-        // container.selectAll('div.token')
-        //   .transition()
-        //   .duration(300)
-        //   .ease(d3.easeQuadInOut)
-        //   .style('opacity', 1);
-        
-        curDiv.style('border', '1px solid rgba(0, 0, 0, 0)');
-      })
-    
-    drawSaliencyLegend(saliencyRow, largestAbs);
   }
 
   onMount(async () => {
@@ -412,7 +268,6 @@
     console.log('loaded');
 
     drawSaliencies(saliencies, saliencyKey);
-    drawSalienciesSVG(saliencies, saliencyKey);
   })
 
 </script>
@@ -429,25 +284,6 @@
     display: flex;
     flex-direction: row;
     justify-content: center;
-  }
-  
-  .saliency {
-    border: 1px solid $light-gray;
-    padding: 5px;
-    display: flex;
-    flex: row;
-    flex-wrap: wrap;
-    position: relative;
-  }
-
-  :global(.token) {
-    padding: 0 3px;
-    border: 1px solid rgba(0, 0, 0, 0);
-    cursor: pointer;
-
-    &:not(:last-of-type) {
-      margin: 2px 4px 2px 0;
-    }
   }
 
   :global(.saliency-svg .token) {
@@ -497,10 +333,9 @@
   />
 
   <div class='saliency-row' bind:this={saliencyRow}>
-    <div class='saliency' style='width: {width}px' bind:this={saliencyDiv}></div>
+    <svg class='saliency-svg' bind:this={saliencySvg}></svg>
   </div>
 
-  <svg class='saliency-svg' bind:this={saliencySvg}></svg>
 
   <div class='control-panel'>
     <button class="button" on:click={submitClicked}>Submit</button>
