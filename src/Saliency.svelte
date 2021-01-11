@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import Tooltip from './Tooltip.svelte';
+  import TextClassificationStats from './TextClassificationStats.svelte';
   export let width = 400;
 
   let saliencyDiv = null;
@@ -15,7 +16,7 @@
   let tooltipShow = false;
 
   // HTML input
-  let saliencyKey = 'grad_0'
+  let saliencyKey = 'negative'
   let saliencies = null;
   let filename = 'saliency_list.json';
 
@@ -219,7 +220,7 @@
 
     .input {
       margin: 0 10px;
-      width: 170px;
+      width: 120px;
     }
   }
 
@@ -247,11 +248,10 @@
         />
     </div>
   </div>
-
   <div class='control-panel'>
     <button class="button" on:click={submitClicked}>Submit</button>
 
-    <input class="input" type="text" placeholder="JSON Saliency Key"
+    <input class="input" type="text" placeholder="Saliency Key"
       bind:value={saliencyKey}>
 
     <div class="file is-normal-small">
@@ -275,7 +275,9 @@
         {filename}
       </div>
     {/if}
-
+    {#if saliencies != null}
+      <TextClassificationStats trueLabel={saliencies[0]['true_label']} predictedLabel={saliencies[0]['predicted_label']} softmaxScores={saliencies[0]['softmax_scores']}/>
+    {/if}
   </div>
   
 
