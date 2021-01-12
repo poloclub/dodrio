@@ -5,7 +5,8 @@
   export let width = 400;
 
   let saliencyDiv = null;
-  let saliencySvg = null;
+  let saliencySVG = null;
+  let rightSVG = null;
   let saliencyComponent = null;
   let saliencyRow = null;
   let tooltip = null;
@@ -15,6 +16,17 @@
   let tooltipHtml = 'tooltip';
   let tooltipWidth = 65;
   let tooltipShow = false;
+  
+  let svgWidth = 950;
+  let svgHeight = 600;
+
+  const rightSVGWidth = 100;
+  const legendPos = {
+    width: 20,
+    height: 300,
+    top: 5,
+    left: 30
+  };
 
   let saliencySVGPadding = {
     top: 10,
@@ -58,10 +70,12 @@
   
   const drawSaliencyLegend = (saliencyRow, largestAbs) => {
     // Add a svg element
-    let rightSVG = d3.select(saliencyRow)
+    let rightSVGHeight = +d3.select(saliencySVG).attr('height');
+    rightSVG = d3.select(saliencyRow)
       .append('svg')
-      .attr('height', 400)
-      .attr('width', 100);
+      .attr('class', 'right-svg')
+      .attr('height', rightSVGHeight)
+      .attr('width', rightSVGWidth);
     
     // Define the gradient
     let legentGradientDef = rightSVG.append('defs')
@@ -85,33 +99,111 @@
       .attr('offset', 1);
     
     // Draw the legend
-    let legendWidth = 20;
-    let legendHeight = 300;
     let legendGroup = rightSVG.append('g')
       .attr('class', 'legend')
-      .attr('transform', `translate(${30}, ${5})`)
+      .attr('transform', `translate(${legendPos.left}, ${legendPos.top})`)
 
     legendGroup.append('rect')
       .attr('x', 0)
       .attr('y', 0)
-      .attr('width', legendWidth)
-      .attr('height', legendHeight)
+      .attr('width', legendPos.width)
+      .attr('height', legendPos.height)
       .style('fill', 'url(#legend-gradient)')
       .style('stroke', 'black');
     
     // Draw the legend axis
     let legendScale = d3.scaleLinear()
       .domain([-largestAbs, largestAbs])
-      .range([legendHeight, 0])
+      .range([legendPos.height, 0])
       .nice();
     
     legendGroup.append("g")
-      .attr('transform', `translate(${legendWidth}, ${0})`)
+      .attr('transform', `translate(${legendPos.width}, ${0})`)
       .call(d3.axisRight(legendScale).ticks(10))
   }
 
+  const drawSaliencyControl = (textTokenPositions) => {
+    if (rightSVG === null) {
+      return;
+    }
+
+    const buttonAnimationTime = 1000;
+    let rectY = legendPos.top + legendPos.height + 10;
+    let heatmapButton = rightSVG.append('rect')
+      .attr('x', legendPos.left)
+      .attr('y', rectY)
+      .attr('class', 'rect-button')
+      .attr('width', 30)
+      .attr('height', 30)
+      .attr('rx', 5)
+      .style('fill', '#F5F5F5')
+      .style('stroke-width', 1)
+      .style('stroke', '#DBDBDB');
+    
+    heatmapButton.on('mouseover', (event, d) => {
+      let node = event.currentTarget;
+      let button = d3.select(node);
+      button.style('stroke', 'black');
+    });
+
+    heatmapButton.on('mouseleave', (event, d) => {
+      let node = event.currentTarget;
+      let button = d3.select(node);
+      button.style('stroke', '#DBDBDB');
+    });
+
+    heatmapButton.on('click', () => {
+      let tokens = d3.select(saliencySVG)
+        .select('.text-group')
+        .selectAll('.token');
+      
+      // Hide the texts
+      tokens.select('.text-token')
+        .style('visibility', 'hidden');
+
+      let tileHeight = +tokens.select('.text-background').attr('height');
+      let containerWidth = svgWidth - saliencySVGPadding.left - saliencySVGPadding.right;
+      let tileGap = 3;
+      let tileColumnNum = Math.floor(containerWidth / (tileHeight + tileGap));
+      let tileNumRow = Math.floor(tokens.nodes().length / tileColumnNum) + 1;
+
+      // To center the heatmap, we need to re-calculate the starting gap
+      let startSpace = (containerWidth - tileColumnNum * (tileHeight + tileGap) + tileGap) / 2;
+
+      tokens.transition('button-animation')
+        .duration(buttonAnimationTime)
+        .ease(d3.easePolyInOut)
+        .attr('transform', (_, i) => {
+        // Compute the current tile's location
+        let cur_r = Math.floor(i / tileColumnNum);
+        let cur_c = i % tileColumnNum;
+        return `translate(${startSpace + cur_c * (tileHeight + tileGap)},
+          ${cur_r * (tileHeight + tileGap)})`;
+      })
+
+      // Change the SVG height
+      console.log(Math.floor(tokens.nodes().length / tileColumnNum));
+      
+      let tempSVGHeight = saliencySVGPadding.top + saliencySVGPadding.bottom / 2 +
+         tileNumRow * (tileHeight + tileGap) - tileGap;
+      
+      d3.select(saliencySVG).attr('height', tempSVGHeight);
+      d3.select(saliencySVG)
+        .select('.svg-border-rect')
+        .attr('height', tempSVGHeight);
+      
+      // Move the rect positions and change their width
+      tokens.select('.text-background')
+        .transition('button-animation')
+        .duration(buttonAnimationTime)
+        .ease(d3.easePolyInOut)
+        .attr('width', function(){return +d3.select(this).attr('height')});
+    })
+
+  }
+
   const drawSaliencies = (saliencies, key) => {
-    if (saliencySvg === null) {
+    if (saliencySVG === null) {
       return;
     }
 
@@ -119,8 +211,6 @@
 
     // Create a divering color scale from red to green
     let largestAbs = d3.max(saliencies.map(d => Math.abs(d[key])));
-    let svgWidth = 950;
-    let svgHeight = 600;
     const tokenPadding = {
       left: 3,
       right: 2,
@@ -134,20 +224,24 @@
       .domain([-largestAbs, 0, largestAbs])
       .range([d3.rgb('#eb2f06'), d3.rgb('#ffffff'), d3.rgb('#458FC1')]);
     
-    let container = d3.select(saliencySvg)
+    let container = d3.select(saliencySVG)
       .attr('height', svgHeight)
       .attr('width', svgWidth)
       .append('g')
       .attr('class', 'main-svg')
       .attr('transform', `translate(${saliencySVGPadding.left}, ${saliencySVGPadding.top})`);
     
-    d3.select(saliencySvg)
+    // Add svg border rect
+    d3.select(saliencySVG)
       .append('rect')
       .attr('class', 'svg-border-rect')
       .attr('height', svgHeight)
       .attr('width', svgWidth)
       .style('stroke', 'black')
       .style('fill', 'none');
+    
+    // Add svg control buttons
+
     
     let containerWidth = svgWidth - saliencySVGPadding.left - saliencySVGPadding.right;
     
@@ -220,7 +314,7 @@
     // Resize the SVG based on the content height
     svgHeight = (curPos.y + textTokenHeight + tokenPadding.top +
                  tokenPadding.bottom + saliencySVGPadding.bottom);
-    d3.select(saliencySvg)
+    d3.select(saliencySVG)
       .attr('height', svgHeight)
       .select('.svg-border-rect')
       .attr('height', svgHeight);
@@ -258,8 +352,10 @@
       
       // Hide the tooltip
       tooltipShow = false;
-    })
-      drawSaliencyLegend(saliencyRow, largestAbs);
+    });
+
+    drawSaliencyLegend(saliencyRow, largestAbs);
+    drawSaliencyControl(textTokenPositions);
   }
 
   onMount(async () => {
@@ -300,6 +396,11 @@
     stroke-width: 1px;
   }
 
+  :global(.right-svg .rect-button) {
+    // shape-rendering: crispEdges;
+    cursor: pointer;
+  }
+
   .control-panel {
     display: flex;
     flex-direction: row-reverse;
@@ -333,7 +434,7 @@
   />
 
   <div class='saliency-row' bind:this={saliencyRow}>
-    <svg class='saliency-svg' bind:this={saliencySvg}></svg>
+    <svg class='saliency-svg' bind:this={saliencySVG}></svg>
   </div>
 
 
