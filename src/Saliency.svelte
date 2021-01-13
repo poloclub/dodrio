@@ -20,6 +20,8 @@
   let svgWidth = 950;
   let svgHeight = 600;
 
+  let heatmapMode = false;
+
   const rightSVGWidth = 100;
   const legendPos = {
     width: 20,
@@ -33,6 +35,13 @@
     left: 10,
     right: 10,
     bottom: 20
+  };
+
+  const tokenPadding = {
+    left: 3,
+    right: 2,
+    top: 4,
+    bottom: 0
   };
 
   // HTML input
@@ -122,12 +131,137 @@
       .call(d3.axisRight(legendScale).ticks(10))
   }
 
-  const drawSaliencyControl = (textTokenPositions) => {
+  const enterHeatmap = () => {
+    const buttonAnimationTime = 1000;
+    const buttonAnimationEase = d3.easeCubicInOut;
+    let tokens = d3.select(saliencySVG)
+      .select('.text-group')
+      .selectAll('.token');
+    
+    // Hide the texts
+    tokens.select('.text-token')
+      .transition('text-opacity')
+      .duration(buttonAnimationTime / 2)
+      .ease(buttonAnimationEase)
+      .style('opacity', 0)
+      .on('end', (d, i, g) => {
+        d3.select(g[i]).style('visibility', 'hidden');
+      });
+
+    let tileHeight = +tokens.select('.text-background').attr('height');
+    let containerWidth = svgWidth - saliencySVGPadding.left - saliencySVGPadding.right;
+    let tileGap = 3;
+    let tileColumnNum = Math.floor(containerWidth / (tileHeight + tileGap));
+    let tileNumRow = Math.floor(tokens.nodes().length / tileColumnNum) + 1;
+
+    // To center the heatmap, we need to re-calculate the starting gap
+    let startSpace = (containerWidth - tileColumnNum * (tileHeight + tileGap) + tileGap) / 2;
+
+    // Move the rect positions and change their width
+    tokens.transition('button-animation')
+      .duration(buttonAnimationTime)
+      .ease(buttonAnimationEase)
+      .attr('transform', (_, i) => {
+      // Compute the current tile's location
+      let cur_r = Math.floor(i / tileColumnNum);
+      let cur_c = i % tileColumnNum;
+      return `translate(${startSpace + cur_c * (tileHeight + tileGap)},
+        ${cur_r * (tileHeight + tileGap)})`;
+    })
+
+    tokens.select('.text-background')
+      .transition('button-animation')
+      .duration(buttonAnimationTime)
+      .ease(buttonAnimationEase)
+      .attr('width', function(){return +d3.select(this).attr('height')});
+
+    // Change the SVG height
+    console.log(Math.floor(tokens.nodes().length / tileColumnNum));
+    
+    let tempSVGHeight = saliencySVGPadding.top + saliencySVGPadding.bottom / 2 +
+        tileNumRow * (tileHeight + tileGap) - tileGap;
+    
+    d3.select(saliencySVG)
+      .transition('button-animation')
+      .duration(buttonAnimationTime)
+      .ease(buttonAnimationEase)
+      .attr('height', tempSVGHeight);
+    
+    d3.select(saliencySVG)
+      .select('.svg-border-rect')
+      .transition('button-animation')
+      .duration(buttonAnimationTime)
+      .ease(buttonAnimationEase)
+      .attr('height', tempSVGHeight);
+    
+    rightSVG.transition('button-animation')
+      .duration(buttonAnimationTime)
+      .ease(buttonAnimationEase)
+      .attr('height', tempSVGHeight);
+  }
+
+
+  const exitHeatmap = (textTokenPositions, textTokenWidths) => {
+    const buttonAnimationTime = 1000;
+    const buttonAnimationEase = d3.easeCubicInOut;
+    let tokens = d3.select(saliencySVG)
+      .select('.text-group')
+      .selectAll('.token');
+    
+    // Show the texts
+    tokens.select('.text-token')
+      .style('visibility', 'visible');
+
+    // Restore the position of the text token
+    tokens.transition('button-animation')
+      .duration(buttonAnimationTime)
+      .ease(buttonAnimationEase)
+      .attr('transform', (_, i) => {
+        let curPos = textTokenPositions[i];
+        return `translate(${curPos.x}, ${curPos.y})`
+      });
+
+    // Restore text token rect width
+    tokens.select('.text-background')
+      .transition('button-animation')
+      .duration(buttonAnimationTime)
+      .ease(buttonAnimationEase)
+      .attr('width', (_, i) => textTokenWidths[i] + tokenPadding.left + tokenPadding.right);
+
+    // Change the SVG height
+    d3.select(saliencySVG)
+      .transition('button-animation')
+      .duration(buttonAnimationTime)
+      .ease(buttonAnimationEase)
+      .attr('height', svgHeight);
+    
+    d3.select(saliencySVG)
+      .select('.svg-border-rect')
+      .transition('button-animation')
+      .duration(buttonAnimationTime)
+      .ease(buttonAnimationEase)
+      .attr('height', svgHeight);
+    
+    rightSVG.transition('button-animation')
+      .duration(buttonAnimationTime)
+      .ease(buttonAnimationEase)
+      .attr('height', svgHeight);
+    
+    // Show the texts
+    tokens.select('.text-token')
+      .transition('text-animation')
+      .delay(buttonAnimationTime / 2)
+      .duration(buttonAnimationTime / 2)
+      .ease(buttonAnimationEase)
+      .style('opacity', d=> {console.log(1); return 1});
+  }
+
+
+  const drawSaliencyControl = (textTokenPositions, textTokenWidths) => {
     if (rightSVG === null) {
       return;
     }
 
-    const buttonAnimationTime = 1000;
     let rectY = legendPos.top + legendPos.height + 10;
     let heatmapButton = rightSVG.append('rect')
       .attr('x', legendPos.left)
@@ -153,51 +287,13 @@
     });
 
     heatmapButton.on('click', () => {
-      let tokens = d3.select(saliencySVG)
-        .select('.text-group')
-        .selectAll('.token');
-      
-      // Hide the texts
-      tokens.select('.text-token')
-        .style('visibility', 'hidden');
-
-      let tileHeight = +tokens.select('.text-background').attr('height');
-      let containerWidth = svgWidth - saliencySVGPadding.left - saliencySVGPadding.right;
-      let tileGap = 3;
-      let tileColumnNum = Math.floor(containerWidth / (tileHeight + tileGap));
-      let tileNumRow = Math.floor(tokens.nodes().length / tileColumnNum) + 1;
-
-      // To center the heatmap, we need to re-calculate the starting gap
-      let startSpace = (containerWidth - tileColumnNum * (tileHeight + tileGap) + tileGap) / 2;
-
-      tokens.transition('button-animation')
-        .duration(buttonAnimationTime)
-        .ease(d3.easePolyInOut)
-        .attr('transform', (_, i) => {
-        // Compute the current tile's location
-        let cur_r = Math.floor(i / tileColumnNum);
-        let cur_c = i % tileColumnNum;
-        return `translate(${startSpace + cur_c * (tileHeight + tileGap)},
-          ${cur_r * (tileHeight + tileGap)})`;
-      })
-
-      // Change the SVG height
-      console.log(Math.floor(tokens.nodes().length / tileColumnNum));
-      
-      let tempSVGHeight = saliencySVGPadding.top + saliencySVGPadding.bottom / 2 +
-         tileNumRow * (tileHeight + tileGap) - tileGap;
-      
-      d3.select(saliencySVG).attr('height', tempSVGHeight);
-      d3.select(saliencySVG)
-        .select('.svg-border-rect')
-        .attr('height', tempSVGHeight);
-      
-      // Move the rect positions and change their width
-      tokens.select('.text-background')
-        .transition('button-animation')
-        .duration(buttonAnimationTime)
-        .ease(d3.easePolyInOut)
-        .attr('width', function(){return +d3.select(this).attr('height')});
+      if (!heatmapMode) {
+        enterHeatmap();
+        heatmapMode = true;
+      } else {
+        exitHeatmap(textTokenPositions, textTokenWidths);
+        heatmapMode = false;
+      }
     })
 
   }
@@ -211,12 +307,6 @@
 
     // Create a divering color scale from red to green
     let largestAbs = d3.max(saliencies.map(d => Math.abs(d[key])));
-    const tokenPadding = {
-      left: 3,
-      right: 2,
-      top: 4,
-      bottom: 0
-    };
     const tokenGap = 4;
     const rowGap = 30;
 
@@ -332,7 +422,9 @@
       // Show the tooltip
       tooltipShow = true;
       let position = node.getBoundingClientRect();
-      let tooltipCenterX = position.x + position.width / 2;
+
+      let curWidth = position.right - position.left;
+      let tooltipCenterX = position.x + curWidth / 2;
       let tooltipCenterY = position.y - 40 + window.scrollY;
 
       tooltipHtml = d3.format('.4f')(+d[key]);
@@ -355,7 +447,7 @@
     });
 
     drawSaliencyLegend(saliencyRow, largestAbs);
-    drawSaliencyControl(textTokenPositions);
+    drawSaliencyControl(textTokenPositions, textTokenWidths);
   }
 
   onMount(async () => {
