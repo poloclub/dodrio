@@ -6,7 +6,6 @@
   // Dictionary of {label : score}
   export let softmaxScores;
   $: {
-    console.log(softmaxScores)
     d3.select(chart)
       .selectAll('*')
       .remove();

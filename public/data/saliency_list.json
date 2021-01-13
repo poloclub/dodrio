@@ -1,5 +1,5 @@
-[
-  {
+{
+  "meta": {
     "true_label": "positive",
     "predicted_label": "positive",
     "softmax_scores": {
@@ -7,7 +7,7 @@
       "positive": 0.9983091354370117
     }
   },
-  {
+  "tokens": [{
     "token": "[CLS]",
     "negative": -0.3462209403514862,
     "positive": 0.5912969708442688
@@ -2551,5 +2551,5 @@
     "token": "[SEP]",
     "negative": 0.0016085917595773935,
     "positive": -0.08878154307603836
-  }
-]
+  }]
+}

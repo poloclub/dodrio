@@ -176,8 +176,6 @@
       .attr('width', function(){return +d3.select(this).attr('height')});
 
     // Change the SVG height
-    console.log(Math.floor(tokens.nodes().length / tileColumnNum));
-    
     let tempSVGHeight = saliencySVGPadding.top + saliencySVGPadding.bottom / 2 +
         tileNumRow * (tileHeight + tileGap) - tileGap;
     
@@ -253,7 +251,7 @@
       .delay(buttonAnimationTime / 2)
       .duration(buttonAnimationTime / 2)
       .ease(buttonAnimationEase)
-      .style('opacity', d=> {console.log(1); return 1});
+      .style('opacity', 1);
   }
 
 
@@ -303,10 +301,11 @@
       return;
     }
 
-    console.log(saliencies);
+    let saliencyTokens = saliencies.tokens;
+    console.log(saliencyTokens);
 
     // Create a divering color scale from red to green
-    let largestAbs = d3.max(saliencies.map(d => Math.abs(d[key])));
+    let largestAbs = d3.max(saliencyTokens.map(d => Math.abs(d[key])));
     const tokenGap = 4;
     const rowGap = 30;
 
@@ -339,7 +338,7 @@
       .attr('class', 'text-group');
 
     let tokenGroups = textGroup.selectAll('g.token')
-      .data(saliencies)
+      .data(saliencyTokens)
       .enter()
       .append('g')
       .attr('class', 'token')
@@ -558,7 +557,10 @@
       </div>
     {/if}
     {#if saliencies != null}
-      <TextClassificationStats trueLabel={saliencies[0]['true_label']} predictedLabel={saliencies[0]['predicted_label']} softmaxScores={saliencies[0]['softmax_scores']}/>
+      <TextClassificationStats
+        trueLabel={saliencies.meta['true_label']}
+        predictedLabel={saliencies.meta['predicted_label']}
+        softmaxScores={saliencies.meta['softmax_scores']}/>
     {/if}
   </div>
   
