@@ -1,5 +1,5 @@
 <script>
-  import { onMount, afterUpdate } from 'svelte';
+  import { onMount } from 'svelte';
   
   export let trueLabel;
   export let predictedLabel;
@@ -15,6 +15,32 @@
 
   let chart;
   let softmaxScoreDicts;
+  let trueLabelTagStyle
+    $: {
+      switch(trueLabel) {
+        case "positive":
+          trueLabelTagStyle = "tag is-rounded is-success"
+          break;
+        case "negative":
+          trueLabelTagStyle = "tag is-rounded is-danger"
+          break;
+        default:
+          trueLabelTagStyle = "tag is-rounded is-light"
+      }
+    };
+  let predictedLabelTagStyle
+    $: {
+      switch(predictedLabel) {
+        case "positive":
+          predictedLabelTagStyle = "tag is-rounded is-success"
+          break;
+        case "negative":
+          predictedLabelTagStyle = "tag is-rounded is-danger"
+          break;
+        default:
+          predictedLabelTagStyle = "tag is-rounded is-light"
+      }
+    };
 
   function preprocessSoftmaxScores() {
     let softmaxScoreDicts = [];
@@ -74,30 +100,6 @@
   onMount(async () => {
     drawSoftmaxChart();
   })
-
-  afterUpdate(async () => {
-    // Update true and predicted label styles
-    switch(trueLabel) {
-      case "positive":
-        document.getElementById("trueLabel").style.cssText = "background-color: #48c774; color: #fff;";
-        break;
-      case "negative":
-        document.getElementById("trueLabel").style.cssText = "background-color: #f14668; color: #fff;";
-        break;
-      default:
-        document.getElementById("trueLabel").style.cssText = "background-color: #f5f5f5; color: rgba(0,0,0,.7);";
-    }
-    switch(predictedLabel) {
-      case "positive":
-        document.getElementById("predictedLabel").style.cssText = "background-color: #48c774; color: #fff;";
-        break;
-      case "negative":
-        document.getElementById("predictedLabel").style.cssText = "background-color: #f14668; color: #fff;";
-        break;
-      default:
-        document.getElementById("predictedLabel").style.cssText = "background-color: #f5f5f5; color: rgba(0,0,0,.7);";
-    }
-  })
 </script>
 
 <style>
@@ -134,9 +136,9 @@
   <div class="stats-1">
     <span>
       Predicted Label:
-      <span id="predictedLabel" class="tag is-light is-rounded">{predictedLabel}</span>&nbsp;
+      <span id="predictedLabel" class={predictedLabelTagStyle}>{predictedLabel}</span>&nbsp;
       True Label:
-      <span id="trueLabel" class="tag is-light is-rounded">{trueLabel}</span>
+      <span id="trueLabel" class={trueLabelTagStyle}>{trueLabel}</span>
     </span>
   </div>
 
