@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import Tooltip from './Tooltip.svelte';
   import TextClassificationStats from './TextClassificationStats.svelte';
+  import SmallMatrix from './SmallMatrix.svelte';
   export let width = 400;
 
   let saliencyDiv = null;
@@ -523,6 +524,8 @@
     width={tooltipWidth}
     tooltipShow={tooltipShow}
   />
+
+  <SmallMatrix />
 
   <div class='saliency-row' bind:this={saliencyRow}>
     <svg class='saliency-svg' bind:this={saliencySVG}></svg>
