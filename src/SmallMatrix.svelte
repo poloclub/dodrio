@@ -116,8 +116,8 @@ function resample_single(canvas, width, height, resize_canvas) {
         matrixData.attentions[0]['common_val'],
         absMax * Math.sign(absMax * attentionMax)
       ])
-      //.range([d3.rgb('#553005'), d3.rgb('#ffffff'), d3.rgb('##003D31')])
-      .range([d3.rgb('#F1F1E7'), d3.rgb('#000000'), d3.rgb('#C9E9E4')])
+      .range([d3.rgb('#553005'), d3.rgb('#ffffff'), d3.rgb('##003D31')])
+      //.range([d3.rgb('#F1F1E7'), d3.rgb('#000000'), d3.rgb('#C9E9E4')])
 
     let bufferCanvas = document.createElement("canvas");
     let bufferContext = bufferCanvas.getContext("2d");
@@ -146,6 +146,8 @@ function resample_single(canvas, width, height, resize_canvas) {
     }
 
     bufferContext.putImageData(imageSingle, 0, 0);
+
+    //resample_single(matrixCanvas, imageLength, imageLength, true);
 
     let matrixContext =  matrixCanvas.getContext("2d");
     matrixContext.drawImage(bufferCanvas, 0, 0, attentionLength, attentionLength,
