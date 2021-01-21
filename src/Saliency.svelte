@@ -3,6 +3,7 @@
   import Tooltip from './Tooltip.svelte';
   import TextClassificationStats from './TextClassificationStats.svelte';
   import SmallMatrix from './SmallMatrix.svelte';
+  import GraphView from './GraphView.svelte'
   export let width = 400;
 
   let saliencyDiv = null;
@@ -525,6 +526,7 @@
     tooltipShow={tooltipShow}
   />
 
+  <GraphView />
   <SmallMatrix />
 
   <div class='saliency-row' bind:this={saliencyRow}>
