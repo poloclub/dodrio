@@ -1,4 +1,5 @@
 <script>
+  import GraphView from './GraphView.svelte';
   import Saliency from './Saliency.svelte';
 
   let saliencyVisCount = 1;
@@ -26,10 +27,11 @@
 
 {#each {length: saliencyVisCount} as _, i}
     <div class='saliency'>
-  		<Saliency width={950}/>
+      <!-- <Saliency width={950}/> -->
+      <GraphView />
 	</div>
 {/each}
 
-<div class="add-saliency-vis">
+<!-- <div class="add-saliency-vis">
 	<button class="button add-saliency" on:click={increaseSaliencyVisCount}><i class="fas fa-plus"></i></button>
-</div>
+</div> -->
