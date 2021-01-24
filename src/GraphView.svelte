@@ -8,6 +8,8 @@
   const SVGWidth = 800;
   const SVGHeight = 800;
 
+  const SVGPadding = {top: 3, left: 3, right: 3, bottom: 3};
+
   const minNodeRadius = 19;
   const maxNodeRadius = 30;
 
@@ -41,8 +43,12 @@
     if (d.saliency !== undefined) {
       const curRadius = nodeRaiusScale(+d.saliency);
     }
-    const left = Math.max(curRadius, Math.min(SVGWidth - curRadius, d.x));
-    const top = Math.max(curRadius, Math.min(SVGHeight - curRadius, d.y));
+
+    let width = SVGWidth - SVGPadding.left - SVGPadding.right;
+    let height = SVGWidth - SVGPadding.top - SVGPadding.bottom;
+
+    const left = Math.max(SVGPadding.left + curRadius, Math.min(width - curRadius, d.x));
+    const top = Math.max(SVGPadding.top + curRadius, Math.min(height - curRadius, d.y));
     return {top: top, left: left};
   }
 
@@ -79,11 +85,7 @@
       let intermediate = {};
 
       let curBilink = [source, intermediate, target];
-      curBilink.selfLoop = false;
-      
-      if (source === target) {
-        curBilink.selfLoop = true;
-      }
+      curBilink.selfLoop = source === target;
       
       nodes.push(intermediate);
       links.push({source: source, target: intermediate},
@@ -160,9 +162,37 @@
         const iCoord = borderConstraint(d[1], nodeRaiusScale);
         const tCoord = borderConstraint(d[2], nodeRaiusScale);
 
-        return 'M' + sCoord.left + ',' + sCoord.top
-          + 'S' + iCoord.left + ',' + iCoord.top
-          + ' ' + tCoord.left + ',' + tCoord.top;
+        if (d.selfLoop) {
+          // Need to handle the arc manually if there is a self loop
+          const iVec = [iCoord.left - sCoord.left, iCoord.top - sCoord.top];
+          const iVecNorm = Math.sqrt((iVec[0] ** 2 + iVec[1] ** 2));
+
+          // Rotate 90 degree
+          // Normalized the rotate direction, use alpha to control magnitude
+          const alpha = 50;
+          const iVecClock90 = [-iVec[1] / iVecNorm * alpha, iVec[0] / iVecNorm * alpha];
+          const iVecCounterClock90 = [iVec[1] / iVecNorm * alpha, -iVec[0] / iVecNorm * alpha];
+
+          const leftControl = [sCoord.left + iVec[0] + iVecClock90[0],
+            sCoord.top + iVec[1] + iVecClock90[1]];
+          const rightControl = [sCoord.left + iVec[0] + iVecCounterClock90[0],
+            sCoord.top + iVec[1] + iVecCounterClock90[1]];
+
+          // console.log(iVec, iVecClock90, leftControl, rightControl);
+
+          // Draw a bezier curve with two control points (which are left anr right
+          // perpendicular to the self loop node -> intermediate node vector)
+          return 'M' + sCoord.left + ',' + sCoord.top
+            + 'C' + leftControl[0] + ',' + leftControl[1]
+            + ' ' + rightControl[0] + ',' + rightControl[1]
+            + ' ' + tCoord.left + ',' + tCoord.top;
+
+        } else {
+          // Draw simple reflective bezier curve if not self loop
+          return 'M' + sCoord.left + ',' + sCoord.top
+            + 'S' + iCoord.left + ',' + iCoord.top
+            + ' ' + tCoord.left + ',' + tCoord.top;
+        }
       });
 
       nodeGroups.attr("transform", d => {
