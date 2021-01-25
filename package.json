@@ -9,6 +9,7 @@
   "devDependencies": {
     "@rollup/plugin-commonjs": "^14.0.0",
     "@rollup/plugin-node-resolve": "^8.0.0",
+    "eslint-plugin-svelte3": "^3.0.0",
     "rollup": "^2.3.4",
     "rollup-plugin-livereload": "^2.0.0",
     "rollup-plugin-svelte": "^6.0.0",
