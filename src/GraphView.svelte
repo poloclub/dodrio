@@ -13,35 +13,37 @@
   const minNodeRadius = 19;
   const maxNodeRadius = 30;
 
+  let forceStrength = {manyBody: 0, attention: 0, textOrder: 0};
+
   const drag = (simulation) => {
   
     const dragstarted = (event) => {
       if (!event.active) simulation.alphaTarget(0.3).restart();
       event.subject.fx = event.subject.x;
       event.subject.fy = event.subject.y;
-    }
+    };
     
     const dragged = (event) => {
       event.subject.fx = event.x;
       event.subject.fy = event.y;
-    }
+    };
     
     const dragended = (event) => {
       if (!event.active) simulation.alphaTarget(0);
       event.subject.fx = null;
       event.subject.fy = null;
-    }
+    };
     
     return d3.drag()
-        .on("start", dragstarted)
-        .on("drag", dragged)
-        .on("end", dragended);
-  }
+      .on('start', dragstarted)
+      .on('drag', dragged)
+      .on('end', dragended);
+  };
 
   const borderConstraint = (d, nodeRadiusScale) => {
     let curRadius = minNodeRadius;
     if (d.saliency !== undefined) {
-      const curRadius = nodeRadiusScale(+d.saliency);
+      curRadius = nodeRadiusScale(+d.saliency);
     }
 
     let width = SVGWidth - SVGPadding.left - SVGPadding.right;
@@ -50,37 +52,40 @@
     const left = Math.max(SVGPadding.left + curRadius, Math.min(width - curRadius, d.x));
     const top = Math.max(SVGPadding.top + curRadius, Math.min(height - curRadius, d.y));
     return {top: top, left: left};
-  }
+  };
 
   const bindSlider = (name, simulation, min, max, defaultValue) => {
     let slider = d3.select(`#${name}`)
-      .attr('value', ((defaultValue - min) / (max - min)) * 1000);
+      .property('value', ((defaultValue - min) / (max - min)) * 1000);
 
     slider.on('input', () => {
-      let sliderValue = +slider.property("value");
+      let sliderValue = +slider.property('value');
       let value = (sliderValue / 1000) * (max - min) + min;
       console.log(name, value);
 
       switch (name) {
-        case 'attention':
-          simulation.force('attentionLink').strength(value);
-        case 'textOrder':
-          simulation.force('textLink').strength(value);
-        case 'manyBody':
-          simulation.force('charge').strength(value);
+      case 'attention':
+        simulation.force('attentionLink').strength(value);
+        break;
+      case 'textOrder':
+        simulation.force('textLink').strength(value);
+        break;
+      case 'manyBody':
+        simulation.force('charge').strength(value);
+        break;
       }
 
       simulation.restart();
-    })
+    });
 
     slider.on('mousedown', (event) => {
       if (!event.active) simulation.alphaTarget(0.2).restart();
-    })
+    });
 
     slider.on('mouseup', (event) => {
       if (!event.active) simulation.alphaTarget(0);
-    })
-  }
+    });
+  };
 
   const drawGraph = () => {
     // Filter the links based on the weight
@@ -111,7 +116,7 @@
       let hiddenLink = {
         source: +nodes[i].id,
         target: +nodes[i + 1].id
-      }
+      };
       hiddenLinks.push(hiddenLink);
     }
     // hiddenLinks.push({
@@ -150,72 +155,76 @@
     
     // Define the force
     let simulation = d3.forceSimulation(nodes);
+    const initManyBodyStrength = -700;
+    const initAttentionStrength = 0.1;
+    const initTextOrderStrength = 2;
 
     // Force 1 (ManyBody force)
-    simulation.force("charge", d3.forceManyBody()
-      .strength(-700)
+    simulation.force('charge', d3.forceManyBody()
+      .strength(initManyBodyStrength)
     );
 
     // Force 2 (Center force)
-    simulation.force("center", d3.forceCenter(SVGWidth / 2, SVGHeight / 2));
+    simulation.force('center', d3.forceCenter(SVGWidth / 2, SVGHeight / 2));
 
     // Force 3 (Link force)
-    simulation.force("attentionLink", d3.forceLink(links)
+    simulation.force('attentionLink', d3.forceLink(links)
       .id(d => d.id)
-      .strength(0.1)
+      .strength(initAttentionStrength)
     );
     
     // Force 4 (Text order link force)
-    simulation.force("textLink", d3.forceLink(hiddenLinks)
+    simulation.force('textLink', d3.forceLink(hiddenLinks)
       .id(d => d.id)
-      .strength(2)
+      .strength(initTextOrderStrength)
     );
 
     // Change the min alpha so that the nodes do not shake at the end (end earlier)
     // The default alphaMin is 0.0001
     simulation.alphaMin(0.01);
 
-    let linkLines = svg.append("g")
-      .attr("stroke", "#999")
-      .attr("stroke-opacity", 0.6)
-      .selectAll("path")
+    let linkLines = svg.append('g')
+      .attr('stroke', '#999')
+      .attr('stroke-opacity', 0.6)
+      .selectAll('path')
       .data(bilinks)
-      .join("path")
+      .join('path')
       .attr('class', 'link');
 
-    let textLinkLines = svg.append("g")
-      .attr("stroke", "pink")
-      .attr("stroke-opacity", 0.6)
-      .selectAll("line")
+    let textLinkLines = svg.append('g')
+      .attr('stroke', 'red')
+      .attr('stroke-opacity', 1)
+      .selectAll('line')
       .data(hiddenLinks)
-      .join("line")
+      .join('line')
       .attr('class', 'link');
 
-    let nodeGroups = svg.append("g")
+    let nodeGroups = svg.append('g')
       .attr('class', 'node-group')
-      .selectAll("g.node")
+      .selectAll('g.node')
       // Need to filter out intermediate nodes
       .data(nodes.filter(d => d.id !== undefined))
-      .join("g")
+      .join('g')
       .attr('class', 'node')
       .call(drag(simulation));
 
     // Add circle to each node
     nodeGroups.append('circle')
       .attr('class', 'node-circle')
-      .attr("r", d => nodeRadiusScale(+d.saliency))
-      .style("fill", 'skyblue');
+      .attr('r', d => nodeRadiusScale(+d.saliency))
+      .style('fill', 'skyblue');
     
     // Add token text to each node
     nodeGroups.append('text')
       .attr('class', 'node-text')
       .text(d => d.token);
 
-    nodeGroups.append("title")
+    nodeGroups.append('title')
       .text(d => d.token);
 
-    simulation.on("tick", () => {
-      linkLines.attr("d", d => {
+    simulation.on('tick', () => {
+      // Update the attention links
+      linkLines.attr('d', d => {
         const sCoord = borderConstraint(d[0], nodeRadiusScale);
         const iCoord = borderConstraint(d[1], nodeRadiusScale);
         const tCoord = borderConstraint(d[2], nodeRadiusScale);
@@ -253,29 +262,27 @@
         }
       });
 
-      nodeGroups.attr("transform", d => {
+      // Update the nodes
+      nodeGroups.attr('transform', d => {
         // Maker sure the nodes are inside the box
-        // const curRadius = nodeRadiusScale(+d.saliency);
-        // const top = Math.max(curRadius, Math.min(SVGWidth - curRadius, d.x));
-        // const left = Math.max(curRadius, Math.min(SVGHeight - curRadius, d.y));
         const coord = borderConstraint(d, nodeRadiusScale);
         return `translate(${coord.left}, ${coord.top})`;
       });
 
+      // Update the text links
       textLinkLines
-        .attr("x1", d => borderConstraint(d.source, nodeRadiusScale).left)
-        .attr("y1", d => borderConstraint(d.source, nodeRadiusScale).top)
-        .attr("x2", d => borderConstraint(d.target, nodeRadiusScale).left)
-        .attr("y2", d => borderConstraint(d.target, nodeRadiusScale).top)
+        .attr('x1', d => borderConstraint(d.source, nodeRadiusScale).left)
+        .attr('y1', d => borderConstraint(d.source, nodeRadiusScale).top)
+        .attr('x2', d => borderConstraint(d.target, nodeRadiusScale).left)
+        .attr('y2', d => borderConstraint(d.target, nodeRadiusScale).top);
+
     });
 
-    console.log('no')
-    bindSlider('attention', simulation, -5, 5, 1);
-    bindSlider('textOrder', simulation, -5, 5, 1);
-    bindSlider('manyBody', simulation, -1000, 1000, -500);
+    bindSlider('attention', simulation, -5, 5, initAttentionStrength);
+    bindSlider('textOrder', simulation, -5, 5, initTextOrderStrength);
+    bindSlider('manyBody', simulation, -1000, 1000, initManyBodyStrength);
 
-    // invalidation.then(() => simulation.stop());
-  }
+  };
 
   onMount(async () => {
     console.log('loading matrix');
@@ -283,7 +290,7 @@
     console.log('loaded matrix');
 
     drawGraph();
-  })
+  });
 </script>
 
 <style>
