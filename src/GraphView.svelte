@@ -100,6 +100,7 @@
       d3.select(graphSVG)
         .select('g.hidden-node-group')
         .style('visibility', config.showHiddenNode ? 'visible' : 'hidden');
+      simulation.alpha(0.05).restart();
     });
 
     // Automatic attention link strength checkbox
@@ -227,8 +228,8 @@
     
     // Define the force
     let simulation = d3.forceSimulation(nodes);
-    const initManyBodyStrength = -700;
-    const initAttentionStrength = 0.1;
+    const initManyBodyStrength = -500;
+    const initAttentionStrength = 0.5;
     const initTextOrderStrength = 2;
 
     forceStrength.manyBody = initManyBodyStrength;
@@ -259,12 +260,31 @@
     // The default alphaMin is 0.0001
     simulation.alphaMin(0.001);
 
+    // Add arrow markers
+    const arrowBoxWidth = 20;
+    const arrowBoxHeight = 20;
+    svg.append('defs')
+      .append('marker')
+      .attr('id', 'arrow')
+      .attr('viewBox', [0, 0, arrowBoxWidth, arrowBoxHeight])
+      .attr('refX', arrowBoxWidth / 2)
+      .attr('refY', arrowBoxHeight / 2)
+      .attr('markerWidth', arrowBoxWidth)
+      .attr('markerHeight', arrowBoxHeight)
+      .attr('orient', 'auto-start-reverse')
+      .append('path')
+      .attr('d', 'M0,5 L0,15 L8,10')
+      .attr('stroke', '#C2C2C2')
+      .attr('fill', '#C2C2C2');
+
+    // Add attention links
     let linkLines = svg.append('g')
-      .attr('stroke', '#999')
-      .attr('stroke-opacity', 0.6)
+      .attr('class', 'attention-link-group')
+      .attr('stroke', '#C2C2C2')
       .selectAll('path')
       .data(bilinks)
       .join('path')
+      .attr('marker-end', 'url(#arrow)')
       .attr('class', 'link');
 
     // Add hidden text order links
@@ -314,8 +334,8 @@
 
     hiddenNodeGroups.append('circle')
       .attr('class', 'hidden-node-circle')
-      .attr('r', 4)
-      .style('fill', 'pink');
+      .attr('r', 3)
+      .style('fill', 'lightgreen');
 
     // Simulation tick updates
     simulation.on('tick', () => {
@@ -343,20 +363,34 @@
           const rightControl = [sCoord.left + iVec[0] + iVecCounterClock90[0],
             sCoord.top + iVec[1] + iVecCounterClock90[1]];
 
-          // console.log(iVec, iVecClock90, leftControl, rightControl);
+          // We need to shorten the path to leave space for arrow
+          let halfLen = Math.sqrt((tCoord.left - rightControl[0]) ** 2 + (tCoord.top - rightControl[1]) ** 2);
+          let theta = nodeRadiusScale(d[2].saliency) / halfLen;
+          let modTCoord = {
+            left: tCoord.left + (iCoord.left - tCoord.left) * theta,
+            top: tCoord.top + (iCoord.top - tCoord.top) * theta,
+          };
 
           // Draw a bezier curve with two control points (which are left anr right
           // perpendicular to the self loop node -> intermediate node vector)
           return 'M' + sCoord.left + ',' + sCoord.top
             + 'C' + leftControl[0] + ',' + leftControl[1]
             + ' ' + rightControl[0] + ',' + rightControl[1]
-            + ' ' + tCoord.left + ',' + tCoord.top;
+            + ' ' + modTCoord.left + ',' + modTCoord.top;
 
         } else {
+          // We need to shorten the path to leave space for arrow
+          let halfLen = Math.sqrt((tCoord.left - iCoord.left) ** 2 + (tCoord.top - iCoord.top) ** 2);
+          let theta = nodeRadiusScale(d[2].saliency) / halfLen;
+          let modTCoord = {
+            left: tCoord.left + (iCoord.left - tCoord.left) * theta,
+            top: tCoord.top + (iCoord.top - tCoord.top) * theta,
+          };
+
           // Draw simple reflective bezier curve if not self loop
           return 'M' + sCoord.left + ',' + sCoord.top
             + 'S' + iCoord.left + ',' + iCoord.top
-            + ' ' + tCoord.left + ',' + tCoord.top;
+            + ' ' + modTCoord.left + ',' + modTCoord.top;
         }
       });
 
@@ -457,8 +491,11 @@
 
 <div class='graph-view'>
   <div class='control-panel'>
+    <!-- Sliders -->
     <div class='slider'>
-      <label for='attention'>Attention Strength [{round(forceStrength.attention, 2)}]</label>
+      <label for='attention'>Attention Strength
+        [{config.autoAttention ? 'auto' : round(forceStrength.attention, 2)}]
+      </label>
       <input type="range" min="0" max="1000" value="500" class="slider" id="attention">
     </div>
 
@@ -470,6 +507,12 @@
     <div class='slider'>
       <label for='manyBody'>ManyBody Strength [{round(forceStrength.manyBody, 2)}]</label>
       <input type="range" min="0" max="1000" value="500" class="slider" id="manyBody">
+    </div>
+
+    <!-- Checkboxes -->
+    <div class='checkbox'>
+      <input type="checkbox" id="checkbox-auto-attention">
+      <label for="checkbox-auto-attention">Auto attention strength </label>
     </div>
 
     <div class='checkbox'>
@@ -487,10 +530,6 @@
       <label for="checkbox-border">Border Constraint</label>
     </div>
     
-    <div class='checkbox'>
-      <input type="checkbox" id="checkbox-auto-attention">
-      <label for="checkbox-auto-attention">Auto attention strength </label>
-    </div>
   </div>
 
   <div class='svg-container'>
