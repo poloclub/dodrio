@@ -13,7 +13,17 @@
   const minNodeRadius = 19;
   const maxNodeRadius = 30;
 
+  let config = {
+    borderConstraint: true,
+    showHiddenLink: true,
+    showHiddenNode: false
+  };
+
   let forceStrength = {manyBody: 0, attention: 0, textOrder: 0};
+
+  const round = (num, decimal) => {
+    return Math.round((num + Number.EPSILON) * (10 ** decimal)) / (10 ** decimal);
+  };
 
   const drag = (simulation) => {
   
@@ -51,7 +61,46 @@
 
     const left = Math.max(SVGPadding.left + curRadius, Math.min(width - curRadius, d.x));
     const top = Math.max(SVGPadding.top + curRadius, Math.min(height - curRadius, d.y));
-    return {top: top, left: left};
+
+    if (config.borderConstraint) {
+      return {top: top, left: left};
+    } else {
+      return {top: d.y, left: d.x};
+    }
+  };
+
+  const bindCheckBox = (simulation) => {
+    // Border checkbox
+    let borderCheckBox = d3.select('#checkbox-border')
+      .property('checked', config.borderConstraint);
+
+    borderCheckBox.on('change', (event) => {
+      config.borderConstraint = event.target.checked;
+      simulation.alpha(0.2).restart();
+    });
+
+    // Hidden links
+    let hiddenLinkCheckBox = d3.select('#checkbox-hidden-link')
+      .property('checked', config.showHiddenLink);
+    
+    hiddenLinkCheckBox.on('change', (event) => {
+      config.showHiddenLink = event.target.checked;
+      d3.select(graphSVG)
+        .select('g.text-link-group')
+        .style('visibility', config.showHiddenLink ? 'visible' : 'hidden');
+    });
+
+    // Hidden nodes
+    let hiddenNodeCheckBox = d3.select('#checkbox-hidden-node')
+      .property('checked', config.showHiddenNode);
+    
+    hiddenNodeCheckBox.on('change', (event) => {
+      config.showHiddenNode = event.target.checked;
+      d3.select(graphSVG)
+        .select('g.hidden-node-group')
+        .style('visibility', config.showHiddenNode ? 'visible' : 'hidden');
+    });
+
   };
 
   const bindSlider = (name, simulation, min, max, defaultValue) => {
@@ -61,7 +110,7 @@
     slider.on('input', () => {
       let sliderValue = +slider.property('value');
       let value = (sliderValue / 1000) * (max - min) + min;
-      console.log(name, value);
+      forceStrength[name] = value;
 
       switch (name) {
       case 'attention':
@@ -159,6 +208,10 @@
     const initAttentionStrength = 0.1;
     const initTextOrderStrength = 2;
 
+    forceStrength.manyBody = initManyBodyStrength;
+    forceStrength.attention = initAttentionStrength;
+    forceStrength.textOrder = initTextOrderStrength;
+
     // Force 1 (ManyBody force)
     simulation.force('charge', d3.forceManyBody()
       .strength(initManyBodyStrength)
@@ -170,7 +223,7 @@
     // Force 3 (Link force)
     simulation.force('attentionLink', d3.forceLink(links)
       .id(d => d.id)
-      .strength(initAttentionStrength)
+      //.strength(initAttentionStrength)
     );
     
     // Force 4 (Text order link force)
@@ -191,14 +244,18 @@
       .join('path')
       .attr('class', 'link');
 
+    // Add hidden text order links
     let textLinkLines = svg.append('g')
-      .attr('stroke', 'red')
-      .attr('stroke-opacity', 1)
+      .attr('class', 'text-link-group')
+      .style('visibility', config.showHiddenLink ? 'visible' : 'hidden')
+      .style('stroke', 'red')
+      .style('stroke-opacity', 1)
       .selectAll('line')
       .data(hiddenLinks)
       .join('line')
       .attr('class', 'link');
 
+    // Add token nodes
     let nodeGroups = svg.append('g')
       .attr('class', 'node-group')
       .selectAll('g.node')
@@ -222,7 +279,25 @@
     nodeGroups.append('title')
       .text(d => d.token);
 
+    // Add hidden nodes
+    let hiddenNodeGroups = svg.append('g')
+      .attr('class', 'hidden-node-group')
+      .style('visibility', config.showHiddenNode ? 'visible' : 'hidden')
+      .selectAll('g.hidden-node')
+      // Need to select intermediate nodes
+      .data(nodes.filter(d => d.id == undefined))
+      .join('g')
+      .attr('class', 'hidden-node');
+
+    hiddenNodeGroups.append('circle')
+      .attr('class', 'hidden-node-circle')
+      .attr('r', 4)
+      .style('fill', 'pink');
+
+    // Simulation tick updates
     simulation.on('tick', () => {
+      console.log('Tick');
+
       // Update the attention links
       linkLines.attr('d', d => {
         const sCoord = borderConstraint(d[0], nodeRadiusScale);
@@ -269,18 +344,33 @@
         return `translate(${coord.left}, ${coord.top})`;
       });
 
+      // Update the hidden nodes
+      if (config.showHiddenNode) {
+        hiddenNodeGroups.attr('transform', d => {
+          // Maker sure the nodes are inside the box
+          const coord = borderConstraint(d);
+          return `translate(${coord.left}, ${coord.top})`;
+        });
+      }
+
       // Update the text links
-      textLinkLines
-        .attr('x1', d => borderConstraint(d.source, nodeRadiusScale).left)
-        .attr('y1', d => borderConstraint(d.source, nodeRadiusScale).top)
-        .attr('x2', d => borderConstraint(d.target, nodeRadiusScale).left)
-        .attr('y2', d => borderConstraint(d.target, nodeRadiusScale).top);
+      if (config.showHiddenLink) {
+        textLinkLines
+          .attr('x1', d => borderConstraint(d.source, nodeRadiusScale).left)
+          .attr('y1', d => borderConstraint(d.source, nodeRadiusScale).top)
+          .attr('x2', d => borderConstraint(d.target, nodeRadiusScale).left)
+          .attr('y2', d => borderConstraint(d.target, nodeRadiusScale).top);
+      }
+
 
     });
 
-    bindSlider('attention', simulation, -5, 5, initAttentionStrength);
-    bindSlider('textOrder', simulation, -5, 5, initTextOrderStrength);
-    bindSlider('manyBody', simulation, -1000, 1000, initManyBodyStrength);
+    // Register UI elements from the control panel
+    bindSlider('attention', simulation, 0, 10, initAttentionStrength);
+    bindSlider('textOrder', simulation, 0, 10, initTextOrderStrength);
+    bindSlider('manyBody', simulation, -1000, 0, initManyBodyStrength);
+
+    bindCheckBox(simulation);
 
   };
 
@@ -293,7 +383,7 @@
   });
 </script>
 
-<style>
+<style type="text/scss">
 
   .graph-view {
     display: flex;
@@ -305,6 +395,23 @@
     flex-direction: column;
     align-items: center;
     margin-right: 50px;
+  }
+
+  .slider {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .checkbox {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    margin-bottom: 5px;
+
+    input {
+      margin-right: 7px;
+    }
   }
 
   :global(.node-circle) {
@@ -327,14 +434,35 @@
 
 <div class='graph-view'>
   <div class='control-panel'>
-    <label for='attention'>Attention Strength</label>
-    <input type="range" min="0" max="1000" value="500" class="slider" id="attention">
+    <div class='slider'>
+      <label for='attention'>Attention Strength [{round(forceStrength.attention, 2)}]</label>
+      <input type="range" min="0" max="1000" value="500" class="slider" id="attention">
+    </div>
 
-    <label for='textOrder'>Text Order Strength</label>
-    <input type="range" min="0" max="1000" value="500" class="slider" id="textOrder">
+    <div class='slider'>
+      <label for='textOrder'>Text Order Strength [{round(forceStrength.textOrder, 2)}]</label>
+      <input type="range" min="0" max="1000" value="500" class="slider" id="textOrder">
+    </div>
 
-    <label for='manyBody'>ManyBody Strength</label>
-    <input type="range" min="0" max="1000" value="500" class="slider" id="manyBody">
+    <div class='slider'>
+      <label for='manyBody'>ManyBody Strength [{round(forceStrength.manyBody, 2)}]</label>
+      <input type="range" min="0" max="1000" value="500" class="slider" id="manyBody">
+    </div>
+
+    <div class='checkbox'>
+      <input type="checkbox" id="checkbox-hidden-link">
+      <label for="checkbox-hidden-link">Show hidden link</label>
+    </div>
+
+    <div class='checkbox'>
+      <input type="checkbox" id="checkbox-hidden-node">
+      <label for="checkbox-hidden-node">Show hidden node</label>
+    </div>
+
+    <div class='checkbox'>
+      <input type="checkbox" id="checkbox-border">
+      <label for="checkbox-border">Border Constraint</label>
+    </div>
   </div>
 
   <div class='svg-container'>

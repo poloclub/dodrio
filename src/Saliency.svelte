@@ -3,7 +3,9 @@
   import Tooltip from './Tooltip.svelte';
   import TextClassificationStats from './TextClassificationStats.svelte';
   import SmallMatrix from './SmallMatrix.svelte';
-  import GraphView from './GraphView.svelte'
+  import GraphView from './GraphView.svelte';
+  import * as d3 from 'd3';
+  
   export let width = 400;
 
   let saliencyDiv = null;
