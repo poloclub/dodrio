@@ -16,7 +16,8 @@
   let config = {
     borderConstraint: true,
     showHiddenLink: true,
-    showHiddenNode: false
+    showHiddenNode: false,
+    autoAttention: true,
   };
 
   let forceStrength = {manyBody: 0, attention: 0, textOrder: 0};
@@ -69,7 +70,7 @@
     }
   };
 
-  const bindCheckBox = (simulation) => {
+  const bindCheckBox = (simulation, links) => {
     // Border checkbox
     let borderCheckBox = d3.select('#checkbox-border')
       .property('checked', config.borderConstraint);
@@ -101,6 +102,24 @@
         .style('visibility', config.showHiddenNode ? 'visible' : 'hidden');
     });
 
+    // Automatic attention link strength checkbox
+    let autoCheckBox = d3.select('#checkbox-auto-attention')
+      .property('checked', config.autoAttention);
+    
+    autoCheckBox.on('change', (event) => {
+      config.autoAttention = event.target.checked;
+
+      if (config.autoAttention) {
+        simulation.force('attentionLink', d3.forceLink(links)
+          .id(d => d.id));
+        simulation.alpha(0.3).restart();
+      } else {
+        simulation.force('attentionLink')
+          .strength(forceStrength.attention);
+        simulation.alpha(0.3).restart();
+      }
+    });
+
   };
 
   const bindSlider = (name, simulation, min, max, defaultValue) => {
@@ -115,6 +134,10 @@
       switch (name) {
       case 'attention':
         simulation.force('attentionLink').strength(value);
+        // Disable the auto attention
+        d3.select('#checkbox-auto-attention')
+          .property('checked', false);
+        config.autoAttention = false;
         break;
       case 'textOrder':
         simulation.force('textLink').strength(value);
@@ -234,7 +257,7 @@
 
     // Change the min alpha so that the nodes do not shake at the end (end earlier)
     // The default alphaMin is 0.0001
-    simulation.alphaMin(0.01);
+    simulation.alphaMin(0.001);
 
     let linkLines = svg.append('g')
       .attr('stroke', '#999')
@@ -370,7 +393,7 @@
     bindSlider('textOrder', simulation, 0, 10, initTextOrderStrength);
     bindSlider('manyBody', simulation, -1000, 0, initManyBodyStrength);
 
-    bindCheckBox(simulation);
+    bindCheckBox(simulation, links);
 
   };
 
@@ -462,6 +485,11 @@
     <div class='checkbox'>
       <input type="checkbox" id="checkbox-border">
       <label for="checkbox-border">Border Constraint</label>
+    </div>
+    
+    <div class='checkbox'>
+      <input type="checkbox" id="checkbox-auto-attention">
+      <label for="checkbox-auto-attention">Auto attention strength </label>
     </div>
   </div>
 
