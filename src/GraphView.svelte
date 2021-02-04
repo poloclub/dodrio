@@ -183,6 +183,10 @@
     let nodes = graphData.nodes.map(d => Object.create(d));
     links = links.map(d => Object.create(d));
 
+    // Maintain a set of all existing node indices
+    let nodeIndices = new Set();
+    graphData.nodes.forEach(d => nodeIndices.add(+d.id));
+
     // Add text order hidden links
     let hiddenLinks = [];
     for (let i = 0; i < nodes.length - 1; i++) {
@@ -204,6 +208,10 @@
     let nodeByID = new Map(nodes.map(d => [d.id, d]));
     let bilinks = [];
 
+    // Add links between intermediate node and its previous token and afterward
+    // token
+    let hiddenTextOrderLinks = [];
+
     links.forEach(d => {
       let source = nodeByID.get(d.source);
       let target = nodeByID.get(d.target);
@@ -213,11 +221,29 @@
       curBilink.selfLoop = source === target;
       
       nodes.push(intermediate);
-      links.push({source: source, target: intermediate},
-        {source: intermediate, target: target});
+      links.push(
+        {source: source, target: intermediate},
+        {source: intermediate, target: target}
+      );
 
       bilinks.push(curBilink);
+
+      if (nodeIndices.has(d.source + 1)) {
+        hiddenTextOrderLinks.push(
+          {source: intermediate, target: nodeByID.get(d.source + 1)}
+        );
+      }
+
+      if (nodeIndices.has(d.target - 1)) {
+        hiddenTextOrderLinks.push(
+          {source: nodeByID.get(d.target - 1), target: intermediate}
+        );
+      }
     });
+
+    console.log(hiddenTextOrderLinks);
+
+
 
     // Create a scale for the node radius
     let allSaliencyScores = nodes.map(d => +d.saliency);
@@ -255,6 +281,12 @@
       .id(d => d.id)
       .strength(initTextOrderStrength)
     );
+
+    // Force 5 (Text order link force on hidden nodes)
+    simulation.force('hiddenTextLink', d3.forceLink(hiddenTextOrderLinks)
+      .id(d => d.id)
+      .strength(initTextOrderStrength)
+    );    
 
     // Change the min alpha so that the nodes do not shake at the end (end earlier)
     // The default alphaMin is 0.0001
