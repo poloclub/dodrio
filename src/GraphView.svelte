@@ -11,11 +11,11 @@
   const SVGPadding = {top: 3, left: 3, right: 3, bottom: 3};
 
   const minNodeRadius = 19;
-  const maxNodeRadius = 30;
+  const maxNodeRadius = 40;
 
   let config = {
     borderConstraint: true,
-    showHiddenLink: true,
+    showHiddenLink: false,
     showHiddenNode: false,
     autoAttention: true,
   };
@@ -241,10 +241,6 @@
       }
     });
 
-    console.log(hiddenTextOrderLinks);
-
-
-
     // Create a scale for the node radius
     let allSaliencyScores = nodes.map(d => +d.saliency);
     let nodeRadiusScale = d3.scaleLinear()
@@ -341,10 +337,15 @@
       .call(drag(simulation));
 
     // Add circle to each node
+    // Create a color scale to represent the text order
+    let colorScale = d3.scaleLinear()
+      .domain(d3.extent(nodeIndices))
+      .range([d3.rgb('#D4E5F4'), d3.rgb('#1E6CB0')]);
+    
     nodeGroups.append('circle')
       .attr('class', 'node-circle')
       .attr('r', d => nodeRadiusScale(+d.saliency))
-      .style('fill', 'skyblue');
+      .style('fill', d => colorScale(d.id));
     
     // Add token text to each node
     nodeGroups.append('text')
