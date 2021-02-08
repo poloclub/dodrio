@@ -1,6 +1,7 @@
 <script>
   import GraphView from './GraphView.svelte';
   import Saliency from './Saliency.svelte';
+  import CircleView from './CircleView.svelte';
 
   let saliencyVisCount = 1;
 
@@ -28,7 +29,8 @@
 {#each {length: saliencyVisCount} as _, i}
     <div class='saliency'>
       <!-- <Saliency width={950}/> -->
-      <GraphView />
+      <!-- <GraphView /> -->
+      <CircleView />
 	</div>
 {/each}
 
