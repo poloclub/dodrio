@@ -26,96 +26,6 @@
     return Math.round((num + Number.EPSILON) * (10 ** decimal)) / (10 ** decimal);
   };
 
-  const bindCheckBox = (simulation, links) => {
-    // Border checkbox
-    let borderCheckBox = d3.select('#checkbox-border')
-      .property('checked', config.borderConstraint);
-
-    borderCheckBox.on('change', (event) => {
-      config.borderConstraint = event.target.checked;
-      simulation.alpha(0.2).restart();
-    });
-
-    // Hidden links
-    let hiddenLinkCheckBox = d3.select('#checkbox-hidden-link')
-      .property('checked', config.showHiddenLink);
-    
-    hiddenLinkCheckBox.on('change', (event) => {
-      config.showHiddenLink = event.target.checked;
-      d3.select(graphSVG)
-        .select('g.text-link-group')
-        .style('visibility', config.showHiddenLink ? 'visible' : 'hidden');
-    });
-
-    // Hidden nodes
-    let hiddenNodeCheckBox = d3.select('#checkbox-hidden-node')
-      .property('checked', config.showHiddenNode);
-    
-    hiddenNodeCheckBox.on('change', (event) => {
-      config.showHiddenNode = event.target.checked;
-      d3.select(graphSVG)
-        .select('g.hidden-node-group')
-        .style('visibility', config.showHiddenNode ? 'visible' : 'hidden');
-      simulation.alpha(0.05).restart();
-    });
-
-    // Automatic attention link strength checkbox
-    let autoCheckBox = d3.select('#checkbox-auto-attention')
-      .property('checked', config.autoAttention);
-    
-    autoCheckBox.on('change', (event) => {
-      config.autoAttention = event.target.checked;
-
-      if (config.autoAttention) {
-        simulation.force('attentionLink', d3.forceLink(links)
-          .id(d => d.id));
-        simulation.alpha(0.3).restart();
-      } else {
-        simulation.force('attentionLink')
-          .strength(forceStrength.attention);
-        simulation.alpha(0.3).restart();
-      }
-    });
-
-  };
-
-  const bindSlider = (name, simulation, min, max, defaultValue) => {
-    let slider = d3.select(`#${name}`)
-      .property('value', ((defaultValue - min) / (max - min)) * 1000);
-
-    slider.on('input', () => {
-      let sliderValue = +slider.property('value');
-      let value = (sliderValue / 1000) * (max - min) + min;
-      forceStrength[name] = value;
-
-      switch (name) {
-      case 'attention':
-        simulation.force('attentionLink').strength(value);
-        // Disable the auto attention
-        d3.select('#checkbox-auto-attention')
-          .property('checked', false);
-        config.autoAttention = false;
-        break;
-      case 'textOrder':
-        simulation.force('textLink').strength(value);
-        break;
-      case 'manyBody':
-        simulation.force('charge').strength(value);
-        break;
-      }
-
-      simulation.restart();
-    });
-
-    slider.on('mousedown', (event) => {
-      if (!event.active) simulation.alphaTarget(0.2).restart();
-    });
-
-    slider.on('mouseup', (event) => {
-      if (!event.active) simulation.alphaTarget(0);
-    });
-  };
-
   const createCircleLayout = (nodes, center, radius) => {
     let nodeIndexArray = nodes.map(d => +d.id);
 
@@ -132,8 +42,10 @@
     // Add position to the node objects
     nodes.forEach(d => {
       let alpha = radialScale(d.id);
-      d.x = center.x + radius * Math.sin(alpha);
-      d.y = center.y + radius * Math.cos(alpha);
+      d.x = round(center.x + radius * Math.sin(alpha), 2);
+      d.y = round(center.y + radius * Math.cos(alpha), 2);
+      d.headX = round(center.x + (radius - minNodeRadius * 1.1) * Math.sin(alpha), 2);
+      d.headY = round(center.x + (radius - minNodeRadius * 1.1) * Math.cos(alpha), 2);
     });
   };
 
@@ -159,6 +71,27 @@
     // Map nodes and links to arrays of objects
     let nodes = graphData.nodes.map(d => Object.create(d));
     links = links.map(d => Object.create(d));
+
+    // Calculate the node positions
+    createCircleLayout(
+      nodes,
+      {x: SVGWidth / 2, y: SVGHeight / 2},
+      SVGWidth / 2 - minNodeRadius - SVGPadding.left
+    );
+    
+    // Create links
+    let nodeByID = new Map(nodes.map(d => [d.id, d]));
+    let bilinks = [];
+
+    links.forEach(d => {
+      let source = nodeByID.get(d.source);
+      let target = nodeByID.get(d.target);
+      
+      bilinks.push({source: source, target: target, selfLoop: source === target});
+    });
+
+    console.log(bilinks);
+
 
     // Maintain a set of all existing node indices
     let nodeIndices = new Set();
@@ -189,15 +122,37 @@
       .attr('stroke', '#C2C2C2')
       .attr('fill', '#C2C2C2');
 
-    // Add attention links
-    // let linkLines = svg.append('g')
-    //   .attr('class', 'attention-link-group')
-    //   .attr('stroke', '#C2C2C2')
-    //   .selectAll('path')
-    //   .data(bilinks)
-    //   .join('path')
-    //   .attr('marker-end', 'url(#arrow)')
-    //   .attr('class', 'link');
+    const drawLines = d => {
+      // We need to shorten the path to leave space for arrow
+      // let center = {x: SVGWidth / 2, y: SVGHeight / 2};
+      // let distance = Math.sqrt((d.target.x - center.x) ** 2 + (d.target.y - center.x) ** 2);
+
+      // let vec = [d.target.x - center.x, d.target.y - center.y];
+      // let normedVec = [vec[0] / distance, vec[1] / distance];
+
+      // let newTarget = {
+      //   x: center.x + vec[0] - normedVec[0] * minNodeRadius,
+      //   y: center.y + vec[1] - normedVec[1] * minNodeRadius
+      // };
+
+      return `M ${d.source.headX} ${d.source.headY} L ${d.target.headX} ${d.target.headY}`;
+    };
+
+    const curveFunc = d3.linkHorizontal()
+      .x(d => d.headX)
+      .y(d => d.headY);
+    
+    // Draw edges
+    let linkLines = svg.append('g')
+      .attr('class', 'attention-link-group')
+      .attr('stroke', '#C2C2C2')
+      .selectAll('path')
+      .data(bilinks)
+      .join('path')
+      //.attr('d', curveFunc)
+      .attr('d', drawLines)
+      .attr('marker-end', 'url(#arrow)')
+      .attr('class', 'link');
 
     // Add token nodes
     let nodeGroups = svg.append('g')
@@ -226,7 +181,6 @@
 
     nodeGroups.append('title')
       .text(d => d.token);
-
 
     // Register UI elements from the control panel
     // bindSlider('attention', simulation, 0, 10, initAttentionStrength);
