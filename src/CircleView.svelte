@@ -122,25 +122,48 @@
       .attr('stroke', '#C2C2C2')
       .attr('fill', '#C2C2C2');
 
-    const drawLines = d => {
-      // We need to shorten the path to leave space for arrow
-      // let center = {x: SVGWidth / 2, y: SVGHeight / 2};
-      // let distance = Math.sqrt((d.target.x - center.x) ** 2 + (d.target.y - center.x) ** 2);
-
-      // let vec = [d.target.x - center.x, d.target.y - center.y];
-      // let normedVec = [vec[0] / distance, vec[1] / distance];
-
-      // let newTarget = {
-      //   x: center.x + vec[0] - normedVec[0] * minNodeRadius,
-      //   y: center.y + vec[1] - normedVec[1] * minNodeRadius
-      // };
-
+    const drawLinesp = d => {
       return `M ${d.source.headX} ${d.source.headY} L ${d.target.headX} ${d.target.headY}`;
     };
 
-    const curveFunc = d3.linkHorizontal()
+    const drawLines = d3.line()
+      .x(d => {console.log(d.source.x); return d.source.x;})
+      .y(d => d.source.y);
+
+    const curveFunc = d3.line()
+      .curve(d3.curveBundle.beta(0.85))
       .x(d => d.headX)
       .y(d => d.headY);
+
+    const bezierCurveFunc = d => {
+      let center = {x: SVGWidth / 2, y: SVGHeight / 2};
+      let controlAlpha = 2 / 5;
+
+      // Two control points symmetric regarding the center point
+      let controlP1 = {
+        x: center.x + (d.source.headX - center.x) * controlAlpha,
+        y: center.y + (d.source.headY - center.x) * controlAlpha
+      };
+
+      let controlP2 = {
+        x: center.x + (d.target.headX - center.x) * controlAlpha,
+        y: center.y + (d.target.headY - center.x) * controlAlpha
+      };
+
+      return `M ${d.source.headX},${d.source.headY} C${controlP1.x}, ${controlP1.y},
+       ${controlP2.x}, ${controlP2.y}, ${d.target.headX},${d.target.headY}`;
+    };
+    
+    console.log(drawLines([{source: {x: 0, y: 0}}, {source: {x: 1, y: 1}}]));
+
+    const coupledBilinks = [];
+    bilinks.forEach(l => {
+      coupledBilinks.push([
+        l.source,
+        l.target
+      ]);
+    });
+    console.log(coupledBilinks);
     
     // Draw edges
     let linkLines = svg.append('g')
@@ -149,8 +172,8 @@
       .selectAll('path')
       .data(bilinks)
       .join('path')
-      //.attr('d', curveFunc)
-      .attr('d', drawLines)
+      .attr('d', bezierCurveFunc)
+      //.attr('d', drawLines)
       .attr('marker-end', 'url(#arrow)')
       .attr('class', 'link');
 
@@ -245,6 +268,7 @@
 
   :global(.link) {
     fill: none;
+    opacity: 0.5;
   }
 
 </style>
