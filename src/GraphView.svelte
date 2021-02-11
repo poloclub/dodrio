@@ -123,7 +123,7 @@
 
   };
 
-  const bindSlider = (name, simulation, min, max, defaultValue) => {
+  const bindSlider = (name, simulation, min, max, defaultValue, nodeRadiusScale=null) => {
     let slider = d3.select(`#${name}`)
       .property('value', ((defaultValue - min) / (max - min)) * 1000);
 
@@ -142,9 +142,13 @@
         break;
       case 'textOrder':
         simulation.force('textLink').strength(value);
+        simulation.force('hiddenTextLink').strength(value);
         break;
       case 'manyBody':
         simulation.force('charge').strength(value);
+        break;
+      case 'collide':
+        simulation.force('collide').radius(d => nodeRadiusScale(d.saliency) + value);
         break;
       }
 
@@ -253,10 +257,14 @@
     const initManyBodyStrength = -500;
     const initAttentionStrength = 0.5;
     const initTextOrderStrength = 2;
+    const initRadialStrength = 1;
+    const initCollideRadius = 7;
 
     forceStrength.manyBody = initManyBodyStrength;
     forceStrength.attention = initAttentionStrength;
     forceStrength.textOrder = initTextOrderStrength;
+    forceStrength.radial = initRadialStrength;
+    forceStrength.collide = initCollideRadius;
 
     // Force 1 (ManyBody force)
     simulation.force('charge', d3.forceManyBody()
@@ -283,6 +291,17 @@
       .id(d => d.id)
       .strength(initTextOrderStrength)
     );    
+    
+    // Force 6 (Radial force)
+    // simulation.force('charge', d3.forceCollide().radius(d => nodeRadiusScale(d.saliency) + 15))
+    //   .force('radial', d3.forceRadial(300)
+    //     .x(SVGWidth / 2)
+    //     .y(SVGHeight / 2)
+    //     .strength(initRadialStrength)
+    //   );
+    
+    // Force 7 (Collide force)
+    simulation.force('collide', d3.forceCollide().radius(d => nodeRadiusScale(d.saliency)));
 
     // Change the min alpha so that the nodes do not shake at the end (end earlier)
     // The default alphaMin is 0.0001
@@ -334,6 +353,7 @@
       .data(nodes.filter(d => d.id !== undefined))
       .join('g')
       .attr('class', 'node')
+      .attr('transform', `translate(${SVGWidth / 2}, ${SVGHeight / 2})`)
       .call(drag(simulation));
 
     // Add circle to each node
@@ -459,6 +479,8 @@
     bindSlider('attention', simulation, 0, 10, initAttentionStrength);
     bindSlider('textOrder', simulation, 0, 10, initTextOrderStrength);
     bindSlider('manyBody', simulation, -1000, 0, initManyBodyStrength);
+    bindSlider('collide', simulation, 0, 20, initCollideRadius, nodeRadiusScale);
+
 
     bindCheckBox(simulation, links);
 
@@ -540,6 +562,11 @@
     <div class='slider'>
       <label for='manyBody'>ManyBody Strength [{round(forceStrength.manyBody, 2)}]</label>
       <input type="range" min="0" max="1000" value="500" class="slider" id="manyBody">
+    </div>
+
+    <div class='slider'>
+      <label for='collide'>Node Distance [{round(forceStrength.collide, 2)}]</label>
+      <input type="range" min="0" max="1000" value="500" class="slider" id="collide">
     </div>
 
     <!-- Checkboxes -->

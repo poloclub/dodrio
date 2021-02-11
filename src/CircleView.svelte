@@ -122,22 +122,13 @@
       .attr('stroke', '#C2C2C2')
       .attr('fill', '#C2C2C2');
 
-    const drawLinesp = d => {
+    const drawLines = d => {
       return `M ${d.source.headX} ${d.source.headY} L ${d.target.headX} ${d.target.headY}`;
     };
 
-    const drawLines = d3.line()
-      .x(d => {console.log(d.source.x); return d.source.x;})
-      .y(d => d.source.y);
-
-    const curveFunc = d3.line()
-      .curve(d3.curveBundle.beta(0.85))
-      .x(d => d.headX)
-      .y(d => d.headY);
-
     const bezierCurveFunc = d => {
       let center = {x: SVGWidth / 2, y: SVGHeight / 2};
-      let controlAlpha = 2 / 5;
+      let controlAlpha = 3 / 5;
 
       // Two control points symmetric regarding the center point
       let controlP1 = {
@@ -153,17 +144,6 @@
       return `M ${d.source.headX},${d.source.headY} C${controlP1.x}, ${controlP1.y},
        ${controlP2.x}, ${controlP2.y}, ${d.target.headX},${d.target.headY}`;
     };
-    
-    console.log(drawLines([{source: {x: 0, y: 0}}, {source: {x: 1, y: 1}}]));
-
-    const coupledBilinks = [];
-    bilinks.forEach(l => {
-      coupledBilinks.push([
-        l.source,
-        l.target
-      ]);
-    });
-    console.log(coupledBilinks);
     
     // Draw edges
     let linkLines = svg.append('g')

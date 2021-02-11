@@ -29,8 +29,8 @@
 {#each {length: saliencyVisCount} as _, i}
     <div class='saliency'>
       <!-- <Saliency width={950}/> -->
-      <!-- <GraphView /> -->
-      <CircleView />
+      <GraphView />
+      <!-- <CircleView /> -->
 	</div>
 {/each}
 
