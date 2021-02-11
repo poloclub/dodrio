@@ -13,11 +13,23 @@
   const minNodeRadius = 19;
   const maxNodeRadius = 40;
 
+  const layoutOptions = {
+    force: {
+      value: 'force',
+      name: 'Force Layout'
+    },
+    radial: {
+      value: 'radial',
+      name: 'Radial Layout'
+    } 
+  };
+
   let config = {
     borderConstraint: true,
     showHiddenLink: false,
     showHiddenNode: false,
     autoAttention: true,
+    defaultLayout: layoutOptions.force
   };
 
   let forceStrength = {manyBody: 0, attention: 0, textOrder: 0};
@@ -88,6 +100,10 @@
       config.showHiddenLink = event.target.checked;
       d3.select(graphSVG)
         .select('g.text-link-group')
+        .style('visibility', config.showHiddenLink ? 'visible' : 'hidden');
+
+      d3.select(graphSVG)
+        .select('g.text-hidden-link-group')
         .style('visibility', config.showHiddenLink ? 'visible' : 'hidden');
     });
 
@@ -164,6 +180,16 @@
     });
   };
 
+  const bindSelect = () => {
+    let selectOption = d3.select('#select-layout')
+      .property('value', config.defaultLayout.value);
+
+    selectOption.on('change', () => {
+      let newLayout = selectOption.property('value');
+
+    });
+  };
+
   const drawGraph = () => {
     // Filter the links based on the weight
     const weightThreshold = 0.05;
@@ -219,7 +245,7 @@
     links.forEach(d => {
       let source = nodeByID.get(d.source);
       let target = nodeByID.get(d.target);
-      let intermediate = {};
+      let intermediate = {hidden: true};
 
       let curBilink = [source, intermediate, target];
       curBilink.selfLoop = source === target;
@@ -232,6 +258,12 @@
 
       bilinks.push(curBilink);
 
+      if (nodeIndices.has(d.source - 1)) {
+        hiddenTextOrderLinks.push(
+          {source: nodeByID.get(d.source - 1), target: intermediate}
+        );
+      }
+
       if (nodeIndices.has(d.source + 1)) {
         hiddenTextOrderLinks.push(
           {source: intermediate, target: nodeByID.get(d.source + 1)}
@@ -241,6 +273,12 @@
       if (nodeIndices.has(d.target - 1)) {
         hiddenTextOrderLinks.push(
           {source: nodeByID.get(d.target - 1), target: intermediate}
+        );
+      }
+
+      if (nodeIndices.has(d.target + 1)) {
+        hiddenTextOrderLinks.push(
+          {source: intermediate, target: nodeByID.get(d.target + 1)}
         );
       }
     });
@@ -254,7 +292,7 @@
     
     // Define the force
     let simulation = d3.forceSimulation(nodes);
-    const initManyBodyStrength = -500;
+    const initManyBodyStrength = -1400;
     const initAttentionStrength = 0.5;
     const initTextOrderStrength = 2;
     const initRadialStrength = 1;
@@ -301,7 +339,9 @@
     //   );
     
     // Force 7 (Collide force)
-    simulation.force('collide', d3.forceCollide().radius(d => nodeRadiusScale(d.saliency)));
+    simulation.force('collide', d3.forceCollide()
+      .radius(d => d.saliency === undefined ? 0 : nodeRadiusScale(d.saliency))
+    );
 
     // Change the min alpha so that the nodes do not shake at the end (end earlier)
     // The default alphaMin is 0.0001
@@ -342,6 +382,17 @@
       .style('stroke-opacity', 1)
       .selectAll('line')
       .data(hiddenLinks)
+      .join('line')
+      .attr('class', 'link');
+
+    // Add hidden text order links
+    let textHiddenLinkLines = svg.append('g')
+      .attr('class', 'text-hidden-link-group')
+      .style('visibility', config.showHiddenLink ? 'visible' : 'hidden')
+      .style('stroke', 'blue')
+      .style('stroke-opacity', 1)
+      .selectAll('line')
+      .data(hiddenTextOrderLinks)
       .join('line')
       .attr('class', 'link');
 
@@ -470,20 +521,25 @@
           .attr('y1', d => borderConstraint(d.source, nodeRadiusScale).top)
           .attr('x2', d => borderConstraint(d.target, nodeRadiusScale).left)
           .attr('y2', d => borderConstraint(d.target, nodeRadiusScale).top);
-      }
 
+        textHiddenLinkLines
+          .attr('x1', d => borderConstraint(d.source, nodeRadiusScale).left)
+          .attr('y1', d => borderConstraint(d.source, nodeRadiusScale).top)
+          .attr('x2', d => borderConstraint(d.target, nodeRadiusScale).left)
+          .attr('y2', d => borderConstraint(d.target, nodeRadiusScale).top);
+      }
 
     });
 
     // Register UI elements from the control panel
     bindSlider('attention', simulation, 0, 10, initAttentionStrength);
     bindSlider('textOrder', simulation, 0, 10, initTextOrderStrength);
-    bindSlider('manyBody', simulation, -1000, 0, initManyBodyStrength);
+    bindSlider('manyBody', simulation, -2000, 0, initManyBodyStrength);
     bindSlider('collide', simulation, 0, 20, initCollideRadius, nodeRadiusScale);
-
 
     bindCheckBox(simulation, links);
 
+    bindSelect();
   };
 
   onMount(async () => {
@@ -588,6 +644,14 @@
     <div class='checkbox'>
       <input type="checkbox" id="checkbox-border">
       <label for="checkbox-border">Border Constraint</label>
+    </div>
+    
+    <!-- Selection -->
+    <div class='select'>
+      <select name='layout' id='select-layout'>
+        <option value='force'>Force Layout</option>
+        <option value='radial'>Radial Layout</option>
+      </select>
     </div>
     
   </div>
