@@ -477,7 +477,7 @@
         let center = {x: SVGWidth / 2, y: SVGHeight / 2};
 
         // We need to shorten the path to leave space for arrow
-        let theta = 1- minNodeRadius / radialRadius;
+        let theta = 1 - minNodeRadius / radialRadius;
         let modTarget = {
           x: center.x + (target.x - center.x) * theta,
           y: center.y + (target.y - center.y) * theta,
