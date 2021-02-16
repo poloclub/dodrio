@@ -16,6 +16,9 @@
   const radialRadius = 300;
   const radialCurveAlpha = 3 / 5;
 
+  const ease = d3.easeCubicInOut;
+  const animationTime = 300;
+
   const layoutOptions = {
     force: {
       value: 'force',
@@ -39,28 +42,26 @@
     defaultLayout: layoutOptions.force
   };
 
-  let initForceStrength = {
+  let forceStrength = {
     force: {
-      manyBodyStrength: -1400,
-      attentionStrength: 0.5,
-      textOrderStrength: 2,
+      manyBody: -1400,
+      attention: 0.5,
+      textOrder: 2,
       collideRadius: 7
     },
     radial: {
-      textOrderStrength: 0.5,
-      radialStrength: 1
+      textOrder: 0.5,
+      radial: 1
     },
     grid: {
-      manyBodyStrength: -1400,
-      attentionStrength: 0.5,
-      textOrderStrength: 2,
+      manyBody: -1400,
+      attention: 0.5,
+      textOrder: 2,
       collideRadius: 7
     }
   };
 
   let currentLayout = config.defaultLayout;
-
-  let forceStrength = {manyBody: 0, attention: 0, textOrder: 0};
 
   const round = (num, decimal) => {
     return Math.round((num + Number.EPSILON) * (10 ** decimal)) / (10 ** decimal);
@@ -208,15 +209,112 @@
     });
   };
 
-  const bindSelect = () => {
+  const resetSimulation = (simulation) => {
+    simulation.force('collide', null);
+    simulation.force('attentionLink', null);
+    simulation.force('charge', null);
+    simulation.force('center', null);
+    simulation.force('textLink', null);
+    simulation.force('hiddenTextLink', null);
+    simulation.force('posX', null);
+    simulation.force('posY', null);
+  };
+
+  const bindSelect = (simulation, links, hiddenLinks, hiddenTextOrderLinks,
+    nodeRadiusScale, radialScale, nodeGroups) => {
     currentLayout = config.defaultLayout;
     let selectOption = d3.select('#select-layout')
       .property('value', config.defaultLayout.value);
 
     selectOption.on('change', () => {
-      let newLayout = selectOption.property('value');
+      let newLayoutValue = selectOption.property('value');
 
+      // Need to switch layout
+      if (newLayoutValue !== currentLayout.value) {
+        resetSimulation(simulation);
+
+        switch(newLayoutValue) {
+        case 'force':
+          currentLayout = layoutOptions.force;
+          initForceSim(simulation, links, hiddenLinks, hiddenTextOrderLinks, nodeRadiusScale);
+          break;
+        case 'radial':
+          currentLayout = layoutOptions.radial;
+          initRadialSim(simulation, hiddenLinks, radialScale);
+          break;
+        case 'grid':
+          currentLayout = layoutOptions.grid;
+          break;
+        }
+
+        updateNodeRadius(nodeGroups, nodeRadiusScale);
+        simulation.velocityDecay(0.9);
+        simulation.alpha(0.1).restart();
+        simulation.velocityDecay(0.4);
+      }
     });
+  };
+
+  const updateNodeRadius = (nodeGroups, nodeRadiusScale) => {
+    nodeGroups.selectAll('circle')
+      .transition('node-radius')
+      .duration(animationTime)
+      .ease(ease)
+      .attr('r', d => currentLayout.value === 'force' ?
+        nodeRadiusScale(+d.saliency) : minNodeRadius);
+  };
+
+  const initForceSim = (simulation, links, hiddenLinks, hiddenTextOrderLinks, nodeRadiusScale) => {
+    // Force 1 (ManyBody force)
+    simulation.force('charge', d3.forceManyBody()
+      .strength(forceStrength.force.manyBody)
+    );
+
+    // Force 2 (Center force)
+    simulation.force('center', d3.forceCenter(SVGWidth / 2, SVGHeight / 2));
+
+    // Force 3 (Link force)
+    simulation.force('attentionLink', d3.forceLink(links)
+      .id(d => d.id)
+
+    );
+    
+    // Force 4 (Text order link force)
+    simulation.force('textLink', d3.forceLink(hiddenLinks)
+      .id(d => d.id)
+      .strength(forceStrength.force.textOrder)
+    );
+
+    // Force 5 (Text order link force on hidden nodes)
+    simulation.force('hiddenTextLink', d3.forceLink(hiddenTextOrderLinks)
+      .id(d => d.id)
+      .strength(forceStrength.force.textOrder)
+    );    
+    
+    // Force 6 (Collide force)
+    simulation.force('collide', d3.forceCollide()
+      .radius(d => d.saliency === undefined ? 0 : nodeRadiusScale(d.saliency))
+    );
+  };
+
+  const initRadialSim = (simulation, hiddenLinks, radialScale) => {
+  
+    // Force 1 (Tex order link force)
+    simulation.force('textLink', d3.forceLink(hiddenLinks)
+      .id(d => d.id)
+      .strength(forceStrength.radial.textOrder)
+    );
+
+    // Force 2 Custom radial force
+    simulation.force('posY', d3.forceY()
+      .y(d => SVGWidth / 2 + Math.sin(radialScale(d.index)) * radialRadius)
+      .strength(forceStrength.radial.radial)
+    );
+
+    simulation.force('posX', d3.forceX()
+      .x(d => SVGWidth / 2 + Math.cos(radialScale(d.index)) * radialRadius)
+      .strength(forceStrength.radial.radial)
+    );
   };
   
   const tickLinkForce = (d, nodeRadiusScale) => {
@@ -423,70 +521,12 @@
     // Define the force
     let simulation = d3.forceSimulation(nodes);
 
-    const initForceSim = (simulation) => {
-      // Force 1 (ManyBody force)
-      simulation.force('charge', d3.forceManyBody()
-        .strength(initForceStrength.force.manyBodyStrength)
-      );
-
-      // Force 2 (Center force)
-      simulation.force('center', d3.forceCenter(SVGWidth / 2, SVGHeight / 2));
-
-      // Force 3 (Link force)
-      simulation.force('attentionLink', d3.forceLink(links)
-        .id(d => d.id)
-        //.strength(initAttentionStrength)
-      );
-      
-      // Force 4 (Text order link force)
-      simulation.force('textLink', d3.forceLink(hiddenLinks)
-        .id(d => d.id)
-        .strength(initForceStrength.force.textOrderStrength)
-      );
-
-      // Force 5 (Text order link force on hidden nodes)
-      simulation.force('hiddenTextLink', d3.forceLink(hiddenTextOrderLinks)
-        .id(d => d.id)
-        .strength(initForceStrength.force.textOrderStrength)
-      );    
-      
-      // Force 6 (Collide force)
-      simulation.force('collide', d3.forceCollide()
-        .radius(d => d.saliency === undefined ? 0 : nodeRadiusScale(d.saliency))
-      );
-
-      forceStrength.manyBody = initForceStrength.force.manyBodyStrength;
-      forceStrength.attention = initForceStrength.force.attentionStrength;
-      forceStrength.textOrder = initForceStrength.force.textOrderStrength;
-      forceStrength.collide = initForceStrength.force.collideRadius;
-    };
-
-    const initRadialSim = (simulation, radialScale) => {
-    
-      // Force 1 (Tex order link force)
-      simulation.force('textLink', d3.forceLink(hiddenLinks)
-        .id(d => d.id)
-        .strength(initForceStrength.radial.textOrderStrength)
-      );
-
-      // Force 2 Custom radial force
-      simulation.force('posY', d3.forceY()
-        .y(d => SVGWidth / 2 + Math.sin(radialScale(d.index)) * radialRadius)
-        .strength(initForceStrength.radial.radialStrength)
-      );
-
-      simulation.force('posX', d3.forceX()
-        .x(d => SVGWidth / 2 + Math.cos(radialScale(d.index)) * radialRadius)
-        .strength(initForceStrength.radial.radialStrength)
-      );
-    };
-
     switch(currentLayout.value) {
     case 'force':
-      initForceSim(simulation);
+      initForceSim(simulation, links, hiddenLinks, hiddenTextOrderLinks, nodeRadiusScale);
       break;
     case 'radial':
-      initRadialSim(simulation, radialScale);
+      initRadialSim(simulation, hiddenLinks, radialScale);
       break;
     }
 
@@ -560,7 +600,6 @@
       .domain(d3.extent(nodeIndices))
       .range([d3.rgb('#D4E5F4'), d3.rgb('#1E6CB0')]);
     
-    console.log(currentLayout.value);
     nodeGroups.append('circle')
       .attr('class', 'node-circle')
       .attr('r', d => currentLayout.value === 'force' ?
@@ -633,14 +672,15 @@
     });
 
     // Register UI elements from the control panel
-    bindSlider('attention', simulation, 0, 10, initForceStrength.force.attentionStrength);
-    bindSlider('textOrder', simulation, 0, 10, initForceStrength.force.textOrderStrength);
-    bindSlider('manyBody', simulation, -2000, 0, initForceStrength.force.manyBodyStrength);
-    bindSlider('collide', simulation, 0, 20, initForceStrength.force.collideRadius, nodeRadiusScale);
+    bindSlider('attention', simulation, 0, 10, forceStrength.force.attention);
+    bindSlider('textOrder', simulation, 0, 10, forceStrength.force.textOrder);
+    bindSlider('manyBody', simulation, -2000, 0, forceStrength.force.manyBody);
+    bindSlider('collide', simulation, 0, 20, forceStrength.force.collideRadius, nodeRadiusScale);
 
     bindCheckBox(simulation, links);
 
-    bindSelect();
+    bindSelect(simulation, links, hiddenLinks, hiddenTextOrderLinks,
+      nodeRadiusScale, radialScale, nodeGroups);
   };
 
   onMount(async () => {
