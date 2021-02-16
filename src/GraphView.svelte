@@ -12,6 +12,9 @@
 
   const minNodeRadius = 19;
   const maxNodeRadius = 40;
+  
+  const radialRadius = 300;
+  const radialCurveAlpha = 3 / 5;
 
   const layoutOptions = {
     force: {
@@ -21,6 +24,10 @@
     radial: {
       value: 'radial',
       name: 'Radial Layout'
+    },
+    grid: {
+      value: 'grid',
+      name: 'Grid Layout'
     } 
   };
 
@@ -31,6 +38,27 @@
     autoAttention: true,
     defaultLayout: layoutOptions.force
   };
+
+  let initForceStrength = {
+    force: {
+      manyBodyStrength: -1400,
+      attentionStrength: 0.5,
+      textOrderStrength: 2,
+      collideRadius: 7
+    },
+    radial: {
+      textOrderStrength: 0.5,
+      radialStrength: 1
+    },
+    grid: {
+      manyBodyStrength: -1400,
+      attentionStrength: 0.5,
+      textOrderStrength: 2,
+      collideRadius: 7
+    }
+  };
+
+  let currentLayout = config.defaultLayout;
 
   let forceStrength = {manyBody: 0, attention: 0, textOrder: 0};
 
@@ -181,6 +209,7 @@
   };
 
   const bindSelect = () => {
+    currentLayout = config.defaultLayout;
     let selectOption = d3.select('#select-layout')
       .property('value', config.defaultLayout.value);
 
@@ -189,6 +218,97 @@
 
     });
   };
+  
+  const tickLinkForce = (d, nodeRadiusScale) => {
+    const sCoord = borderConstraint(d[0], nodeRadiusScale);
+    const iCoord = borderConstraint(d[1], nodeRadiusScale);
+    const tCoord = borderConstraint(d[2], nodeRadiusScale);
+
+    if (d.selfLoop) {
+      // Need to handle the arc manually if there is a self loop
+      const iVec = [iCoord.left - sCoord.left, iCoord.top - sCoord.top];
+      const iVecNorm = Math.sqrt((iVec[0] ** 2 + iVec[1] ** 2));
+
+      // Rotate 90 degree
+      // Normalized the rotate direction, use alpha to control magnitude
+      const alpha = 50;
+      const iVecClock90 = [-iVec[1] / iVecNorm * alpha, iVec[0] / iVecNorm * alpha];
+      const iVecCounterClock90 = [iVec[1] / iVecNorm * alpha, -iVec[0] / iVecNorm * alpha];
+
+      const leftControl = [sCoord.left + iVec[0] + iVecClock90[0],
+        sCoord.top + iVec[1] + iVecClock90[1]];
+      const rightControl = [sCoord.left + iVec[0] + iVecCounterClock90[0],
+        sCoord.top + iVec[1] + iVecCounterClock90[1]];
+
+      // We need to shorten the path to leave space for arrow
+      let halfLen = Math.sqrt((tCoord.left - rightControl[0]) ** 2 + (tCoord.top - rightControl[1]) ** 2);
+      let theta = nodeRadiusScale(d[2].saliency) / halfLen;
+      let modTCoord = {
+        left: tCoord.left + (iCoord.left - tCoord.left) * theta,
+        top: tCoord.top + (iCoord.top - tCoord.top) * theta,
+      };
+
+      // Draw a bezier curve with two control points (which are left anr right
+      // perpendicular to the self loop node -> intermediate node vector)
+      return 'M' + sCoord.left + ',' + sCoord.top
+        + 'C' + leftControl[0] + ',' + leftControl[1]
+        + ' ' + rightControl[0] + ',' + rightControl[1]
+        + ' ' + modTCoord.left + ',' + modTCoord.top;
+
+    } else {
+      // We need to shorten the path to leave space for arrow
+      let halfLen = Math.sqrt((tCoord.left - iCoord.left) ** 2 + (tCoord.top - iCoord.top) ** 2);
+      let theta = nodeRadiusScale(d[2].saliency) / halfLen;
+      let modTCoord = {
+        left: tCoord.left + (iCoord.left - tCoord.left) * theta,
+        top: tCoord.top + (iCoord.top - tCoord.top) * theta,
+      };
+
+      // Draw simple reflective bezier curve if not self loop
+      return 'M' + sCoord.left + ',' + sCoord.top
+        + 'S' + iCoord.left + ',' + iCoord.top
+        + ' ' + modTCoord.left + ',' + modTCoord.top;
+    }
+  };
+
+  const tickNodeForce = (d, nodeRadiusScale) => {
+    // Maker sure the nodes are inside the box
+    const coord = borderConstraint(d, nodeRadiusScale);
+    return `translate(${coord.left}, ${coord.top})`;
+  };
+
+  const tickLinkRadial = (d) => {
+    let source = {x: d[0].x, y: d[0].y};
+    let target = {x: d[2].x, y: d[2].y};
+    let center = {x: SVGWidth / 2, y: SVGHeight / 2};
+
+    // We need to shorten the path to leave space for arrow
+    let theta = 1 - minNodeRadius / radialRadius;
+    let modTarget = {
+      x: center.x + (target.x - center.x) * theta,
+      y: center.y + (target.y - center.y) * theta,
+    };
+
+    let modSource = {
+      x: center.x + (source.x - center.x) * theta,
+      y: center.y + (source.y - center.y) * theta,
+    };
+    
+    // Two control points symmetric regarding the center point
+    let controlP1 = {
+      x: center.x + (modSource.x - center.x) * radialCurveAlpha,
+      y: center.y + (modSource.y - center.x) * radialCurveAlpha
+    };
+
+    let controlP2 = {
+      x: center.x + (modTarget.x - center.x) * radialCurveAlpha,
+      y: center.y + (modTarget.y - center.x) * radialCurveAlpha
+    };
+
+    return `M ${modSource.x},${modSource.y} C${controlP1.x}, ${controlP1.y},
+      ${controlP2.x}, ${controlP2.y}, ${modTarget.x},${modTarget.y}`;
+  };
+
 
   const drawGraph = () => {
     // Filter the links based on the weight
@@ -216,6 +336,13 @@
     // Maintain a set of all existing node indices
     let nodeIndices = new Set();
     graphData.nodes.forEach(d => nodeIndices.add(+d.id));
+    let nodeIndexArray = Array.from(nodeIndices);
+
+    // Create a radial scale for radial layout
+    let radialScale = d3.scaleLinear()
+      .domain(d3.extent(nodeIndexArray))
+      .range([-Math.PI / 2, Math.PI * 3 / 2])
+      .nice();
 
     // Add text order hidden links
     let hiddenLinks = [];
@@ -226,10 +353,13 @@
       };
       hiddenLinks.push(hiddenLink);
     }
-    // hiddenLinks.push({
-    //   source: +nodes[nodes.length - 1].id,
-    //   target: nodes[0].id
-    // });
+
+    // Add a connection between the first and last token
+    hiddenLinks.push({
+      source: +nodes[nodes.length - 1].id,
+      target: nodes[0].id
+    });
+
     hiddenLinks = hiddenLinks.map(d => Object.create(d));
     
     console.log(nodes, links);
@@ -292,56 +422,73 @@
     
     // Define the force
     let simulation = d3.forceSimulation(nodes);
-    const initManyBodyStrength = -1400;
-    const initAttentionStrength = 0.5;
-    const initTextOrderStrength = 2;
-    const initRadialStrength = 1;
-    const initCollideRadius = 7;
 
-    forceStrength.manyBody = initManyBodyStrength;
-    forceStrength.attention = initAttentionStrength;
-    forceStrength.textOrder = initTextOrderStrength;
-    forceStrength.radial = initRadialStrength;
-    forceStrength.collide = initCollideRadius;
+    const initForceSim = (simulation) => {
+      // Force 1 (ManyBody force)
+      simulation.force('charge', d3.forceManyBody()
+        .strength(initForceStrength.force.manyBodyStrength)
+      );
 
-    // Force 1 (ManyBody force)
-    simulation.force('charge', d3.forceManyBody()
-      .strength(initManyBodyStrength)
-    );
+      // Force 2 (Center force)
+      simulation.force('center', d3.forceCenter(SVGWidth / 2, SVGHeight / 2));
 
-    // Force 2 (Center force)
-    simulation.force('center', d3.forceCenter(SVGWidth / 2, SVGHeight / 2));
+      // Force 3 (Link force)
+      simulation.force('attentionLink', d3.forceLink(links)
+        .id(d => d.id)
+        //.strength(initAttentionStrength)
+      );
+      
+      // Force 4 (Text order link force)
+      simulation.force('textLink', d3.forceLink(hiddenLinks)
+        .id(d => d.id)
+        .strength(initForceStrength.force.textOrderStrength)
+      );
 
-    // Force 3 (Link force)
-    simulation.force('attentionLink', d3.forceLink(links)
-      .id(d => d.id)
-      //.strength(initAttentionStrength)
-    );
+      // Force 5 (Text order link force on hidden nodes)
+      simulation.force('hiddenTextLink', d3.forceLink(hiddenTextOrderLinks)
+        .id(d => d.id)
+        .strength(initForceStrength.force.textOrderStrength)
+      );    
+      
+      // Force 6 (Collide force)
+      simulation.force('collide', d3.forceCollide()
+        .radius(d => d.saliency === undefined ? 0 : nodeRadiusScale(d.saliency))
+      );
+
+      forceStrength.manyBody = initForceStrength.force.manyBodyStrength;
+      forceStrength.attention = initForceStrength.force.attentionStrength;
+      forceStrength.textOrder = initForceStrength.force.textOrderStrength;
+      forceStrength.collide = initForceStrength.force.collideRadius;
+    };
+
+    const initRadialSim = (simulation, radialScale) => {
     
-    // Force 4 (Text order link force)
-    simulation.force('textLink', d3.forceLink(hiddenLinks)
-      .id(d => d.id)
-      .strength(initTextOrderStrength)
-    );
+      // Force 1 (Tex order link force)
+      simulation.force('textLink', d3.forceLink(hiddenLinks)
+        .id(d => d.id)
+        .strength(initForceStrength.radial.textOrderStrength)
+      );
 
-    // Force 5 (Text order link force on hidden nodes)
-    simulation.force('hiddenTextLink', d3.forceLink(hiddenTextOrderLinks)
-      .id(d => d.id)
-      .strength(initTextOrderStrength)
-    );    
-    
-    // Force 6 (Radial force)
-    // simulation.force('charge', d3.forceCollide().radius(d => nodeRadiusScale(d.saliency) + 15))
-    //   .force('radial', d3.forceRadial(300)
-    //     .x(SVGWidth / 2)
-    //     .y(SVGHeight / 2)
-    //     .strength(initRadialStrength)
-    //   );
-    
-    // Force 7 (Collide force)
-    simulation.force('collide', d3.forceCollide()
-      .radius(d => d.saliency === undefined ? 0 : nodeRadiusScale(d.saliency))
-    );
+      // Force 2 Custom radial force
+      simulation.force('posY', d3.forceY()
+        .y(d => SVGWidth / 2 + Math.sin(radialScale(d.index)) * radialRadius)
+        .strength(initForceStrength.radial.radialStrength)
+      );
+
+      simulation.force('posX', d3.forceX()
+        .x(d => SVGWidth / 2 + Math.cos(radialScale(d.index)) * radialRadius)
+        .strength(initForceStrength.radial.radialStrength)
+      );
+    };
+
+    switch(currentLayout.value) {
+    case 'force':
+      initForceSim(simulation);
+      break;
+    case 'radial':
+      initRadialSim(simulation, radialScale);
+      break;
+    }
 
     // Change the min alpha so that the nodes do not shake at the end (end earlier)
     // The default alphaMin is 0.0001
@@ -413,9 +560,11 @@
       .domain(d3.extent(nodeIndices))
       .range([d3.rgb('#D4E5F4'), d3.rgb('#1E6CB0')]);
     
+    console.log(currentLayout.value);
     nodeGroups.append('circle')
       .attr('class', 'node-circle')
-      .attr('r', d => nodeRadiusScale(+d.saliency))
+      .attr('r', d => currentLayout.value === 'force' ?
+        nodeRadiusScale(+d.saliency) : minNodeRadius)
       .style('fill', d => colorScale(d.id));
     
     // Add token text to each node
@@ -446,72 +595,25 @@
       console.log('Tick');
 
       // Update the attention links
-      linkLines.attr('d', d => {
-        const sCoord = borderConstraint(d[0], nodeRadiusScale);
-        const iCoord = borderConstraint(d[1], nodeRadiusScale);
-        const tCoord = borderConstraint(d[2], nodeRadiusScale);
+      switch (currentLayout.value) {
+      case 'force':
+        linkLines.attr('d', d => tickLinkForce(d, nodeRadiusScale));
+        break;
+      case 'radial':
+        linkLines.attr('d', d => tickLinkRadial(d));
+        break;
+      }
 
-        if (d.selfLoop) {
-          // Need to handle the arc manually if there is a self loop
-          const iVec = [iCoord.left - sCoord.left, iCoord.top - sCoord.top];
-          const iVecNorm = Math.sqrt((iVec[0] ** 2 + iVec[1] ** 2));
-
-          // Rotate 90 degree
-          // Normalized the rotate direction, use alpha to control magnitude
-          const alpha = 50;
-          const iVecClock90 = [-iVec[1] / iVecNorm * alpha, iVec[0] / iVecNorm * alpha];
-          const iVecCounterClock90 = [iVec[1] / iVecNorm * alpha, -iVec[0] / iVecNorm * alpha];
-
-          const leftControl = [sCoord.left + iVec[0] + iVecClock90[0],
-            sCoord.top + iVec[1] + iVecClock90[1]];
-          const rightControl = [sCoord.left + iVec[0] + iVecCounterClock90[0],
-            sCoord.top + iVec[1] + iVecCounterClock90[1]];
-
-          // We need to shorten the path to leave space for arrow
-          let halfLen = Math.sqrt((tCoord.left - rightControl[0]) ** 2 + (tCoord.top - rightControl[1]) ** 2);
-          let theta = nodeRadiusScale(d[2].saliency) / halfLen;
-          let modTCoord = {
-            left: tCoord.left + (iCoord.left - tCoord.left) * theta,
-            top: tCoord.top + (iCoord.top - tCoord.top) * theta,
-          };
-
-          // Draw a bezier curve with two control points (which are left anr right
-          // perpendicular to the self loop node -> intermediate node vector)
-          return 'M' + sCoord.left + ',' + sCoord.top
-            + 'C' + leftControl[0] + ',' + leftControl[1]
-            + ' ' + rightControl[0] + ',' + rightControl[1]
-            + ' ' + modTCoord.left + ',' + modTCoord.top;
-
-        } else {
-          // We need to shorten the path to leave space for arrow
-          let halfLen = Math.sqrt((tCoord.left - iCoord.left) ** 2 + (tCoord.top - iCoord.top) ** 2);
-          let theta = nodeRadiusScale(d[2].saliency) / halfLen;
-          let modTCoord = {
-            left: tCoord.left + (iCoord.left - tCoord.left) * theta,
-            top: tCoord.top + (iCoord.top - tCoord.top) * theta,
-          };
-
-          // Draw simple reflective bezier curve if not self loop
-          return 'M' + sCoord.left + ',' + sCoord.top
-            + 'S' + iCoord.left + ',' + iCoord.top
-            + ' ' + modTCoord.left + ',' + modTCoord.top;
-        }
-      });
+      if (currentLayout.value === 'force') {
+        linkLines.attr('d', d => tickLinkForce(d, nodeRadiusScale));
+      }
 
       // Update the nodes
-      nodeGroups.attr('transform', d => {
-        // Maker sure the nodes are inside the box
-        const coord = borderConstraint(d, nodeRadiusScale);
-        return `translate(${coord.left}, ${coord.top})`;
-      });
+      nodeGroups.attr('transform', d => tickNodeForce(d, nodeRadiusScale));
 
       // Update the hidden nodes
       if (config.showHiddenNode) {
-        hiddenNodeGroups.attr('transform', d => {
-          // Maker sure the nodes are inside the box
-          const coord = borderConstraint(d);
-          return `translate(${coord.left}, ${coord.top})`;
-        });
+        hiddenNodeGroups.attr('transform', d => tickNodeForce(d, nodeRadiusScale));
       }
 
       // Update the text links
@@ -528,14 +630,13 @@
           .attr('x2', d => borderConstraint(d.target, nodeRadiusScale).left)
           .attr('y2', d => borderConstraint(d.target, nodeRadiusScale).top);
       }
-
     });
 
     // Register UI elements from the control panel
-    bindSlider('attention', simulation, 0, 10, initAttentionStrength);
-    bindSlider('textOrder', simulation, 0, 10, initTextOrderStrength);
-    bindSlider('manyBody', simulation, -2000, 0, initManyBodyStrength);
-    bindSlider('collide', simulation, 0, 20, initCollideRadius, nodeRadiusScale);
+    bindSlider('attention', simulation, 0, 10, initForceStrength.force.attentionStrength);
+    bindSlider('textOrder', simulation, 0, 10, initForceStrength.force.textOrderStrength);
+    bindSlider('manyBody', simulation, -2000, 0, initForceStrength.force.manyBodyStrength);
+    bindSlider('collide', simulation, 0, 20, initForceStrength.force.collideRadius, nodeRadiusScale);
 
     bindCheckBox(simulation, links);
 

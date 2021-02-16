@@ -128,7 +128,7 @@
 
     const bezierCurveFunc = d => {
       let center = {x: SVGWidth / 2, y: SVGHeight / 2};
-      let controlAlpha = 3 / 5;
+      let controlAlpha = 4 / 5;
 
       // Two control points symmetric regarding the center point
       let controlP1 = {

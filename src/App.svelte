@@ -2,6 +2,8 @@
   import GraphView from './GraphView.svelte';
   import Saliency from './Saliency.svelte';
   import CircleView from './CircleView.svelte';
+  import GridView from './GridView.svelte';
+  import RadialView from './RadialView.svelte'
 
   let saliencyVisCount = 1;
 
@@ -30,7 +32,9 @@
     <div class='saliency'>
       <!-- <Saliency width={950}/> -->
       <GraphView />
+      <!-- <RadialView /> -->
       <!-- <CircleView /> -->
+      <!-- <GridView /> -->
 	</div>
 {/each}
 
