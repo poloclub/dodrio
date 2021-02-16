@@ -16,6 +16,14 @@
   const radialRadius = 300;
   const radialCurveAlpha = 3 / 5;
 
+  const gridRowSize = 10;
+  const gridGap = 10;
+  let tokenSize = null;
+  let currentSimNodes = null;
+
+  let originalNodes = null;
+  let augmentedNodes = null;
+
   const ease = d3.easeCubicInOut;
   const animationTime = 300;
 
@@ -218,10 +226,12 @@
     simulation.force('hiddenTextLink', null);
     simulation.force('posX', null);
     simulation.force('posY', null);
+    simulation.force('grid', null);
   };
 
   const bindSelect = (simulation, links, hiddenLinks, hiddenTextOrderLinks,
-    nodeRadiusScale, radialScale, nodeGroups) => {
+    nodeRadiusScale, radialScale, nodeGroups, gridLinks) => {
+
     currentLayout = config.defaultLayout;
     let selectOption = d3.select('#select-layout')
       .property('value', config.defaultLayout.value);
@@ -235,22 +245,40 @@
 
         switch(newLayoutValue) {
         case 'force':
+          // Force requires augmented nodes
+          if (currentSimNodes === 'original') {
+            simulation.stop().nodes(augmentedNodes);
+            currentSimNodes = 'augmented';
+          }
+
           currentLayout = layoutOptions.force;
           initForceSim(simulation, links, hiddenLinks, hiddenTextOrderLinks, nodeRadiusScale);
+
+          simulation.alpha(1).restart();
           break;
+
         case 'radial':
           currentLayout = layoutOptions.radial;
           initRadialSim(simulation, hiddenLinks, radialScale);
+
+          simulation.alpha(0.1).restart();
           break;
+
         case 'grid':
+          // Grid requires original nodes
+          if (currentSimNodes === 'augmented') {
+            simulation.stop().nodes(originalNodes);
+            currentSimNodes = 'original';
+          }
+
           currentLayout = layoutOptions.grid;
+          initGridSim(simulation, gridLinks);
+
+          simulation.alpha(1).restart();
           break;
         }
 
         updateNodeRadius(nodeGroups, nodeRadiusScale);
-        simulation.velocityDecay(0.9);
-        simulation.alpha(0.1).restart();
-        simulation.velocityDecay(0.4);
       }
     });
   };
@@ -298,14 +326,13 @@
   };
 
   const initRadialSim = (simulation, hiddenLinks, radialScale) => {
-  
     // Force 1 (Tex order link force)
     simulation.force('textLink', d3.forceLink(hiddenLinks)
       .id(d => d.id)
       .strength(forceStrength.radial.textOrder)
     );
 
-    // Force 2 Custom radial force
+    // Force 2 (Custom radial force)
     simulation.force('posY', d3.forceY()
       .y(d => SVGWidth / 2 + Math.sin(radialScale(d.index)) * radialRadius)
       .strength(forceStrength.radial.radial)
@@ -314,6 +341,40 @@
     simulation.force('posX', d3.forceX()
       .x(d => SVGWidth / 2 + Math.cos(radialScale(d.index)) * radialRadius)
       .strength(forceStrength.radial.radial)
+    );
+  };
+  
+  const initGridSim = (simulation, gridLinks) => {
+    const columnSize = Math.ceil(tokenSize / gridRowSize);
+    
+    // Force 1 (Manybody force)
+    simulation.force('charge', d3.forceManyBody()
+      .strength(d => d.saliency == undefined ? 0 : -200)
+    );
+
+    // Force 2 (Center force)
+    simulation.force('center', d3.forceCenter(SVGWidth / 2, SVGHeight / 2));
+
+    // Force 3 (Grid force)
+    simulation.force('grid', d3.forceLink(gridLinks)
+      .iterations(80)
+      .distance(50)
+      .id(d => d.id)
+    );
+
+    // Force 4 (Orientation force)
+    simulation.force('posX', d3.forceX()
+      .x(d => (d.index % gridRowSize) * SVGWidth / gridRowSize)
+    );
+
+    simulation.force('posY', d3.forceY()
+      .y(d => Math.floor(d.index / gridRowSize) * SVGHeight / columnSize)
+      .strength(d => d.saliency === undefined ? 0 : 0.1)
+    );
+    
+    // Force 5 (Collide force)
+    simulation.force('collide', d3.forceCollide()
+      .radius(d => d.saliency === undefined ? 0 : minNodeRadius + gridGap)
     );
   };
   
@@ -375,9 +436,12 @@
     return `translate(${coord.left}, ${coord.top})`;
   };
 
-  const tickLinkRadial = (d) => {
-    let source = {x: d[0].x, y: d[0].y};
-    let target = {x: d[2].x, y: d[2].y};
+  const tickLinkRadial = (d, nodeRadiusScale) => {
+    const sCoord = borderConstraint(d[0], nodeRadiusScale);
+    const tCoord = borderConstraint(d[2], nodeRadiusScale);
+
+    let source = {x: sCoord.left, y: sCoord.top};
+    let target = {x: tCoord.left, y: tCoord.top};
     let center = {x: SVGWidth / 2, y: SVGHeight / 2};
 
     // We need to shorten the path to leave space for arrow
@@ -406,7 +470,23 @@
     return `M ${modSource.x},${modSource.y} C${controlP1.x}, ${controlP1.y},
       ${controlP2.x}, ${controlP2.y}, ${modTarget.x},${modTarget.y}`;
   };
+  
+  const trickLinkGrid = (d, nodeRadiusScale) => {
+    const sCoord = borderConstraint(d[0], nodeRadiusScale);
+    const tCoord = borderConstraint(d[2], nodeRadiusScale);
 
+    // We need to shorten the path to leave space for arrow
+    let halfLen = Math.sqrt((tCoord.left - sCoord.left) ** 2 + (tCoord.top - sCoord.top) ** 2);
+
+    let theta = minNodeRadius / halfLen;
+    let modTCoord = {
+      left: tCoord.left + (sCoord.left - tCoord.left) * theta,
+      top: tCoord.top + (sCoord.top - tCoord.top) * theta,
+    };
+
+    return 'M' + sCoord.left + ',' + sCoord.top
+      + 'L' + modTCoord.left + ',' + modTCoord.top;
+  };
 
   const drawGraph = () => {
     // Filter the links based on the weight
@@ -435,6 +515,9 @@
     let nodeIndices = new Set();
     graphData.nodes.forEach(d => nodeIndices.add(+d.id));
     let nodeIndexArray = Array.from(nodeIndices);
+    tokenSize = nodeIndexArray.length;
+
+    originalNodes = nodes.slice();
 
     // Create a radial scale for radial layout
     let radialScale = d3.scaleLinear()
@@ -511,6 +594,22 @@
       }
     });
 
+    augmentedNodes = nodes.slice();
+    
+    // Create grid links
+    let gridLinks = [];
+    nodeIndexArray.sort((a, b) => +a - +b);
+    for (let i = 0; i < nodes.length; i++) {
+      if (i % gridRowSize !== gridRowSize - 1 & nodeByID.has(i + 1)) {
+        gridLinks.push({source: nodeByID.get(i), target: nodeByID.get(i + 1)});
+      }
+      if (nodeByID.has(i + gridRowSize)) {
+        gridLinks.push({source: nodeByID.get(i), target: nodeByID.get(i + gridRowSize)});
+      }
+    }
+
+    console.log(gridLinks);
+
     // Create a scale for the node radius
     let allSaliencyScores = nodes.map(d => +d.saliency);
     let nodeRadiusScale = d3.scaleLinear()
@@ -520,6 +619,7 @@
     
     // Define the force
     let simulation = d3.forceSimulation(nodes);
+    currentSimNodes = 'augmented';
 
     switch(currentLayout.value) {
     case 'force':
@@ -527,6 +627,11 @@
       break;
     case 'radial':
       initRadialSim(simulation, hiddenLinks, radialScale);
+      break;
+    case 'grid':
+      simulation.nodes(originalNodes);
+      currentSimNodes = 'original';
+      initGridSim(simulation, gridLinks);
       break;
     }
 
@@ -639,12 +744,13 @@
         linkLines.attr('d', d => tickLinkForce(d, nodeRadiusScale));
         break;
       case 'radial':
-        linkLines.attr('d', d => tickLinkRadial(d));
+        linkLines.attr('d', d => tickLinkRadial(d, nodeRadiusScale));
         break;
-      }
-
-      if (currentLayout.value === 'force') {
-        linkLines.attr('d', d => tickLinkForce(d, nodeRadiusScale));
+      case 'grid':
+        linkLines.attr('d', d => trickLinkGrid(d, nodeRadiusScale));
+        break;
+      default:
+        console.log('Unexpected case.');
       }
 
       // Update the nodes
@@ -680,7 +786,7 @@
     bindCheckBox(simulation, links);
 
     bindSelect(simulation, links, hiddenLinks, hiddenTextOrderLinks,
-      nodeRadiusScale, radialScale, nodeGroups);
+      nodeRadiusScale, radialScale, nodeGroups, gridLinks);
   };
 
   onMount(async () => {
@@ -746,23 +852,23 @@
     <!-- Sliders -->
     <div class='slider'>
       <label for='attention'>Attention Strength
-        [{config.autoAttention ? 'auto' : round(forceStrength.attention, 2)}]
+        [{config.autoAttention ? 'auto' : round(forceStrength.force.attention, 2)}]
       </label>
       <input type="range" min="0" max="1000" value="500" class="slider" id="attention">
     </div>
 
     <div class='slider'>
-      <label for='textOrder'>Text Order Strength [{round(forceStrength.textOrder, 2)}]</label>
+      <label for='textOrder'>Text Order Strength [{round(forceStrength.force.textOrder, 2)}]</label>
       <input type="range" min="0" max="1000" value="500" class="slider" id="textOrder">
     </div>
 
     <div class='slider'>
-      <label for='manyBody'>ManyBody Strength [{round(forceStrength.manyBody, 2)}]</label>
+      <label for='manyBody'>ManyBody Strength [{round(forceStrength.force.manyBody, 2)}]</label>
       <input type="range" min="0" max="1000" value="500" class="slider" id="manyBody">
     </div>
 
     <div class='slider'>
-      <label for='collide'>Node Distance [{round(forceStrength.collide, 2)}]</label>
+      <label for='collide'>Node Distance [{round(forceStrength.grid.collide, 2)}]</label>
       <input type="range" min="0" max="1000" value="500" class="slider" id="collide">
     </div>
 
@@ -790,8 +896,9 @@
     <!-- Selection -->
     <div class='select'>
       <select name='layout' id='select-layout'>
-        <option value='force'>Force Layout</option>
-        <option value='radial'>Radial Layout</option>
+        {#each Object.values(layoutOptions) as opt}
+          <option value={opt.value}>{opt.name}</option>
+        {/each}
       </select>
     </div>
     
