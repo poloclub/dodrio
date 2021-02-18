@@ -17,12 +17,21 @@
   const radialCurveAlpha = 3 / 5;
 
   const gridRowSize = 10;
-  const gridGap = 10;
+  const gridRowGap = 25;
+  const gridColumnGap = 20;
+
   let tokenSize = null;
   let currentSimNodes = null;
 
   let originalNodes = null;
   let augmentedNodes = null;
+
+  let nodes = null;
+  let links = null;
+  let bilinks = null;
+  let hiddenLinks = null;
+  let hiddenTextOrderLinks = null;
+  let gridLinks = null;
 
   const ease = d3.easeCubicInOut;
   const animationTime = 300;
@@ -47,7 +56,7 @@
     showHiddenLink: false,
     showHiddenNode: false,
     autoAttention: true,
-    defaultLayout: layoutOptions.force
+    defaultLayout: layoutOptions.grid
   };
 
   let forceStrength = {
@@ -226,8 +235,7 @@
     simulation.force('grid', null);
   };
 
-  const bindSelect = (simulation, links, hiddenLinks, hiddenTextOrderLinks,
-    nodeRadiusScale, radialScale, nodeGroups, gridLinks) => {
+  const bindSelect = (simulation, nodeRadiusScale, nodeGroups) => {
 
     currentLayout = config.defaultLayout;
     let selectOption = d3.select('#select-layout')
@@ -243,33 +251,33 @@
         switch(newLayoutValue) {
         case 'force':
           // Force requires augmented nodes
-          if (currentSimNodes === 'original') {
-            simulation.stop().nodes(augmentedNodes);
-            currentSimNodes = 'augmented';
-          }
+          // if (currentSimNodes === 'original') {
+          //   simulation.stop().nodes(augmentedNodes);
+          //   currentSimNodes = 'augmented';
+          // }
 
           currentLayout = layoutOptions.force;
-          initForceSim(simulation, links, hiddenLinks, hiddenTextOrderLinks, nodeRadiusScale);
+          initForceSim(simulation, nodeRadiusScale);
 
           simulation.alpha(1).restart();
           break;
 
         case 'radial':
           currentLayout = layoutOptions.radial;
-          initRadialSim(simulation, hiddenLinks, radialScale);
+          initRadialSim(simulation);
 
-          simulation.alpha(0.1).restart();
+          simulation.alpha(0.6).restart();
           break;
 
         case 'grid':
           // Grid requires original nodes
-          if (currentSimNodes === 'augmented') {
-            simulation.stop().nodes(originalNodes);
-            currentSimNodes = 'original';
-          }
+          // if (currentSimNodes === 'augmented') {
+          //   simulation.stop().nodes(originalNodes);
+          //   currentSimNodes = 'original';
+          // }
 
           currentLayout = layoutOptions.grid;
-          initGridSim(simulation, gridLinks);
+          initGridSim(simulation);
 
           simulation.alpha(1).restart();
           break;
@@ -289,7 +297,7 @@
         nodeRadiusScale(+d.saliency) : minNodeRadius);
   };
 
-  const initForceSim = (simulation, links, hiddenLinks, hiddenTextOrderLinks, nodeRadiusScale) => {
+  const initForceSim = (simulation, nodeRadiusScale) => {
     // Force 1 (ManyBody force)
     simulation.force('charge', d3.forceManyBody()
       .strength(forceStrength.force.manyBody)
@@ -321,7 +329,8 @@
     );
   };
 
-  const initRadialSim = (simulation, hiddenLinks, radialScale) => {
+  const initRadialSim = (simulation) => {
+    console.log(hiddenLinks);
     // Force 1 (Tex order link force)
     simulation.force('textLink', d3.forceLink(hiddenLinks)
       .id(d => d.id)
@@ -330,26 +339,32 @@
 
     // Force 2 (Custom radial force)
     simulation.force('posY', d3.forceY()
-      .y(d => SVGWidth / 2 + Math.sin(radialScale(d.index)) * radialRadius)
+      .y((d, i) => {
+        let curLen = nodes.filter(d => d.id !== undefined).length;
+        let curAngle = -Math.PI / 2 + i * (Math.PI * 2 / curLen);
+        return SVGHeight / 2 + Math.sin(curAngle) * radialRadius;
+      })
       .strength(forceStrength.radial.radial)
     );
 
     simulation.force('posX', d3.forceX()
-      .x(d => SVGWidth / 2 + Math.cos(radialScale(d.index)) * radialRadius)
+      .x((d, i) => {
+        let curLen = nodes.filter(d => d.id !== undefined).length;
+        let curAngle = -Math.PI / 2 + i * (Math.PI * 2 / curLen);
+        return SVGHeight / 2 + Math.cos(curAngle) * radialRadius;
+      })
       .strength(forceStrength.radial.radial)
     );
   };
-  
-  const initGridSim = (simulation, gridLinks) => {
-    const columnSize = Math.ceil(tokenSize / gridRowSize);
-    
-    // Force 1 (Manybody force)
-    simulation.force('charge', d3.forceManyBody()
-      .strength(d => d.saliency == undefined ? 0 : -200)
-    );
 
-    // Force 2 (Center force)
-    simulation.force('center', d3.forceCenter(SVGWidth / 2, SVGHeight / 2));
+  const initGridSim = (simulation) => {
+    const gridColumnSize = Math.ceil(tokenSize / gridRowSize);
+
+    let rowLength = gridRowSize * 2 * minNodeRadius + (gridRowSize - 1) * gridColumnGap;
+    let columnLength = gridColumnSize * 2 * minNodeRadius + (gridColumnSize - 1) * gridRowGap;
+
+    let xs = Math.floor((SVGWidth - rowLength) / 2);
+    let ys = Math.floor((SVGHeight - columnLength) / 2);
 
     // Force 3 (Grid force)
     simulation.force('grid', d3.forceLink(gridLinks)
@@ -360,18 +375,28 @@
 
     // Force 4 (Orientation force)
     simulation.force('posX', d3.forceX()
-      .x(d => (d.index % gridRowSize) * SVGWidth / gridRowSize)
+      .x((d, i) => xs + (i % gridRowSize) * (2 * minNodeRadius + gridColumnGap) + minNodeRadius)
+      .strength(d => d.id === undefined ? 0 : 1)
     );
 
     simulation.force('posY', d3.forceY()
-      .y(d => Math.floor(d.index / gridRowSize) * SVGHeight / columnSize)
-      .strength(d => d.saliency === undefined ? 0 : 0.1)
+      .y((d, i) => ys + Math.floor(i / gridRowSize) * (2 * minNodeRadius + gridRowGap) + minNodeRadius)
+      .strength(d => d.id === undefined ? 0 : 1)
     );
-    
-    // Force 5 (Collide force)
-    simulation.force('collide', d3.forceCollide()
-      .radius(d => d.saliency === undefined ? 0 : minNodeRadius + gridGap)
-    );
+  };
+
+  const initCurrentSim = (simulation, nodeRadiusScale) => {
+    switch(currentLayout.value) {
+    case 'force':
+      initForceSim(simulation, nodeRadiusScale);
+      break;
+    case 'radial':
+      initRadialSim(simulation);
+      break;
+    case 'grid':
+      initGridSim(simulation);
+      break;
+    }
   };
   
   const tickLinkForce = (d, nodeRadiusScale) => {
@@ -507,11 +532,12 @@
       .style('fill', 'none');
 
     // Create the data lists
-    let links = graphData.links.filter(d => d.weight > weightThreshold);
+    links = graphData.links.filter(d => d.weight > weightThreshold);
 
     // Map nodes and links to arrays of objects
-    let nodes = graphData.nodes.map(d => Object.create(d));
-    links = links.map(d => Object.create(d));
+    nodes = graphData.nodes.map(d => Object.create(d));
+    nodes.sort((a, b) => +a.id - +b.id);
+    //links = links.map(d => Object.create(d));
 
     // Maintain a set of all existing node indices
     let nodeIndices = new Set();
@@ -528,7 +554,7 @@
       .nice();
 
     // Add text order hidden links
-    let hiddenLinks = [];
+    hiddenLinks = [];
     for (let i = 0; i < nodes.length - 1; i++) {
       let hiddenLink = {
         source: +nodes[i].id,
@@ -549,11 +575,11 @@
 
     // Add intermediate nodes to create bezier curves
     let nodeByID = new Map(nodes.map(d => [d.id, d]));
-    let bilinks = [];
+    bilinks = [];
 
     // Add links between intermediate node and its previous token and afterward
     // token
-    let hiddenTextOrderLinks = [];
+    hiddenTextOrderLinks = [];
 
     links.forEach(d => {
       let source = nodeByID.get(d.source);
@@ -605,7 +631,7 @@
     augmentedNodes = nodes.slice();
     
     // Create grid links
-    let gridLinks = [];
+    gridLinks = [];
     nodeIndexArray.sort((a, b) => +a - +b);
     for (let i = 0; i < nodes.length; i++) {
       if (i % gridRowSize !== gridRowSize - 1 & nodeByID.has(i + 1)) {
@@ -638,15 +664,15 @@
 
     switch(currentLayout.value) {
     case 'force':
-      initForceSim(simulation, links, hiddenLinks, hiddenTextOrderLinks, nodeRadiusScale);
+      initForceSim(simulation, nodeRadiusScale);
       break;
     case 'radial':
-      initRadialSim(simulation, hiddenLinks, radialScale);
+      initRadialSim(simulation);
       break;
     case 'grid':
-      simulation.nodes(originalNodes);
-      currentSimNodes = 'original';
-      initGridSim(simulation, gridLinks);
+      // simulation.nodes(originalNodes);
+      // currentSimNodes = 'original';
+      initGridSim(simulation);
       break;
     }
 
@@ -673,14 +699,16 @@
       .attr('fill', '#C2C2C2');
 
     // Add attention links
-    let linkLines = svg.append('g')
+    let linkLineGroup = svg.append('g')
       .attr('class', 'attention-link-group')
-      .attr('stroke', '#C2C2C2')
-      .selectAll('path')
-      .data(bilinks)
+      .attr('stroke', '#C2C2C2');
+
+    let linkLines = linkLineGroup.selectAll('path')
+      .data(bilinks, d => `${d[0].id}-${d[2].id}`)
       .join('path')
       .attr('marker-end', 'url(#arrow)')
       .attr('class', 'link')
+      .attr('data-name', d => `${d[0].id}-${d[2].id}`)
       .style('stroke-width', d => linkWidth(d.attention));
 
     // Add hidden text order links
@@ -706,15 +734,102 @@
       .attr('class', 'link');
 
     // Add token nodes
-    let nodeGroups = svg.append('g')
-      .attr('class', 'node-group')
-      .selectAll('g.node')
+    let nodeGroup = svg.append('g')
+      .attr('class', 'node-group');
+
+    let nodeGroups = nodeGroup.selectAll('g.node')
       // Need to filter out intermediate nodes
-      .data(nodes.filter(d => d.id !== undefined))
+      .data(nodes.filter(d => d.id !== undefined), d => d.id)
       .join('g')
       .attr('class', 'node')
       .attr('transform', `translate(${SVGWidth / 2}, ${SVGHeight / 2})`)
-      .call(drag(simulation));
+      .call(drag(simulation))
+      .on('dblclick', e => {
+        let curNode = d3.select(e.target);
+        let curID = curNode.data()[0].id;
+
+        // Delete the node from the nodes array
+        for (let i = nodes.length - 1; i >= 0; i--) {
+          if (nodes[i].id === curID) {
+            nodes.splice(i, 1);
+          }
+        }
+
+        // Remove the node element on screen
+        nodeGroup.selectAll('g.node')
+          .data(nodes.filter(d => d.id !== undefined), d => d.id)
+          .exit()
+          .remove();
+
+        // Delete all links connecting to this node
+        for (let i = bilinks.length - 1; i >= 0; i--) {
+          if (bilinks[i][0].id === curID | bilinks[i][2].id === curID) {
+            bilinks.splice(i, 1);
+          }
+        }
+
+        // Delete all attention links connecting to this node
+        for (let i = links.length - 1; i >= 0; i--) {
+          if (links[i].source === curID | links[i].target === curID) {
+            links.splice(i, 1);
+          }
+        }
+
+        // Rewire the text order link array
+        let nextID = null;
+        let preID = null;
+        for (let i = hiddenLinks.length - 1; i >= 0; i--) {
+          if (hiddenLinks[i].source === curID) {
+            nextID = hiddenLinks[i].target;
+            hiddenLinks.splice(i, 1);
+          }
+          if (hiddenLinks[i].target === curID) {
+            preID = hiddenLinks[i].source;
+            if (i + 1 < hiddenLinks.length) {
+              hiddenLinks[i].target = hiddenLinks[i + 1].source;
+            } else {
+              hiddenLinks[i].target = hiddenLinks[0].source;
+            }
+          }
+        }
+
+        // Rewire the hidden text order link array
+        for (let i = hiddenTextOrderLinks.length - 1; i >= 0; i--) {
+          if (hiddenTextOrderLinks[i].source.id === curID) {
+            hiddenTextOrderLinks[i].source = nodeByID.get(preID);
+          }
+          if (hiddenTextOrderLinks[i].target.id === curID) {
+            hiddenTextOrderLinks[i].target = nodeByID.get(nextID);
+          }
+        }
+
+        // Need to reconstruct the grid links
+        gridLinks = [];
+        nodeIndices = new Set();
+        nodes.forEach(d => {if (d.id !== undefined) nodeIndices.add(+d.id);});
+        nodeIndexArray = Array.from(nodeIndices);
+        nodeIndexArray.sort((a, b) => +a - +b);
+
+        for (let i = 0; i < nodeIndexArray.length - 1; i++) {
+          let curI = nodeIndexArray[i];
+          if (i % gridRowSize !== gridRowSize - 1 & nodeByID.has(nodeIndexArray[i + 1])) {
+            gridLinks.push({source: nodeByID.get(curI),
+              target: nodeByID.get(nodeIndexArray[i + 1])});
+          }
+          if (nodeByID.has(nodeIndexArray[i + gridRowSize])) {
+            gridLinks.push({source: nodeByID.get(curI),
+              target: nodeByID.get(nodeIndexArray[i + gridRowSize])});
+          }
+        }
+
+        linkLineGroup.selectAll('path.link')
+          .data(bilinks, d => `${d[0].id}-${d[2].id}`)
+          .exit()
+          .remove();
+
+        initCurrentSim(simulation, nodeRadiusScale);
+        simulation.alpha(0.3).restart();
+      });
 
     // Add circle to each node
     // Create a color scale to represent the text order
@@ -803,8 +918,7 @@
 
     bindCheckBox(simulation, links);
 
-    bindSelect(simulation, links, hiddenLinks, hiddenTextOrderLinks,
-      nodeRadiusScale, radialScale, nodeGroups, gridLinks);
+    bindSelect(simulation, nodeRadiusScale, nodeGroups);
   };
 
   onMount(async () => {
