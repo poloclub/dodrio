@@ -23,14 +23,10 @@
   let tokenSize = null;
   let currentSimNodes = null;
 
-  let originalNodes = null;
-  let augmentedNodes = null;
-
   let nodes = null;
   let links = null;
-  let bilinks = null;
+  let biLinks = null;
   let hiddenLinks = null;
-  let hiddenTextOrderLinks = null;
   let gridLinks = null;
 
   const ease = d3.easeCubicInOut;
@@ -56,15 +52,15 @@
     showHiddenLink: false,
     showHiddenNode: false,
     autoAttention: true,
-    defaultLayout: layoutOptions.grid
+    defaultLayout: layoutOptions.force
   };
 
   let forceStrength = {
     force: {
-      manyBody: -500,
+      manyBody: -1300,
       attention: 0.5,
-      textOrder: 2.5,
-      collideRadius: 7
+      textOrder: 1.6,
+      collideRadius: 10
     },
     radial: {
       textOrder: 0.5,
@@ -108,7 +104,7 @@
 
   const borderConstraint = (d, nodeRadiusScale) => {
     let curRadius = minNodeRadius;
-    if (d.saliency !== undefined) {
+    if (!d.hidden) {
       curRadius = nodeRadiusScale(+d.saliency);
     }
 
@@ -201,12 +197,11 @@
         break;
       case 'textOrder':
         simulation.force('textLink').strength(d => d.target.index === 0 ? 0 : value);
-        simulation.force('hiddenTextLink').strength(d => d.target.index === 0 ? 0 : value);
         break;
       case 'manyBody':
         simulation.force('charge').strength(value);
         break;
-      case 'collide':
+      case 'collideRadius':
         simulation.force('collide').radius(d => nodeRadiusScale(d.saliency) + value);
         break;
       }
@@ -316,21 +311,14 @@
       .id(d => d.id)
       .strength(d => d.target.index === 0 ? 0 : forceStrength.force.textOrder)
     );
-
-    // Force 5 (Text order link force on hidden nodes)
-    simulation.force('hiddenTextLink', d3.forceLink(hiddenTextOrderLinks)
-      .id(d => d.id)
-      .strength(d => d.target.index === 0 ? 0 : forceStrength.force.textOrder)
-    );    
     
-    // Force 6 (Collide force)
+    // Force 5 (Collide force)
     simulation.force('collide', d3.forceCollide()
-      .radius(d => d.saliency === undefined ? 0 : nodeRadiusScale(d.saliency))
+      .radius(d => nodeRadiusScale(d.saliency) + forceStrength.force.collideRadius)
     );
   };
 
   const initRadialSim = (simulation) => {
-    console.log(hiddenLinks);
     // Force 1 (Tex order link force)
     simulation.force('textLink', d3.forceLink(hiddenLinks)
       .id(d => d.id)
@@ -340,7 +328,7 @@
     // Force 2 (Custom radial force)
     simulation.force('posY', d3.forceY()
       .y((d, i) => {
-        let curLen = nodes.filter(d => d.id !== undefined).length;
+        let curLen = nodes.filter(d => !d.hidden).length;
         let curAngle = -Math.PI / 2 + i * (Math.PI * 2 / curLen);
         return SVGHeight / 2 + Math.sin(curAngle) * radialRadius;
       })
@@ -349,7 +337,7 @@
 
     simulation.force('posX', d3.forceX()
       .x((d, i) => {
-        let curLen = nodes.filter(d => d.id !== undefined).length;
+        let curLen = nodes.filter(d => !d.hidden).length;
         let curAngle = -Math.PI / 2 + i * (Math.PI * 2 / curLen);
         return SVGHeight / 2 + Math.cos(curAngle) * radialRadius;
       })
@@ -401,10 +389,18 @@
   
   const tickLinkForce = (d, nodeRadiusScale) => {
     const sCoord = borderConstraint(d[0], nodeRadiusScale);
-    const iCoord = borderConstraint(d[1], nodeRadiusScale);
-    const tCoord = borderConstraint(d[2], nodeRadiusScale);
+    const tCoord = borderConstraint(d[1], nodeRadiusScale);
 
     if (d.selfLoop) {
+      const iCoord = borderConstraint(d[2], nodeRadiusScale);
+
+      // Shorten the distance from source to intermediate point
+      let interLen = Math.sqrt((tCoord.left - iCoord.left) ** 2 +
+        (tCoord.top - iCoord.top) ** 2) - nodeRadiusScale(d[0].saliency);
+
+      iCoord.left = tCoord.left + (iCoord.left - tCoord.left) / interLen * 80;
+      iCoord.top = tCoord.top + (iCoord.top - tCoord.top) / interLen * 80;
+
       // Need to handle the arc manually if there is a self loop
       const iVec = [iCoord.left - sCoord.left, iCoord.top - sCoord.top];
       const iVecNorm = Math.sqrt((iVec[0] ** 2 + iVec[1] ** 2));
@@ -422,13 +418,13 @@
 
       // We need to shorten the path to leave space for arrow
       let halfLen = Math.sqrt((tCoord.left - rightControl[0]) ** 2 + (tCoord.top - rightControl[1]) ** 2);
-      let theta = (nodeRadiusScale(d[2].saliency) + 10)/ halfLen;
+      let theta = (nodeRadiusScale(d[0].saliency) + 10)/ halfLen;
       let modTCoord = {
         left: tCoord.left + (rightControl[0] - tCoord.left) * theta,
         top: tCoord.top + (rightControl[1] - tCoord.top) * theta,
       };
 
-      // Draw a bezier curve with two control points (which are left anr right
+      // Draw a bezier curve with two control points (which are left and right
       // perpendicular to the self loop node -> intermediate node vector)
       return 'M' + sCoord.left + ',' + sCoord.top
         + 'C' + leftControl[0] + ',' + leftControl[1]
@@ -437,23 +433,13 @@
 
     } else {
       // We need to shorten the path to leave space for arrow
-      let halfLen = Math.sqrt((tCoord.left - iCoord.left) ** 2 + (tCoord.top - iCoord.top) ** 2);
-      let theta = (nodeRadiusScale(d[2].saliency) + 10) / halfLen;
+      let vecLen = Math.sqrt((tCoord.left - sCoord.left) ** 2 + (tCoord.top - sCoord.top) ** 2);
+      let theta = (nodeRadiusScale(d[1].saliency) + 10) / vecLen;
       let modTCoord = {
-        left: tCoord.left + (iCoord.left - tCoord.left) * theta,
-        top: tCoord.top + (iCoord.top - tCoord.top) * theta,
+        left: tCoord.left + (sCoord.left  - tCoord.left) * theta,
+        top: tCoord.top + (sCoord.top - tCoord.top) * theta,
       };
-
-      let controlLen = Math.sqrt((modTCoord.left - iCoord.left) ** 2 + (modTCoord.top - iCoord.top) ** 2);
-
-      if (controlLen < 3) {
-        return 'M' + sCoord.left + ',' + sCoord.top
-        + 'L' + modTCoord.left + ',' + modTCoord.top;
-      } else {
-        return 'M' + sCoord.left + ',' + sCoord.top
-          + 'S' + iCoord.left + ',' + iCoord.top
-          + ' ' + modTCoord.left + ',' + modTCoord.top;
-      }
+      return 'M' + sCoord.left + ',' + sCoord.top + 'L' + modTCoord.left + ',' + modTCoord.top;
     }
   };
 
@@ -465,7 +451,7 @@
 
   const tickLinkRadial = (d, nodeRadiusScale) => {
     const sCoord = borderConstraint(d[0], nodeRadiusScale);
-    const tCoord = borderConstraint(d[2], nodeRadiusScale);
+    const tCoord = borderConstraint(d[1], nodeRadiusScale);
 
     let source = {x: sCoord.left, y: sCoord.top};
     let target = {x: tCoord.left, y: tCoord.top};
@@ -500,7 +486,7 @@
   
   const tickLinkGrid = (d, nodeRadiusScale) => {
     const sCoord = borderConstraint(d[0], nodeRadiusScale);
-    const tCoord = borderConstraint(d[2], nodeRadiusScale);
+    const tCoord = borderConstraint(d[1], nodeRadiusScale);
 
     // We need to shorten the path to leave space for arrow
     let halfLen = Math.sqrt((tCoord.left - sCoord.left) ** 2 + (tCoord.top - sCoord.top) ** 2);
@@ -533,25 +519,17 @@
 
     // Create the data lists
     links = graphData.links.filter(d => d.weight > weightThreshold);
+    links = links.map(d => Object.create(d));
 
     // Map nodes and links to arrays of objects
     nodes = graphData.nodes.map(d => Object.create(d));
     nodes.sort((a, b) => +a.id - +b.id);
-    //links = links.map(d => Object.create(d));
 
     // Maintain a set of all existing node indices
     let nodeIndices = new Set();
     graphData.nodes.forEach(d => nodeIndices.add(+d.id));
     let nodeIndexArray = Array.from(nodeIndices);
     tokenSize = nodeIndexArray.length;
-
-    originalNodes = nodes.slice();
-
-    // Create a radial scale for radial layout
-    let radialScale = d3.scaleLinear()
-      .domain(d3.extent(nodeIndexArray))
-      .range([-Math.PI / 2, Math.PI * 3 / 2])
-      .nice();
 
     // Add text order hidden links
     hiddenLinks = [];
@@ -571,64 +549,32 @@
 
     hiddenLinks = hiddenLinks.map(d => Object.create(d));
     
-    console.log(nodes, links);
+    console.log(nodes, links, hiddenLinks);
 
     // Add intermediate nodes to create bezier curves
     let nodeByID = new Map(nodes.map(d => [d.id, d]));
-    bilinks = [];
-
-    // Add links between intermediate node and its previous token and afterward
-    // token
-    hiddenTextOrderLinks = [];
+    biLinks = [];
 
     links.forEach(d => {
       let source = nodeByID.get(d.source);
       let target = nodeByID.get(d.target);
-      let intermediate = {hidden: true};
+      let curBilink = [source, target];
+      curBilink.selfLoop = false;
+      curBilink.attention = +d.weight;
 
-      let curBilink = [source, intermediate, target];
-      curBilink.selfLoop = source === target;
-      curBilink.attention = d.weight;
-      
-      nodes.push(intermediate);
-      links.push(
-        {source: source, target: intermediate},
-        {source: intermediate, target: target}
-      );
-
-      bilinks.push(curBilink);
-
-      if (d.source.index < d.target.index) {
-        if (nodeIndices.has(d.source + 1)) {
-          hiddenTextOrderLinks.push(
-            {source: intermediate, target: nodeByID.get(d.source + 1)}
-          );
-        }
-
-        // if (nodeIndices.has(d.target - 1)) {
-        //   hiddenTextOrderLinks.push(
-        //     {source: nodeByID.get(d.target - 1), target: intermediate}
-        //   );
-        // }
-      } else {
-        if (nodeIndices.has(d.source - 1)) {
-          hiddenTextOrderLinks.push(
-            {source: nodeByID.get(d.source - 1), target: intermediate}
-          );
-        }
-
-        // if (nodeIndices.has(d.target + 1)) {
-        //   hiddenTextOrderLinks.push(
-        //     {source: intermediate, target: nodeByID.get(d.target + 1)}
-        //   );
-        // }
+      // Add a hidden node if there is a self-loop
+      if (source === target) {
+        curBilink.selfLoop = true;
+        let intermediate = {hidden: true};
+        curBilink.push(intermediate);
+        nodes.push(intermediate);
+        links.push(
+          {source: intermediate, target: source}
+        );
       }
 
-
+      biLinks.push(curBilink);
     });
-
-    // Save a snapshot of the original nodes (without intermediate nodes)
-    augmentedNodes = nodes.slice();
     
     // Create grid links
     gridLinks = [];
@@ -649,10 +595,11 @@
     let nodeRadiusScale = d3.scaleLinear()
       .domain(d3.extent(allSaliencyScores))
       .range([minNodeRadius, maxNodeRadius])
+      .unknown(0)
       .nice();
 
     // Create a scale for link stroke width
-    let attentionWeights = bilinks.map(d => +d.attention);
+    let attentionWeights = links.map(d => +d.weight);
     let linkWidth = d3.scaleLinear()
       .domain(d3.extent(attentionWeights))
       .range([0.5, 2.5])
@@ -670,8 +617,6 @@
       initRadialSim(simulation);
       break;
     case 'grid':
-      // simulation.nodes(originalNodes);
-      // currentSimNodes = 'original';
       initGridSim(simulation);
       break;
     }
@@ -704,11 +649,11 @@
       .attr('stroke', '#C2C2C2');
 
     let linkLines = linkLineGroup.selectAll('path')
-      .data(bilinks, d => `${d[0].id}-${d[2].id}`)
+      .data(biLinks, d => `${d[0].id}-${d[1].id}`)
       .join('path')
       .attr('marker-end', 'url(#arrow)')
       .attr('class', 'link')
-      .attr('data-name', d => `${d[0].id}-${d[2].id}`)
+      .attr('data-name', d => `${d[0].id}-${d[1].id}`)
       .style('stroke-width', d => linkWidth(d.attention));
 
     // Add hidden text order links
@@ -719,17 +664,6 @@
       .style('stroke-opacity', 1)
       .selectAll('line')
       .data(hiddenLinks)
-      .join('line')
-      .attr('class', 'link');
-
-    // Add hidden text order links
-    let textHiddenLinkLines = svg.append('g')
-      .attr('class', 'text-hidden-link-group')
-      .style('visibility', config.showHiddenLink ? 'visible' : 'hidden')
-      .style('stroke', 'blue')
-      .style('stroke-opacity', 1)
-      .selectAll('line')
-      .data(hiddenTextOrderLinks)
       .join('line')
       .attr('class', 'link');
 
@@ -762,44 +696,29 @@
           .remove();
 
         // Delete all links connecting to this node
-        for (let i = bilinks.length - 1; i >= 0; i--) {
-          if (bilinks[i][0].id === curID | bilinks[i][2].id === curID) {
-            bilinks.splice(i, 1);
+        for (let i = biLinks.length - 1; i >= 0; i--) {
+          if (biLinks[i][0].id === curID | biLinks[i][1].id === curID) {
+            biLinks.splice(i, 1);
           }
         }
 
         // Delete all attention links connecting to this node
         for (let i = links.length - 1; i >= 0; i--) {
-          if (links[i].source === curID | links[i].target === curID) {
+          if (links[i].source.id === curID | links[i].target.id === curID) {
             links.splice(i, 1);
           }
         }
 
         // Rewire the text order link array
-        let nextID = null;
-        let preID = null;
         for (let i = hiddenLinks.length - 1; i >= 0; i--) {
-          if (hiddenLinks[i].source === curID) {
-            nextID = hiddenLinks[i].target;
+          if (hiddenLinks[i].source.id === curID) {
             hiddenLinks.splice(i, 1);
-          }
-          if (hiddenLinks[i].target === curID) {
-            preID = hiddenLinks[i].source;
+          } else if (hiddenLinks[i].target.id === curID) {
             if (i + 1 < hiddenLinks.length) {
               hiddenLinks[i].target = hiddenLinks[i + 1].source;
             } else {
               hiddenLinks[i].target = hiddenLinks[0].source;
             }
-          }
-        }
-
-        // Rewire the hidden text order link array
-        for (let i = hiddenTextOrderLinks.length - 1; i >= 0; i--) {
-          if (hiddenTextOrderLinks[i].source.id === curID) {
-            hiddenTextOrderLinks[i].source = nodeByID.get(preID);
-          }
-          if (hiddenTextOrderLinks[i].target.id === curID) {
-            hiddenTextOrderLinks[i].target = nodeByID.get(nextID);
           }
         }
 
@@ -823,7 +742,7 @@
         }
 
         linkLineGroup.selectAll('path.link')
-          .data(bilinks, d => `${d[0].id}-${d[2].id}`)
+          .data(biLinks, d => `${d[0].id}-${d[1].id}`)
           .exit()
           .remove();
 
@@ -901,12 +820,6 @@
           .attr('y1', d => borderConstraint(d.source, nodeRadiusScale).top)
           .attr('x2', d => borderConstraint(d.target, nodeRadiusScale).left)
           .attr('y2', d => borderConstraint(d.target, nodeRadiusScale).top);
-
-        textHiddenLinkLines
-          .attr('x1', d => borderConstraint(d.source, nodeRadiusScale).left)
-          .attr('y1', d => borderConstraint(d.source, nodeRadiusScale).top)
-          .attr('x2', d => borderConstraint(d.target, nodeRadiusScale).left)
-          .attr('y2', d => borderConstraint(d.target, nodeRadiusScale).top);
       }
     });
 
@@ -914,7 +827,7 @@
     bindSlider('attention', simulation, 0, 10, forceStrength.force.attention);
     bindSlider('textOrder', simulation, 0, 10, forceStrength.force.textOrder);
     bindSlider('manyBody', simulation, -2000, 0, forceStrength.force.manyBody);
-    bindSlider('collide', simulation, 0, 20, forceStrength.force.collideRadius, nodeRadiusScale);
+    bindSlider('collideRadius', simulation, 0, 20, forceStrength.force.collideRadius, nodeRadiusScale);
 
     bindCheckBox(simulation, links);
 
@@ -1001,7 +914,7 @@
 
     <div class='slider'>
       <label for='collide'>Node Distance [{round(forceStrength.force.collideRadius, 2)}]</label>
-      <input type="range" min="0" max="1000" value="500" class="slider" id="collide">
+      <input type="range" min="0" max="1000" value="500" class="slider" id="collideRadius">
     </div>
 
     <!-- Checkboxes -->
