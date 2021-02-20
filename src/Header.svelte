@@ -19,14 +19,14 @@
   }
 
   #logo-text {
-    font-size: 30px;
+    font-size: 2rem;
     color: white;
     font-family: 'Fredoka One';
     margin-right: 10px;
   }
 
   #logo-tagline {
-    font-size: 23px;
+    font-size: 1.5rem;
     color: $brown-light;
     font-family: 'Neucha';
   }
@@ -36,11 +36,14 @@
     justify-content: flex-start;
     align-items: center;
     color: white;
+
+    :not(:last-child) {
+      margin-right: 15px;
+    }
   }
 
   .icon {
-    font-size: 1.4rem;
-    margin-left: 15px;
+    font-size: 1.5rem;
     display: flex;
     align-items: center;
     color: white;
@@ -62,7 +65,7 @@
 
   <div class="icons">
   
-    <a target="_blank" href="https://arxiv.org/abs/2004.15004">
+    <a class="icon-a" target="_blank" href="https://arxiv.org/abs/2004.15004">
       <div class="icon" title="Research paper">
         <i class="fas fa-file-pdf"></i>
       </div>
