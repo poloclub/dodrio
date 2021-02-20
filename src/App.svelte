@@ -1,15 +1,10 @@
 <script>
+  import Main from './Main.svelte';
   import GraphView from './GraphView.svelte';
   import Saliency from './Saliency.svelte';
   import CircleView from './CircleView.svelte';
   import GridView from './GridView.svelte';
-  import RadialView from './RadialView.svelte'
-
-  let saliencyVisCount = 1;
-
-  const increaseSaliencyVisCount = (evt) => {
-    saliencyVisCount += 1;
-  }
+  import RadialView from './RadialView.svelte';
 </script>
 
 <style>
@@ -19,25 +14,14 @@
     justify-content: space-around;
     margin-top: 20px;
   }
-
-  .add-saliency-vis {
-  	display: flex;
-    width: 100%;
-    justify-content: space-around;
-    margin-top: 20px;
-  }
 </style>
 
-{#each {length: saliencyVisCount} as _, i}
-    <div class='saliency'>
-      <!-- <Saliency width={950}/> -->
-      <GraphView />
-      <!-- <RadialView /> -->
-      <!-- <CircleView /> -->
-      <!-- <GridView /> -->
-	</div>
-{/each}
 
-<!-- <div class="add-saliency-vis">
-	<button class="button add-saliency" on:click={increaseSaliencyVisCount}><i class="fas fa-plus"></i></button>
-</div> -->
+<div class='app-page'>
+  <!-- <Saliency width={950}/> -->
+  <!-- <GraphView /> -->
+  <Main />
+  <!-- <RadialView /> -->
+  <!-- <CircleView /> -->
+  <!-- <GridView /> -->
+</div>
