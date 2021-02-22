@@ -143,14 +143,10 @@
       .text(d => d);
 
     // Compute dependency link hierarchy based on the gaps between two tokens
-    let rankedDepList = {};
-    let rankedDepListt = [];
+    let rankedDepList = [];
 
     depList.forEach(d => {
       let gap = Math.abs(d.child - d.parent);
-      if (rankedDepList[gap] === undefined) {
-        rankedDepList[gap] = [];
-      }
 
       // Compute the middle point of the link for adding the text later
       let middleX = undefined;
@@ -183,31 +179,27 @@
       d.middleX = Number.isNaN(middleX) ? 0 : middleX;
       d.gap = gap;
 
-      rankedDepList[gap].push(d);
-      rankedDepListt.push(d);
+      rankedDepList.push(d);
     });
 
-    rankedDepListt.sort((a, b) => a.gap - b.gap);
+    rankedDepList.sort((a, b) => a.gap - b.gap);
 
+    // Need to pre-fill 1 because the first level (line) is reserved for
+    // consecutive tokens only
     let tokenRelCount = Array(tokens.length).fill(1);
     let rankedDepMap = {};
 
     // Rank the dependency based on token's dependency count
-    rankedDepListt.forEach(d => {
+    rankedDepList.forEach(d => {
       if (d.relation !== 'root') {
         let iLow = Math.min(d.child, d.parent);
         let iHigh = Math.max(d.child, d.parent);
         let curRank = tokenRelCount.slice(iLow, iHigh + 1).reduce((a, b) => Math.max(a, b));
 
-        if (iLow === 1) {
-          console.log(tokenRelCount);
-        }
-
         if (d.gap === 1) {
           curRank = 0;
         } else {
           tokenRelCount[Math.min(d.child, d.parent)] = curRank + 1;
-          //tokenRelCount[d.parent] = curRank + 1;
         }
 
         if (rankedDepMap[curRank] === undefined) {
@@ -217,16 +209,6 @@
         rankedDepMap[curRank].push(d);
       }
     });
-
-    console.log(tokenRelCount);
-
-
-
-    console.log(rankedDepListt);
-
-    console.log(rankedDepList);
-
-    console.log(rankedDepMap);
 
     let arcGroup = tokenGroup.append('g')
       .attr('class', 'arc-group');
@@ -270,14 +252,6 @@
             Q${control1.x} ${control1.y}, ${mid1.x} ${mid1.y}
             L${mid2.x} ${mid2.y}
             Q${control2.x} ${control2.y}, ${targetX} ${i === 0 ? 0 : -5}`;
-
-          // return `M${sourceX} ${0}
-          //   L${control1.x} ${control1.y}
-          //   L${mid1.x} ${mid1.y}
-          //   L${mid2.x} ${mid2.y}
-          //   L${control2.x} ${control2.y}
-          //   L${targetX} ${0}`;
-
         });
 
       arcGroup.selectAll(`rect.arc-path-rect-${i}`)
