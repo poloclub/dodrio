@@ -1,5 +1,4 @@
 <script>
-  import { onMount } from 'svelte';
   import { graphViewConfigStore } from './store';
   import * as d3 from 'd3';
   
@@ -9,8 +8,11 @@
   let graphSVG = null;
   let graphData = null;
 
-  const SVGWidth = 800;
-  const SVGHeight = 800;
+  let SVGWidth = undefined;
+  let SVGHeight = undefined;
+  
+  // View configs
+  const rightListWidth = 180;
 
   const SVGPadding = {top: 3, left: 3, right: 3, bottom: 3};
 
@@ -24,14 +26,21 @@
   const gridRowGap = 25;
   const gridColumnGap = 20;
 
+  // Graph vis variables
   let tokenSize = null;
-  let currentSimNodes = null;
-
   let nodes = null;
   let links = null;
   let biLinks = null;
   let hiddenLinks = null;
   let gridLinks = null;
+
+  // Control panel variables
+  let curHeadMode = 'semantic';
+  let headLists = {
+    'semantic': [1, 2, 3],
+    'syntactic': [4, 5, 6],
+    'gradient': [7, 8, 9]
+  };
 
   const ease = d3.easeCubicInOut;
   const animationTime = 300;
@@ -113,7 +122,7 @@
     }
 
     let width = SVGWidth - SVGPadding.left - SVGPadding.right;
-    let height = SVGWidth - SVGPadding.top - SVGPadding.bottom;
+    let height = SVGHeight - SVGPadding.top - SVGPadding.bottom;
 
     const left = Math.max(SVGPadding.left + curRadius, Math.min(width - curRadius, d.x));
     const top = Math.max(SVGPadding.top + curRadius, Math.min(height - curRadius, d.y));
@@ -249,35 +258,20 @@
 
         switch(newLayoutValue) {
         case 'force':
-          // Force requires augmented nodes
-          // if (currentSimNodes === 'original') {
-          //   simulation.stop().nodes(augmentedNodes);
-          //   currentSimNodes = 'augmented';
-          // }
-
           currentLayout = layoutOptions.force;
           initForceSim(simulation, nodeRadiusScale);
-
           simulation.alpha(1).restart();
           break;
 
         case 'radial':
           currentLayout = layoutOptions.radial;
           initRadialSim(simulation);
-
           simulation.alpha(0.6).restart();
           break;
 
         case 'grid':
-          // Grid requires original nodes
-          // if (currentSimNodes === 'augmented') {
-          //   simulation.stop().nodes(originalNodes);
-          //   currentSimNodes = 'original';
-          // }
-
           currentLayout = layoutOptions.grid;
           initGridSim(simulation);
-
           simulation.alpha(1).restart();
           break;
         }
@@ -611,7 +605,6 @@
     
     // Define the force
     let simulation = d3.forceSimulation(nodes);
-    currentSimNodes = 'augmented';
 
     switch(currentLayout.value) {
     case 'force':
@@ -852,15 +845,21 @@
         (graphViewCompConfig.compHeight !== value.compHeight &&
         graphViewCompConfig.compWidth !== value.compWidth)
       ){
+        // Update the height and width
         graphViewCompConfig = value;
+        SVGHeight = graphViewCompConfig.compHeight;
+        SVGWidth = graphViewCompConfig.compWidth - rightListWidth;
         renderGraph();
       }
     }
   });
 
-  // onMount(async () => {
-  //   console.log(compHeight);
-  // });
+  const headModeClicked = (e) => {
+    let newMode = e.target.dataset.mode;
+    if (newMode !== curHeadMode) {
+      curHeadMode = newMode;
+    }
+  };
 
 
 </script>
@@ -870,6 +869,8 @@
   .graph-view {
     display: flex;
     flex-direction: row;
+    width: 100%;
+    height: 100%;
   }
 
   .control-panel {
@@ -912,11 +913,111 @@
     fill: none;
   }
 
+  .list {
+    background: hsl(0, 0%, 95%);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 10px 5px 0px 5px;
+  }
+
+  .list-title {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .list-title-text {
+    font-size: 1.2rem;
+    margin-bottom: 5px;
+  }
+
+  .list-title-icons {
+    display: flex;
+    flex-direction: row;
+
+    :not(:last-child) {
+      margin-right: 10px;
+    }
+  }
+
+  .icon-wrapper {
+    width: 26px;
+    height: 26px;
+    border-radius: 20%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border: 2px solid hsla(0, 0%, 60%, 50%);
+    cursor: pointer;
+    color: hsl(0, 0%, 60%, 80%);
+
+    &.active {
+      color: hsl(207, 78%, 62%);
+      border: 2px solid hsla(207, 78%, 62%, 100%);
+    }
+
+    :global(svg) {
+      pointer-events: none;
+    }
+  }
+
+  .list-item {
+
+  }
+
 </style>
 
 <div class='graph-view'>
-  <div class='control-panel'>
-    <!-- Sliders -->
+
+  <div class='svg-container'>
+    <svg class='graph-svg' bind:this={graphSVG}></svg>
+  </div>
+
+  <div class='list' style='width: {rightListWidth + 'px'};'>
+    <div class='list-title'>
+      <div class='list-title-text'>
+        Relevant Heads
+      </div>
+
+      <div class='list-title-icons'>
+        <div class='icon-wrapper active' title='Sorted by semantics'
+          data-mode='semantic'
+          on:click={headModeClicked}
+        >
+          <i class="fas fa-lightbulb"></i> 
+        </div>
+
+        <div class='icon-wrapper' title='Sorted by syntactic'
+          data-mode='syntactic'
+          on:click={headModeClicked}
+        >
+          <i class="fas fa-font"></i> 
+        </div>
+
+        <div class='icon-wrapper' title='Sorted by gradients'
+          on:click={headModeClicked}
+          data-mode='gradient'
+        >
+          <i class="fas fa-adjust"></i> 
+        </div>
+      </div>
+      
+    </div>
+
+    {#each headLists[curHeadMode] as item}
+      <div class='list-item'>
+        {item}
+      </div>
+    {/each}
+  </div>
+  
+</div>
+
+  <!-- <div class='control-panel'>
+    <!- - Sliders - ->
     <div class='slider'>
       <label for='attention'>Attention Strength
         [{config.autoAttention ? 'auto' : round(forceStrength.force.attention, 2)}]
@@ -939,7 +1040,7 @@
       <input type="range" min="0" max="1000" value="500" class="slider" id="collideRadius">
     </div>
 
-    <!-- Checkboxes -->
+    <!- - Checkboxes - ->
     <div class='checkbox'>
       <input type="checkbox" id="checkbox-auto-attention">
       <label for="checkbox-auto-attention">Auto attention strength </label>
@@ -960,7 +1061,7 @@
       <label for="checkbox-border">Border Constraint</label>
     </div>
     
-    <!-- Selection -->
+    <!- - Selection - ->
     <div class='select'>
       <select name='layout' id='select-layout'>
         {#each Object.values(layoutOptions) as opt}
@@ -969,10 +1070,4 @@
       </select>
     </div>
     
-  </div>
-
-  <div class='svg-container'>
-    <svg class='graph-svg' bind:this={graphSVG}></svg>
-  </div>
-  
-</div>
+  </div> -->
