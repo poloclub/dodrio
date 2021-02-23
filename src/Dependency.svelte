@@ -431,7 +431,7 @@
     data = await d3.json('/data/twitter-dep-0877.json');
     console.log('loaded data');
 
-    drawGraph();
+    // drawGraph();
   });
 
   instanceViewConfigStore.subscribe(async value => {
@@ -445,8 +445,8 @@
         SVGHeight = instanceViewConfig.compHeight;
 
         data = await d3.json('/data/twitter-dep-0877.json');
-        drawGraph();
-        // drawTree();
+        // drawGraph();
+        drawTree();
       }
     }
   }) 

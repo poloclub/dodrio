@@ -3,7 +3,8 @@
   import GraphView from './GraphView.svelte';
   import EmbeddingView from './EmbeddingView.svelte';
   import Dependency from './Dependency.svelte';
-  import { graphViewConfigStore, embeddingViewConfigStore, instanceViewConfigStore } from './store';
+  import TableView from './TableView.svelte';
+  import { graphViewConfigStore, embeddingViewConfigStore, instanceViewConfigStore, tableViewConfigStore } from './store';
   import { onMount } from 'svelte';
 
   let graphViewDIV = undefined;
@@ -24,6 +25,12 @@
     compHeight: undefined
   };
 
+  let tableViewDIV = undefined;
+  let tableViewConfig = {
+    compWidth: undefined,
+    compHeight: undefined
+  };
+
   onMount(() => {
     graphViewConfig.compWidth = Math.floor(graphViewDIV.clientWidth);
     graphViewConfig.compHeight = Math.floor(graphViewDIV.clientHeight);
@@ -36,6 +43,10 @@
     instanceViewConfig.compWidth = Math.floor(instanceViewDIV.clientWidth);
     instanceViewConfig.compHeight = Math.floor(instanceViewDIV.clientHeight);
     instanceViewConfigStore.set(instanceViewConfig);
+
+    tableViewConfig.compWidth = tableViewDIV.clientWidth;
+    tableViewConfig.compHeight = tableViewDIV.clientHeight;
+    tableViewConfigStore.set(tableViewConfig);
   });
 
 </script>
@@ -112,8 +123,8 @@
       </div>
 
       <!-- Table view -->
-      <div class='table-container'>
-
+      <div class='table-container' bind:this={tableViewDIV}>
+        <TableView />
       </div>
 
     </div>
