@@ -1,6 +1,10 @@
 <script>
   import { onMount } from 'svelte';
+  import { graphViewConfigStore } from './store';
   import * as d3 from 'd3';
+  
+  // Shared states
+  let graphViewCompConfig = undefined;
 
   let graphSVG = null;
   let graphData = null;
@@ -834,13 +838,31 @@
     bindSelect(simulation, nodeRadiusScale, nodeGroups);
   };
 
-  onMount(async () => {
+  const renderGraph = async () => {
     console.log('loading matrix');
     graphData = await d3.json('/data/twitter_graph_800_9_7.json');
     console.log('loaded matrix');
 
     drawGraph();
+  };
+
+  graphViewConfigStore.subscribe(value => {
+    if (value.compHeight !== undefined && value.compWidth !== undefined){
+      if (graphViewCompConfig === undefined ||
+        (graphViewCompConfig.compHeight !== value.compHeight &&
+        graphViewCompConfig.compWidth !== value.compWidth)
+      ){
+        graphViewCompConfig = value;
+        renderGraph();
+      }
+    }
   });
+
+  // onMount(async () => {
+  //   console.log(compHeight);
+  // });
+
+
 </script>
 
 <style type="text/scss">

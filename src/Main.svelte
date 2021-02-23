@@ -1,6 +1,21 @@
 <script>
   import Header from './Header.svelte';
   import GraphView from './GraphView.svelte';
+  import { graphViewConfigStore } from './store';
+  import { onMount } from 'svelte';
+
+  let graphViewDIV = undefined;
+  let graphViewConfig = {
+    compWidth: undefined,
+    compHeight: undefined
+  };
+
+  onMount(() => {
+    graphViewConfig.compWidth = graphViewDIV.clientWidth;
+    graphViewConfig.compHeight = graphViewDIV.clientHeight;
+    graphViewConfigStore.set(graphViewConfig);
+  });
+
 </script>
 
 <style type='text/scss'>
@@ -51,6 +66,7 @@
     border: solid 2px red;
     width: 100%;
     height: 100%;
+    overflow: scroll;
   }
 
 
@@ -82,8 +98,8 @@
       </div>
 
       <!-- Graph View -->
-      <div class='graph-container'>
-        <!-- <GraphView /> -->
+      <div class='graph-container' bind:this={graphViewDIV} >
+        <GraphView />
       </div>
 
     </div>
