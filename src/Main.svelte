@@ -33,6 +33,7 @@
     width: min(700px, 80%);
     height: 100%;
     display: flex;
+    overflow:scroll;
     flex-direction: column;
   }
 
@@ -41,6 +42,7 @@
     width: 100%;
     height: 100%;
     display: flex;
+    overflow:scroll;
     flex-direction: column;
   }
 
@@ -48,18 +50,21 @@
     border: solid 2px $gray-light;
     width: 100%;
     height: 80%;
+    overflow:scroll;
   }
 
   .table-container {
     border: solid 2px $gray-light;
     width: 100%;
     height: 100%;
+    overflow:scroll;
   }
 
   .instance-container {
     border: solid 2px $gray-light;
     width: 100%;
     height: 50%;
+    overflow:scroll;
   }
 
   .graph-container {
