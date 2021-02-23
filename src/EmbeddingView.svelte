@@ -8,21 +8,21 @@
 
   let embeddingSVG = null;
   let embeddingData = null;
-  let longest300
+  let longest300;
 
-  const SVGWidth = 435;
-  const SVGHeight = 345;
+  let SVGWidth = null;
+  let SVGHeight = null;
 
   let labelColorMap = {
     0 : 'red',
     1 : 'grey',
-    2 : 'green'
-  }
+    2 : 'skyblue'
+  };
 
   const drawEmbeddingsPlot = () => {
 
     const zoom = d3.zoom()
-        .on('zoom', (event) => {
+      .on('zoom', (event) => {
         svg.attr('transform', event.transform);
       })
       .scaleExtent([1, 10])
@@ -36,32 +36,31 @@
     let x = d3.scaleLinear()
       .domain([-6, 14])
       .range([ 0, SVGWidth ]);
-    svg.append("g")
-      .attr("transform", "translate(0," + SVGHeight + ")")
+    svg.append('g')
+      .attr('transform', 'translate(0,' + SVGHeight + ')')
       .call(d3.axisBottom(x));
 
     let y = d3.scaleLinear()
       .domain([0, 12])
       .range([ SVGHeight, 0]);
-    svg.append("g")
-      .attr("transform", "translate(0," + SVGWidth + ")")
+    svg.append('g')
+      .attr('transform', 'translate(0,' + SVGWidth + ')')
       .call(d3.axisLeft(y));
 
 
     // Add dots
     svg.append('g')
-      .selectAll("dot")
+      .selectAll('dot')
       .data(embeddingData)
       .enter()
-      .append("circle")
-      .attr("cx", function (d) { return x(d.coords[0]); } )
-      .attr("cy", function (d) { return y(d.coords[1]); } )
-      .attr("r", 2)
-      .style("fill", function (d) { return labelColorMap[d.label] })
-      .style("opacity", 0.3) 
-      .style("stroke", "white")
-
-  }
+      .append('circle')
+      .attr('cx', function (d) { return x(d.coords[0]); } )
+      .attr('cy', function (d) { return y(d.coords[1]); } )
+      .attr('r', 5)
+      .style('fill', function (d) { return labelColorMap[d.label] })
+      .style('opacity', 0.3) 
+      .style('stroke', 'white');
+  };
 
   const renderEmbeddings = async () => {
     console.log('loading embeddings');
@@ -78,6 +77,8 @@
         embeddingViewConfig.compWidth !== value.compWidth)
       ){
         embeddingViewConfig = value;
+        SVGWidth = embeddingViewConfig.compWidth;
+        SVGHeight = embeddingViewConfig.compHeight;
         renderEmbeddings();
       }
     }
@@ -86,7 +87,7 @@
   
 </script>
 
-<style type="text/scss">
+<style type='text/scss'>
 
 </style>
 

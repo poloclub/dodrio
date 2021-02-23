@@ -1,7 +1,8 @@
 <script>
   import Header from './Header.svelte';
   import GraphView from './GraphView.svelte';
-  import { graphViewConfigStore } from './store';
+  import EmbeddingView from './EmbeddingView.svelte';
+  import { graphViewConfigStore, embeddingViewConfigStore } from './store';
   import { onMount } from 'svelte';
 
   let graphViewDIV = undefined;
@@ -9,11 +10,21 @@
     compWidth: undefined,
     compHeight: undefined
   };
+  
+  let embeddingViewDIV = undefined;
+  let embeddingViewConfig = {
+    compWidth: undefined,
+    compHeight: undefined
+  };
 
   onMount(() => {
-    graphViewConfig.compWidth = graphViewDIV.clientWidth;
-    graphViewConfig.compHeight = graphViewDIV.clientHeight;
+    graphViewConfig.compWidth = Math.floor(graphViewDIV.clientWidth);
+    graphViewConfig.compHeight = Math.floor(graphViewDIV.clientHeight);
     graphViewConfigStore.set(graphViewConfig);
+
+    embeddingViewConfig.compWidth = Math.floor(embeddingViewDIV.clientWidth);
+    embeddingViewConfig.compHeight = Math.floor(embeddingViewDIV.clientHeight);
+    embeddingViewConfigStore.set(embeddingViewConfig);
   });
 
 </script>
@@ -50,7 +61,7 @@
     border: solid 2px $gray-light;
     width: 100%;
     height: 80%;
-    overflow:scroll;
+    // overflow:scroll;
   }
 
   .table-container {
@@ -85,8 +96,8 @@
     <div class='select-container'>
 
       <!-- Embedding view -->
-      <div class='embedding-container'>
-
+      <div class='embedding-container' bind:this={embeddingViewDIV}>
+        <EmbeddingView />
       </div>
 
       <!-- Table view -->
