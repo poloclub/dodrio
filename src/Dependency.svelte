@@ -1,12 +1,15 @@
 <script>
   import { onMount } from 'svelte';
+  import { instanceViewConfigStore } from './store';
   import * as d3 from 'd3';
 
   let svg = null;
   let data = null;
 
-  const SVGWidth = 800;
-  const SVGHeight = 800;
+  let SVGWidth = 800;
+  let SVGHeight = 800;
+
+  let instanceViewConfig = undefined;
 
   const SVGPadding = {top: 3, left: 3, right: 3, bottom: 3};
   const textTokenPadding = {top: 3, left: 3, right: 3, bottom: 3};
@@ -42,7 +45,7 @@
     // Add arrow markers
     svg.append('defs')
       .append('marker')
-      .attr('id', 'arrow')
+      .attr('id', 'dep-arrow')
       .attr('viewBox', [0, 0, 10, 10])
       .attr('refX', 0)
       .attr('refY', 5)
@@ -219,7 +222,7 @@
         .data(rankedDepMap[k], d => `${d.parent}-${d.child}`)
         .join('path')
         .attr('class', `arc-path arc-path-${i}`)
-        .attr('marker-end', 'url(#arrow)')
+        .attr('marker-end', 'url(#dep-arrow)')
         .attr('d', d => {          
           let sourceX = d.sourceX;
           let targetX = d.targetX;
@@ -274,98 +277,153 @@
         .text(d => d.relation === 'root' ? '' : d.relation);
 
     });
+  };
 
+  const drawTree = () => {
+    svg = d3.select(svg)
+      .attr('width', SVGWidth)
+      .attr('height', SVGHeight);
 
+    // Add a border
+    svg.append('rect')
+      .attr('class', 'border-rect')
+      .attr('width', SVGWidth)
+      .attr('height', SVGHeight)
+      .style('stroke', 'black')
+      .style('fill', 'none');
 
+    // Add arrow markers
+    svg.append('defs')
+      .append('marker')
+      .attr('id', 'arrow')
+      .attr('viewBox', [0, 0, 10, 10])
+      .attr('refX', 0)
+      .attr('refY', 5)
+      .attr('markerWidth', 10)
+      .attr('markerHeight', 7)
+      .attr('orient', 'auto')
+      .attr('stroke-width', 1)
+      .attr('markerUnits', 'userSpaceOnUse')
+      .append('path')
+      //.attr('d', 'M0,5 L0,15 L8,10')
+      .attr('d', 'M 0 0 L 10 5 L 0 10 z')
+      .attr('stroke', 'black')
+      .attr('fill', 'black');
 
+    const depList = data.list;
+    let tokens = data.words;
 
-    // ----- Tree Code ----
+    let textTokenWidths = {};
+    let textTokenHeight = null;
 
-    // // Convert flat data to hierarchy
-    // let root = d3.stratify()
-    //   .id(d => d.child)
-    //   .parentId(d => d.parent)(depList);
+    // Before drawing the tree, pre-render all texts to figure out thier widths
+    let hiddenTextGroup = svg.append('g')
+      .attr('class', 'hidden-text')
+      .style('opacity', 0);
+
+    let hiddenTexts = hiddenTextGroup.selectAll('.text-token')
+      .data(tokens)
+      .join('text')
+      .attr('class', 'text-token')
+      .text(d => d);
     
-    // console.log(root);
+    // After the text elements are created, we need to query again to get the
+    // length and width of these elements
+    hiddenTexts.each(function(_, i) {
+      let bbox = this.getBBox();
+      textTokenWidths[i] = +Number(bbox.width).toFixed(2);
+      if (textTokenHeight == null) {
+        textTokenHeight = bbox.height;
+      }
+    });
 
-    // let treeRoot = d3.tree()
-    //   .separation((a, b) => Math.max(textTokenWidths[a.id], textTokenWidths[b.id]))
-    //   .size([
-    //     SVGWidth - SVGPadding.left - SVGPadding.right,
-    //     SVGHeight - SVGPadding.top - SVGPadding.bottom - 2 * textTokenHeight,
-    //   ])(root);
+    hiddenTextGroup.remove();
+    hiddenTexts.remove();
 
-    // console.log(treeRoot.descendants(), treeRoot.links());
-
-    // let treeGroup = svg.append('g')
-    //   .attr('class', 'tree-group')
-    //   .attr('transform', `translate(${SVGPadding.left}, ${SVGPadding.top + textTokenHeight})`);
-
-    // let rootLinks = treeRoot.links();
-
-    // for (let i = 0; i < rootLinks.length; i++) {
-    //   rootLinks[i].left = +rootLinks[i].target.x > +rootLinks[i].source.x;
-    //   rootLinks[i].vertical = Math.abs(+rootLinks[i].target.x - +rootLinks[i].source.x) < 5;
-    // }
-
-    // console.log(rootLinks);
-
-    // let links = treeGroup.append('g')
-    //   .attr('class', 'link-group')
-    //   .selectAll('path')
-    //   .data(rootLinks, d => `${d.source.id}-${d.target.id}`)
-    //   .join('path')
-    //   .attr('id', d => `link-${d.source.id}-${d.target.id}`)
-    //   .attr('data-left', d => `${d.left} ${d.source.x} ${d.target.x}`)
-    //   .attr('d', d3.linkVertical()
-    //     .x(d => d.x)
-    //     .y(d => d.y)
-    //   );
+    // Convert flat data to hierarchy
+    let root = d3.stratify()
+      .id(d => d.child)
+      .parentId(d => d.parent)(depList);
     
-    // // Append relationship text on the path
-    // let linkTexts = treeGroup.append('g')
-    //   .attr('class', 'link-text-group')
-    //   .selectAll('text.text-link')
-    //   .data(rootLinks, d => `${d.source.id}-${d.target.id}`)
-    //   .join('text')
-    //   .attr('class', 'text-link');
-    
-    // let linkPathTexts = linkTexts.append('textPath')
-    //   .attr('href', d => `#link-${d.source.id}-${d.target.id}`)
-    //   .attr('startOffset', '50%')
-    //   .attr('side', d => d.left ? 'left' : 'right')
-    //   .style('text-anchor', 'middle')
-    //   .style('dominant-baseline', 'end')
-    //   .text(d => d.target.data.relation);
-    
-    // linkTexts.clone(true)
-    //   .lower()
-    //   .attr('stroke-width', 2)
-    //   .attr('stroke', 'white');
-    
-    // let nodes = treeGroup.append('g')
-    //   .attr('class', 'node-group')
-    //   .selectAll('g')
-    //   .data(root.descendants())
-    //   .join('g')
-    //   .attr('class', 'node')
-    //   .attr('transform', d => `translate(${d.x}, ${d.y})`);
+    console.log(root);
 
-    // nodes.append('rect')
-    //   .attr('x', d => -(textTokenWidths[d.id] + textTokenPadding.left + textTokenPadding.right) / 2)
-    //   .attr('y', - (textTokenHeight + textTokenPadding.top + textTokenPadding.bottom) / 2)
-    //   .attr('width', d => textTokenWidths[d.id] + textTokenPadding.left + textTokenPadding.right)
-    //   .attr('height', textTokenHeight + textTokenPadding.top + textTokenPadding.bottom)
-    //   .attr('rx', 5)
-    //   .style('fill', 'hsl(210, 25%, 98%)')
-    //   .style('stroke', 'hsl(180, 1%, 80%)');
+    let treeRoot = d3.tree()
+      .separation((a, b) => Math.max(textTokenWidths[a.id], textTokenWidths[b.id]))
+      .size([
+        SVGWidth - SVGPadding.left - SVGPadding.right,
+        SVGHeight - SVGPadding.top - SVGPadding.bottom - 2 * textTokenHeight,
+      ])(root);
 
-    // nodes.append('text')
-    //   .attr('class', 'text-token')
-    //   .attr('y', 1)
-    //   .text(d => tokens[d.id]);
+    console.log(treeRoot.descendants(), treeRoot.links());
 
-    // ------- Tree Code ------
+    let treeGroup = svg.append('g')
+      .attr('class', 'tree-group')
+      .attr('transform', `translate(${SVGPadding.left}, ${SVGPadding.top + textTokenHeight})`);
+
+    let rootLinks = treeRoot.links();
+
+    for (let i = 0; i < rootLinks.length; i++) {
+      rootLinks[i].left = +rootLinks[i].target.x > +rootLinks[i].source.x;
+      rootLinks[i].vertical = Math.abs(+rootLinks[i].target.x - +rootLinks[i].source.x) < 5;
+    }
+
+    console.log(rootLinks);
+
+    let links = treeGroup.append('g')
+      .attr('class', 'link-group')
+      .selectAll('path')
+      .data(rootLinks, d => `${d.source.id}-${d.target.id}`)
+      .join('path')
+      .attr('id', d => `link-${d.source.id}-${d.target.id}`)
+      .attr('data-left', d => `${d.left} ${d.source.x} ${d.target.x}`)
+      .attr('d', d3.linkVertical()
+        .x(d => d.x)
+        .y(d => d.y)
+      );
+    
+    // Append relationship text on the path
+    let linkTexts = treeGroup.append('g')
+      .attr('class', 'link-text-group')
+      .selectAll('text.text-link')
+      .data(rootLinks, d => `${d.source.id}-${d.target.id}`)
+      .join('text')
+      .attr('class', 'text-link');
+    
+    let linkPathTexts = linkTexts.append('textPath')
+      .attr('href', d => `#link-${d.source.id}-${d.target.id}`)
+      .attr('startOffset', '50%')
+      .attr('side', d => d.left ? 'left' : 'right')
+      .style('text-anchor', 'middle')
+      .style('dominant-baseline', 'end')
+      .text(d => d.target.data.relation);
+    
+    linkTexts.clone(true)
+      .lower()
+      .attr('stroke-width', 2)
+      .attr('stroke', 'white');
+    
+    let nodes = treeGroup.append('g')
+      .attr('class', 'node-group')
+      .selectAll('g')
+      .data(root.descendants())
+      .join('g')
+      .attr('class', 'node')
+      .attr('transform', d => `translate(${d.x}, ${d.y})`);
+
+    nodes.append('rect')
+      .attr('x', d => -(textTokenWidths[d.id] + textTokenPadding.left + textTokenPadding.right) / 2)
+      .attr('y', - (textTokenHeight + textTokenPadding.top + textTokenPadding.bottom) / 2)
+      .attr('width', d => textTokenWidths[d.id] + textTokenPadding.left + textTokenPadding.right)
+      .attr('height', textTokenHeight + textTokenPadding.top + textTokenPadding.bottom)
+      .attr('rx', 5)
+      .style('fill', 'hsl(210, 25%, 98%)')
+      .style('stroke', 'hsl(180, 1%, 80%)');
+
+    nodes.append('text')
+      .attr('class', 'text-token')
+      .attr('y', 1)
+      .text(d => tokens[d.id]);
+
   };
 
   onMount(async () => {
@@ -375,12 +433,30 @@
 
     drawGraph();
   });
+
+  instanceViewConfigStore.subscribe(async value => {
+    if (value.compHeight !== undefined && value.compWidth !== undefined){
+      if (instanceViewConfig === undefined ||
+        (instanceViewConfig.compHeight !== value.compHeight &&
+        instanceViewConfig.compWidth !== value.compWidth)
+      ){
+        instanceViewConfig = value;
+        //SVGWidth = instanceViewConfig.compWidth;
+        SVGHeight = instanceViewConfig.compHeight;
+
+        data = await d3.json('/data/twitter-dep-0877.json');
+        drawGraph();
+        // drawTree();
+      }
+    }
+  }) 
+
 </script>
 
 <style type='text/scss'>
 
   .svg-container {
-    width: 800px;
+    // width: 800px;
     overflow: scroll;
     border: 1px solid skyblue;
     cursor: default;
@@ -445,7 +521,7 @@
 
 <div class='graph-view'>
 
-  <div class='svg-container'>
+  <div class='svg-container' style={`width: ${instanceViewConfig === undefined ? 800 : instanceViewConfig.compWidth}px`}>
     <svg class='dependency-svg' bind:this={svg}></svg>
   </div>
   

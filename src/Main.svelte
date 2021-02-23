@@ -2,7 +2,8 @@
   import Header from './Header.svelte';
   import GraphView from './GraphView.svelte';
   import EmbeddingView from './EmbeddingView.svelte';
-  import { graphViewConfigStore, embeddingViewConfigStore } from './store';
+  import Dependency from './Dependency.svelte';
+  import { graphViewConfigStore, embeddingViewConfigStore, instanceViewConfigStore } from './store';
   import { onMount } from 'svelte';
 
   let graphViewDIV = undefined;
@@ -16,6 +17,12 @@
     compWidth: undefined,
     compHeight: undefined
   };
+  
+  let instanceViewDIV = undefined;
+  let instanceViewConfig = {
+    compWidth: undefined,
+    compHeight: undefined
+  };
 
   onMount(() => {
     graphViewConfig.compWidth = Math.floor(graphViewDIV.clientWidth);
@@ -25,6 +32,10 @@
     embeddingViewConfig.compWidth = Math.floor(embeddingViewDIV.clientWidth);
     embeddingViewConfig.compHeight = Math.floor(embeddingViewDIV.clientHeight);
     embeddingViewConfigStore.set(embeddingViewConfig);
+
+    instanceViewConfig.compWidth = Math.floor(instanceViewDIV.clientWidth);
+    instanceViewConfig.compHeight = Math.floor(instanceViewDIV.clientHeight);
+    instanceViewConfigStore.set(instanceViewConfig);
   });
 
 </script>
@@ -107,10 +118,10 @@
 
     </div>
 
-    <div class='attention-container'>
+    <div class='attention-container' bind:this={instanceViewDIV}>
       <!-- Instance View -->
       <div class='instance-container'>
-
+        <Dependency />
       </div>
 
       <!-- Graph View -->
