@@ -22,14 +22,14 @@
   @import 'define';
   
   .main-content {
-    border: solid 3px red;
+    border: solid 2px $gray-light;
     height: min(800px, calc(100vh - 50px));
     width: 100vw;
     display: flex;
   }
 
   .select-container {
-    border: solid 3px red;
+    border: solid 2px $gray-light;
     width: min(700px, 80%);
     height: 100%;
     display: flex;
@@ -37,7 +37,7 @@
   }
 
   .attention-container {
-    border: solid 2px red;
+    border: solid 2px $gray-light;
     width: 100%;
     height: 100%;
     display: flex;
@@ -45,25 +45,25 @@
   }
 
   .embedding-container {
-    border: solid 2px red;
+    border: solid 2px $gray-light;
     width: 100%;
     height: 80%;
   }
 
   .table-container {
-    border: solid 2px red;
+    border: solid 2px $gray-light;
     width: 100%;
     height: 100%;
   }
 
   .instance-container {
-    border: solid 2px red;
+    border: solid 2px $gray-light;
     width: 100%;
     height: 50%;
   }
 
   .graph-container {
-    border: solid 2px red;
+    border: solid 2px $gray-light;
     width: 100%;
     height: 100%;
     overflow: scroll;
