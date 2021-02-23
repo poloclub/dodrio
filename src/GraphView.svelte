@@ -1,9 +1,12 @@
 <script>
   import { graphViewConfigStore } from './store';
+  import GraphMatrix from './GraphMatrix.svelte';
   import * as d3 from 'd3';
+  import { onMount } from 'svelte';
   
   // Shared states
   let graphViewCompConfig = undefined;
+  let instanceID = 1718;
 
   let graphSVG = null;
   let graphData = null;
@@ -35,12 +38,18 @@
   let gridLinks = null;
 
   // Control panel variables
-  let curHeadMode = 'semantic';
+  let curHeadMode = 'gradient';
   let headLists = {
     'semantic': [1, 2, 3],
     'syntactic': [4, 5, 6],
     'gradient': [7, 8, 9]
   };
+  let relevantAttentions = [];
+  let listK = 20;
+  let attentionData = undefined;
+  let gradSortedIndexes = undefined;
+  let semanticSortedIndexes = undefined;
+  let syntacticSortedIndexes = undefined;
 
   const ease = d3.easeCubicInOut;
   const animationTime = 300;
@@ -89,6 +98,10 @@
   const round = (num, decimal) => {
     return Math.round((num + Number.EPSILON) * (10 ** decimal)) / (10 ** decimal);
   };
+
+  const padZero = (num, digit) => {
+    return Array(Math.max(digit - String(num).length + 1, 0)).join(0) + num;
+  }
 
   const drag = (simulation) => {
   
@@ -850,6 +863,7 @@
         SVGHeight = graphViewCompConfig.compHeight;
         SVGWidth = graphViewCompConfig.compWidth - rightListWidth;
         renderGraph();
+        console.log(866, relevantAttentions);
       }
     }
   });
@@ -860,6 +874,46 @@
       curHeadMode = newMode;
     }
   };
+
+  /**
+   * Load attention matrices from files.
+   */
+  const loadAttentionMatrix = () => {
+    // Compute the current indexes based on the current mode
+    let indexes = [];
+    switch (curHeadMode) {
+    case 'gradient':
+      for (let i = 0; i < listK; i++) {
+        indexes.push(gradSortedIndexes[i][1]);
+      }
+      break;
+    case 'semantic':
+      break;
+    case 'syntactic':
+      break;
+    }
+
+    // Collect attention matrices based on the sorted index
+    relevantAttentions = [];
+    indexes.forEach(d => {
+      let curLayer = d[0];
+      let curHead = d[1];
+      relevantAttentions.push({
+        attention: attentionData[curLayer][curHead],
+        layer: curLayer,
+        head: curHead
+      });
+    });
+  };
+
+  onMount(async() => {
+    attentionData = await d3.json(`/data/twitter-attention-data/attention-${padZero(instanceID, 4)}.json`);
+    gradSortedIndexes = await d3.json('/data/twitter-sorted-grad-heads.json');
+    gradSortedIndexes = gradSortedIndexes[instanceID];
+    console.log(908, attentionData);
+    loadAttentionMatrix();
+    console.log(909, relevantAttentions);
+  });
 
 
 </script>
@@ -921,12 +975,14 @@
     align-items: center;
     justify-content: flex-start;
     padding: 10px 5px 0px 5px;
+    overflow-y: scroll;
   }
 
   .list-title {
     display: flex;
     flex-direction: column;
     align-items: center;
+    margin-bottom: 15px;
   }
 
   .list-title-text {
@@ -965,7 +1021,11 @@
   }
 
   .list-item {
-
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: center;
   }
 
 </style>
@@ -1007,9 +1067,12 @@
       
     </div>
 
-    {#each headLists[curHeadMode] as item}
+    {#each relevantAttentions as item}
       <div class='list-item'>
-        {item}
+        <GraphMatrix curAttention={item.attention} />
+        <div class='list-item-text'>
+          Layer {item.layer} Head {item.head}
+        </div>
       </div>
     {/each}
   </div>
