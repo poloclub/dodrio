@@ -21,6 +21,8 @@
   };
 
   $: {
+    // When selectedInstanceId store value changes, update
+    // embedding highlight.
     d3.select('#circle-' + previousSelectedInstanceId)
       .attr('r', 5)
       .style('opacity', 0.3);
@@ -34,29 +36,24 @@
 
     const zoom = d3.zoom()
       .on('zoom', (event) => {
-        svg.attr('transform', event.transform);
+        svg.select('g').attr('transform', event.transform);
       })
       .scaleExtent([1, 10])
-      .extent([[0, 0], [SVGWidth, SVGHeight]]);
 
     let svg = d3.select(embeddingSVG)
       .attr('width', SVGWidth)
       .attr('height', SVGHeight)
+      .attr("viewBox", [0, 0, SVGWidth, SVGHeight])
+      .style('fill', '#eee')
       .call(zoom);
 
     let x = d3.scaleLinear()
       .domain([-6, 14])
       .range([ 0, SVGWidth ]);
-    svg.append('g')
-      .attr('transform', 'translate(0,' + SVGHeight + ')')
-      .call(d3.axisBottom(x));
 
     let y = d3.scaleLinear()
       .domain([0, 12])
       .range([ SVGHeight, 0]);
-    svg.append('g')
-      .attr('transform', 'translate(0,' + SVGWidth + ')')
-      .call(d3.axisLeft(y));
 
 
     // Add dots
