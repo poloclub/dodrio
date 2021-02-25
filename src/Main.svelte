@@ -41,7 +41,8 @@
     embeddingViewConfigStore.set(embeddingViewConfig);
 
     instanceViewConfig.compWidth = Math.floor(instanceViewDIV.clientWidth);
-    instanceViewConfig.compHeight = Math.floor(instanceViewDIV.clientHeight);
+    // Need to offset the horizontal scroll bar height
+    instanceViewConfig.compHeight = Math.floor(instanceViewDIV.clientHeight) - 5;
     instanceViewConfigStore.set(instanceViewConfig);
 
     tableViewConfig.compWidth = tableViewDIV.clientWidth;
@@ -102,7 +103,7 @@
     border: solid 2px $gray-light;
     width: 100%;
     height: 50%;
-    overflow:scroll;
+    overflow: hidden;
     box-sizing: border-box;
   }
 
@@ -136,9 +137,9 @@
 
     </div>
 
-    <div class='attention-container' bind:this={instanceViewDIV}>
+    <div class='attention-container'>
       <!-- Instance View -->
-      <div class='instance-container'>
+      <div class='instance-container' bind:this={instanceViewDIV}>
         <Dependency />
       </div>
 
