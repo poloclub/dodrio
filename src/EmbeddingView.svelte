@@ -1,6 +1,6 @@
 <script>
   import { onMount, afterUpdate } from 'svelte';
-  import { embeddingViewConfigStore } from './store';
+  import { embeddingViewConfigStore, currInstanceStore } from './store';
   import * as d3 from 'd3';
   
   // Shared states
@@ -8,7 +8,7 @@
 
   let embeddingSVG = null;
   let embeddingData = null;
-  let longest300;
+  let selectedInstanceId = 23;
 
   let SVGWidth = null;
   let SVGHeight = null;
@@ -54,13 +54,30 @@
       .data(embeddingData)
       .enter()
       .append('circle')
+      .attr('id', function(d) { return 'circle-' + d.id; })
       .attr('cx', function (d) { return x(d.coords[0]); } )
       .attr('cy', function (d) { return y(d.coords[1]); } )
-      .attr('r', 5)
+      .attr('r', function(d) {
+        return d.id == selectedInstanceId ? 9 : 5;
+      })
       .style('fill', function (d) { return labelColorMap[d.label] })
-      .style('opacity', 0.3) 
-      .style('stroke', 'white');
+      .style('opacity', function(d) {
+        return d.id == selectedInstanceId ? 1 : 0.3;
+      }) 
+      .style('stroke', 'white')
+      .on('click', transferEmbeddingPointHighlights);
   };
+
+  function transferEmbeddingPointHighlights(d) {
+    let data = d.originalTarget.__data__;
+    d3.select('#circle-' + selectedInstanceId)
+      .attr('r', 5)
+      .style('opacity', 0.3);
+    currInstanceStore.set(data.id);
+    d3.select(this)
+      .attr('r', 9)
+      .style('opacity', 1);
+  }
 
   const renderEmbeddings = async () => {
     console.log('loading embeddings');
@@ -84,6 +101,10 @@
     }
   });
 
+  currInstanceStore.subscribe(value => {
+    selectedInstanceId = value;
+    console.log(selectedInstanceId);
+  });
   
 </script>
 
