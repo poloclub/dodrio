@@ -59,6 +59,7 @@
     height: min(800px, calc(100vh - 50px));
     width: 100vw;
     display: flex;
+    box-sizing: border-box;
   }
 
   .select-container {
@@ -68,6 +69,7 @@
     display: flex;
     overflow:scroll;
     flex-direction: column;
+    box-sizing: border-box;
   }
 
   .attention-container {
@@ -77,12 +79,14 @@
     display: flex;
     overflow:scroll;
     flex-direction: column;
+    box-sizing: border-box;
   }
 
   .embedding-container {
     border: solid 2px $gray-light;
     width: 100%;
     height: 80%;
+    box-sizing: border-box;
     // overflow:scroll;
   }
 
@@ -91,6 +95,7 @@
     width: 100%;
     height: 100%;
     overflow:scroll;
+    box-sizing: border-box;
   }
 
   .instance-container {
@@ -98,6 +103,7 @@
     width: 100%;
     height: 50%;
     overflow:scroll;
+    box-sizing: border-box;
   }
 
   .graph-container {
@@ -105,6 +111,7 @@
     width: 100%;
     height: 100%;
     overflow: scroll;
+    box-sizing: border-box;
   }
 
 
