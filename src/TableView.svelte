@@ -52,6 +52,8 @@
     document.getElementsByTagName('table')[0].children[1]
         .children[currHighlightedRow].style = 'background-color: inherit;';
 
+
+
     // Add style to top row, since sorting
     // by column moves selected row to the top.
     document.getElementsByTagName('table')[0].children[1]
@@ -115,6 +117,10 @@
     table-layout: auto;
     text-align: center;
     border-collapse: separate;
+  }
+
+  tr:first-child {
+    background-color: rgba(228, 241, 254, 1);
   }
 </style>
 
