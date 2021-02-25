@@ -5,3 +5,4 @@ export const embeddingViewConfigStore = writable({});
 export const tableViewConfigStore = writable({});
 export const instanceViewConfigStore = writable({});
 export const svgStore = writable(undefined);
+export const currInstanceStore = writable(0);
