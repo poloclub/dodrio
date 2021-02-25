@@ -9,6 +9,7 @@
   let embeddingSVG = null;
   let embeddingData = null;
   let selectedInstanceId = 23;
+  let previousSelectedInstanceId = -1;
 
   let SVGWidth = null;
   let SVGHeight = null;
@@ -18,6 +19,17 @@
     1 : 'grey',
     2 : 'skyblue'
   };
+
+  $: {
+    // previousSelectedInstanceId = selectedInstanceId;
+    d3.select('#circle-' + previousSelectedInstanceId)
+      .attr('r', 5)
+      .style('opacity', 0.3);
+    d3.select('#circle-' + selectedInstanceId)
+      .attr('r', 9)
+      .style('opacity', 1);
+    previousSelectedInstanceId = selectedInstanceId;
+  }
 
   const drawEmbeddingsPlot = () => {
 
@@ -103,7 +115,6 @@
 
   currInstanceStore.subscribe(value => {
     selectedInstanceId = value;
-    console.log(selectedInstanceId);
   });
   
 </script>

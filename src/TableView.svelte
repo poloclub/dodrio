@@ -9,6 +9,8 @@
   let tableData = [];
   let selectedInstanceId = 23;
   let currHighlightedRow = 0;
+  let mostRecentColumnSortCriterion = 'id';
+  let isEmbeddingViewUpdate = false;
 
   let twitterLabelMap = {
     'positive': 0,
@@ -18,8 +20,25 @@
   let selectedRowColor = 'rgba(228, 241, 254, 1);';
 
   let sortBy = {col: 'id', ascending: true};
+
+  $: {
+    if (document.getElementsByTagName('table')[0]
+      && document.getElementsByTagName('table')[0]
+      .children[1].children[currHighlightedRow]) {
+      // We sort by most recent column so that placing
+      // the selected instance at the top of the table does
+      // not affect the previous sorting. Reactive for
+      // when the instanceId store value changes from
+      // another source (ie. EmbeddingView).
+      if (isEmbeddingViewUpdate) {
+        sort(mostRecentColumnSortCriterion);
+      }
+    }
+    isEmbeddingViewUpdate = true;
+  }
   
   $: sort = (column) => {
+    mostRecentColumnSortCriterion = column;
     
     if (sortBy.col == column) {
       sortBy.ascending = !sortBy.ascending
@@ -52,19 +71,18 @@
     document.getElementsByTagName('table')[0].children[1]
         .children[currHighlightedRow].style = 'background-color: inherit;';
 
-
-
     // Add style to top row, since sorting
     // by column moves selected row to the top.
     document.getElementsByTagName('table')[0].children[1]
         .children[0].style = 'background-color: ' + selectedRowColor;
     currHighlightedRow = 0;
+    isEmbeddingViewUpdate = false;
   }
 
   $: getInstance = (row) => {
-    console.log("selected row id: " + row.cells[0].innerText);
     currInstanceStore.set(row.cells[0].innerText);
-
+    isEmbeddingViewUpdate = false;
+    console.log("selected row id: " + row.cells[0].innerText);
     // Remove style from previously selected row.
     document.getElementsByTagName('table')[0].children[1]
         .children[currHighlightedRow].style = 'background-color: inherit;';
