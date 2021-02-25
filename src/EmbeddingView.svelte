@@ -1,6 +1,7 @@
 <script>
   import { onMount, afterUpdate } from 'svelte';
   import { embeddingViewConfigStore, currInstanceStore } from './store';
+  import Tooltip from './Tooltip.svelte';
   import * as d3 from 'd3';
   
   // Shared states
@@ -14,13 +15,22 @@
   let SVGWidth = null;
   let SVGHeight = null;
 
+  let tooltip = null;
+  let tooltipLeft = 0;
+  let tooltipTop = 0;
+  let tooltipHtml = 'tooltip';
+  let tooltipWidth = 100;
+  let tooltipShow = false;
+  let toolTipFontSize = '0.5em';
+  let charactersToIncludeInTooltip = 30;
+
   let labelColorMap = {
     0 : 'red',
     1 : 'grey',
     2 : 'skyblue'
   };
 
-  $: {
+  $: selectedInstanceId, function() {
     // When selectedInstanceId store value changes, update
     // embedding highlight.
     d3.select('#circle-' + previousSelectedInstanceId)
@@ -30,7 +40,7 @@
       .attr('r', 9)
       .style('opacity', 1);
     previousSelectedInstanceId = selectedInstanceId;
-  }
+  }();
 
   const drawEmbeddingsPlot = () => {
 
@@ -38,7 +48,7 @@
       .on('zoom', (event) => {
         svg.select('g').attr('transform', event.transform);
       })
-      .scaleExtent([1, 10])
+      .scaleExtent([0.5, 10])
 
     let svg = d3.select(embeddingSVG)
       .attr('width', SVGWidth)
@@ -54,7 +64,6 @@
     let y = d3.scaleLinear()
       .domain([0, 12])
       .range([ SVGHeight, 0]);
-
 
     // Add dots
     svg.append('g')
@@ -73,8 +82,49 @@
         return d.id == selectedInstanceId ? 1 : 0.3;
       }) 
       .style('stroke', 'white')
-      .on('click', transferEmbeddingPointHighlights);
+      .on('click', transferEmbeddingPointHighlights)
+      .on("mouseover", showTooltip)
+      .on("mouseleave", function(d) {
+        tooltipShow = false;
+      } );
   };
+
+  function showTooltip(event, d) {
+    let node = event.currentTarget;
+    let position = node.getBoundingClientRect();
+    let curWidth = position.right - position.left;
+    let tooltipCenterX = position.x + curWidth / 2;
+    let tooltipCenterY = position.y - 40 + window.scrollY;
+    tooltipShow = true;
+
+    tooltipHtml = buildTooltipSentenceHtml(d.sentence)
+    tooltipLeft = tooltipCenterX - tooltipWidth / 2;
+    tooltipTop = tooltipCenterY;
+  }
+
+  function buildTooltipSentenceHtml(sentence) {
+    // We want to split the sentence around the halfway point
+    // but not split the sentence mid-word.
+  
+    let sentenceHalfwayIdx = Math.floor(charactersToIncludeInTooltip/2);
+    let sentenceSplitIdxBeforeHalf = sentenceHalfwayIdx
+    let sentenceSplitIdxAfterHalf = sentenceHalfwayIdx
+    while(sentence.charAt(sentenceSplitIdxBeforeHalf) != ' ') {
+      sentenceSplitIdxBeforeHalf--;
+    }
+    while(sentence.charAt(sentenceSplitIdxAfterHalf) != ' ') {
+      sentenceSplitIdxAfterHalf++;
+    }
+    let sentenceSplitIdx = (Math.min(Math.abs(sentenceHalfwayIdx - sentenceSplitIdxBeforeHalf))
+                          > Math.min(Math.abs(sentenceHalfwayIdx - sentenceSplitIdxAfterHalf))) 
+                          ? sentenceSplitIdxAfterHalf : sentenceSplitIdxBeforeHalf;
+
+    tooltipHtml = sentence.substring(0, sentenceSplitIdx)
+                + '<br>'
+                + sentence.substring(sentenceSplitIdx, Math.floor(charactersToIncludeInTooltip))
+                + '...';
+    return tooltipHtml;
+  }
 
   function transferEmbeddingPointHighlights(d) {
     let data = d.originalTarget.__data__;
@@ -123,6 +173,14 @@
   
 
   <div class='svg-container'>
+    <Tooltip bind:this={tooltip}
+    left={tooltipLeft}
+    top={tooltipTop}
+    tooltipHtml={tooltipHtml}
+    width={tooltipWidth}
+    tooltipShow={tooltipShow}
+    fontSize={toolTipFontSize}
+  />
     <svg class='embedding-svg' bind:this={embeddingSVG}></svg>
   </div>
   
