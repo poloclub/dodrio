@@ -111,7 +111,7 @@
     border: solid 2px $gray-light;
     width: 100%;
     height: 100%;
-    overflow: scroll;
+    overflow: hidden;
     box-sizing: border-box;
   }
 

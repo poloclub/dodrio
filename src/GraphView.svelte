@@ -3,6 +3,7 @@
   import GraphMatrix from './GraphMatrix.svelte';
   import * as d3 from 'd3';
   import { onMount } from 'svelte';
+import Header from './Header.svelte';
   
   // Shared states
   let graphViewCompConfig = undefined;
@@ -46,6 +47,8 @@
   };
   let relevantAttentions = [];
   let listK = 20;
+  let curLayer = 3;
+  let curHead = 8;
   let attentionData = undefined;
   let gradSortedIndexes = undefined;
   let semanticSortedIndexes = undefined;
@@ -898,11 +901,19 @@
       let curLayer = d[0];
       let curHead = d[1];
       relevantAttentions.push({
-        attention: attentionData[curLayer][curHead],
+        attention: attentionData[curLayer][curHead].slice(0, tokenSize).map(
+          d => d.slice(0, tokenSize)
+        ),
         layer: curLayer,
         head: curHead
       });
     });
+  };
+
+  const listItemClicked = (layer, head) => {
+    curLayer = layer;
+    curHead = head;
+    console.log(curLayer, curHead);
   };
 
   onMount(async() => {
@@ -965,21 +976,28 @@
   }
 
   .list {
-    background: hsl(0, 0%, 95%);
+    background: hsl(0, 0%, 98%);
     height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    padding: 10px 5px 0px 5px;
+    padding: 0 0 5px 0;
     overflow-y: scroll;
+    overflow-x: hidden;
   }
 
   .list-title {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: 15px;
+    padding: 15px 5px 15px 5px;
+    position: sticky;
+    top: 0px;
+    width: 100%;
+    background: hsl(0, 0%, 98%);
+    border-bottom: 1px solid hsla(0, 0%, 0%, 0.1);
+    font-size: 0.93rem;
   }
 
   .list-title-text {
@@ -1018,11 +1036,27 @@
   }
 
   .list-item {
-    margin-bottom: 10px;
+    padding: 14px 0 6px 0;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
     align-items: center;
+    width: 100%;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 80ms ease-in-out;
+
+    &:hover {
+      background: hsla(0, 0%, 0%, 0.04);
+    }
+
+    &.selected {
+      background: hsla(0, 0%, 0%, 0.08);
+    }
+  }
+
+  .list-item-text {
+    cursor: default;
   }
 
 </style>
@@ -1065,8 +1099,11 @@
     </div>
 
     {#each relevantAttentions as item}
-      <div class='list-item'>
-        <GraphMatrix curAttention={item.attention} />
+      <div class='list-item'
+        class:selected={item.layer === curLayer && item.head === curHead}
+        on:click={() => listItemClicked(item.layer, item.head)}
+      >
+        <GraphMatrix curAttention={item.attention}/>
         <div class='list-item-text'>
           Layer {item.layer} Head {item.head}
         </div>

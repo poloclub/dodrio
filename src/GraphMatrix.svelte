@@ -4,7 +4,6 @@
 
   export let curAttention = null;
 
-  let heatmapMode = false;
   let matrixSVG = null;
   let matrixCanvas = null;
   
@@ -29,24 +28,11 @@
 
     const attentionLength = curAttention.length;
     let absMax = Math.max(Math.abs(attentionMin), Math.abs(attentionMax));
-    let colorScale = d3.scaleDiverging(d3.interpolateBrBG).domain([
-      absMax * Math.sign(absMax * attentionMin),
-      0,
-      absMax * Math.sign(absMax * attentionMax),
-    ]);
    
     // console.log(38, absMax, attentionMin, attentionMax);
-
-    colorScale = d3.scaleLinear()
-      .domain([
-        // absMax * Math.sign(absMax * attentionMin),
-        0,
-        absMax * Math.sign(absMax * attentionMax)
-      ])
-      .range([
-        // d3.rgb('#553005'), 
-        d3.rgb('#ffffff'), d3.rgb('red')])
-      // .range([d3.rgb('#F1F1E7'), d3.rgb('#000000'), d3.rgb('#C9E9E4')]);
+    let colorScale = d3.scaleLinear()
+      .domain([0, absMax])
+      .range([d3.color('white'), d3.color('hsl(203, 70%, 52%)')]);
 
     let bufferCanvas = document.createElement('canvas');
     let bufferContext = bufferCanvas.getContext('2d');
@@ -61,12 +47,12 @@
     // console.log(curAttention);
 
     for (let i = 0; i < imageSingleArray.length; i+=4) {
-      let pixeIndex = Math.floor(i / 4);
-      let row = Math.floor(pixeIndex / attentionLength);
-      let column = pixeIndex % attentionLength;
+      let pixelIndex = Math.floor(i / 4);
+      let row = Math.floor(pixelIndex / attentionLength);
+      let column = pixelIndex % attentionLength;
       let color = undefined;
 
-      color = d3.rgb(colorScale(curAttention[row][column]));
+      color = d3.rgb(colorScale(Math.abs(curAttention[row][column])));
 
       imageSingleArray[i] = color.r;
       imageSingleArray[i + 1] = color.g;
@@ -88,10 +74,15 @@
   });
 </script>
 
-<style>
+<style type='text/scss'>
+
+  .matrix-canvas {
+    border: 1px solid hsla(0, 0%, 0%, 0.1);
+  }
+
 </style>
 
-<div class='small-mtrix'>
+<div class='small-matrix'>
   <!-- <svg class='matrix-svg' bind:this={matrixSVG} width=150 height=150></svg> -->
   <canvas class='matrix-canvas' bind:this={matrixCanvas} width={imageLength} height={imageLength}></canvas>
 </div>
