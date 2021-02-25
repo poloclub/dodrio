@@ -21,7 +21,7 @@
 
   let sortBy = {col: 'id', ascending: true};
 
-  $: {
+  $: selectedInstanceId, function(){
     if (document.getElementsByTagName('table')[0]
       && document.getElementsByTagName('table')[0]
       .children[1].children[currHighlightedRow]) {
@@ -35,7 +35,7 @@
       }
     }
     isEmbeddingViewUpdate = true;
-  }
+  }();
   
   $: sort = (column) => {
     mostRecentColumnSortCriterion = column;
