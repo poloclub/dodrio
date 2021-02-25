@@ -21,7 +21,6 @@
   };
 
   $: {
-    // previousSelectedInstanceId = selectedInstanceId;
     d3.select('#circle-' + previousSelectedInstanceId)
       .attr('r', 5)
       .style('opacity', 0.3);
