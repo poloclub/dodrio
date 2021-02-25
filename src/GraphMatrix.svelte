@@ -35,7 +35,7 @@
       absMax * Math.sign(absMax * attentionMax),
     ]);
    
-    console.log(38, absMax, attentionMin, attentionMax);
+    // console.log(38, absMax, attentionMin, attentionMax);
 
     colorScale = d3.scaleLinear()
       .domain([
@@ -58,7 +58,7 @@
     let imageSingle = bufferContext.getImageData(0, 0, attentionLength, attentionLength);
     let imageSingleArray = imageSingle.data;
 
-    console.log(curAttention);
+    // console.log(curAttention);
 
     for (let i = 0; i < imageSingleArray.length; i+=4) {
       let pixeIndex = Math.floor(i / 4);
@@ -80,7 +80,7 @@
     matrixContext.drawImage(bufferCanvas, 0, 0, attentionLength, attentionLength,
       0, 0, imageLength, imageLength);
 
-    console.log(attentionLength, imageSingleArray, attentionMax, attentionMin);
+    // console.log(attentionLength, imageSingleArray, attentionMax, attentionMin);
   };
 
   onMount(async () => {

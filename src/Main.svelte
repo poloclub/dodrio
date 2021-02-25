@@ -41,7 +41,8 @@
     embeddingViewConfigStore.set(embeddingViewConfig);
 
     instanceViewConfig.compWidth = Math.floor(instanceViewDIV.clientWidth);
-    instanceViewConfig.compHeight = Math.floor(instanceViewDIV.clientHeight);
+    // Need to offset the horizontal scroll bar height
+    instanceViewConfig.compHeight = Math.floor(instanceViewDIV.clientHeight) - 5;
     instanceViewConfigStore.set(instanceViewConfig);
 
     tableViewConfig.compWidth = tableViewDIV.clientWidth;
@@ -59,6 +60,7 @@
     height: min(800px, calc(100vh - 50px));
     width: 100vw;
     display: flex;
+    box-sizing: border-box;
   }
 
   .select-container {
@@ -68,6 +70,7 @@
     display: flex;
     overflow:scroll;
     flex-direction: column;
+    box-sizing: border-box;
   }
 
   .attention-container {
@@ -77,12 +80,14 @@
     display: flex;
     overflow:scroll;
     flex-direction: column;
+    box-sizing: border-box;
   }
 
   .embedding-container {
     border: solid 2px $gray-light;
     width: 100%;
     height: 80%;
+    box-sizing: border-box;
     // overflow:scroll;
   }
 
@@ -91,13 +96,15 @@
     width: 100%;
     height: 100%;
     overflow:scroll;
+    box-sizing: border-box;
   }
 
   .instance-container {
     border: solid 2px $gray-light;
     width: 100%;
     height: 50%;
-    overflow:scroll;
+    overflow: hidden;
+    box-sizing: border-box;
   }
 
   .graph-container {
@@ -105,6 +112,7 @@
     width: 100%;
     height: 100%;
     overflow: scroll;
+    box-sizing: border-box;
   }
 
 
@@ -129,9 +137,9 @@
 
     </div>
 
-    <div class='attention-container' bind:this={instanceViewDIV}>
+    <div class='attention-container'>
       <!-- Instance View -->
-      <div class='instance-container'>
+      <div class='instance-container' bind:this={instanceViewDIV}>
         <Dependency />
       </div>
 

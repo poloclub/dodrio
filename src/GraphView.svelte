@@ -863,7 +863,6 @@
         SVGHeight = graphViewCompConfig.compHeight;
         SVGWidth = graphViewCompConfig.compWidth - rightListWidth;
         renderGraph();
-        console.log(866, relevantAttentions);
       }
     }
   });
@@ -910,9 +909,7 @@
     attentionData = await d3.json(`/data/twitter-attention-data/attention-${padZero(instanceID, 4)}.json`);
     gradSortedIndexes = await d3.json('/data/twitter-sorted-grad-heads.json');
     gradSortedIndexes = gradSortedIndexes[instanceID];
-    console.log(908, attentionData);
     loadAttentionMatrix();
-    console.log(909, relevantAttentions);
   });
 
 

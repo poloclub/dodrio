@@ -10,26 +10,50 @@
   let SVGHeight = 800;
 
   let instanceViewConfig = undefined;
+  let SVGInitialized = false;
 
   const SVGPadding = {top: 3, left: 3, right: 3, bottom: 3};
   const textTokenPadding = {top: 3, left: 3, right: 3, bottom: 3};
 
-  let nodes = null;
-  let links = null;
 
   const ease = d3.easeCubicInOut;
   const animationTime = 300;
-
-  let config = {
-    borderConstraint: true,
-  }
 
   const round = (num, decimal) => {
     return Math.round((num + Number.EPSILON) * (10 ** decimal)) / (10 ** decimal);
   };
 
-  const drawGraph = () => {
+  const getTokenWidth = (tokens) => {
+    let textTokenWidths = {};
+    let textTokenHeight = null;
 
+    let hiddenTextGroup = svg.append('g')
+      .attr('class', 'hidden-text')
+      .style('opacity', 0);
+
+    let hiddenTexts = hiddenTextGroup.selectAll('.text-token')
+      .data(tokens)
+      .join('text')
+      .attr('class', 'text-token')
+      .text(d => d);
+    
+    // After the text elements are created, we need to query again to get the
+    // length and width of these elements
+    hiddenTexts.each(function(_, i) {
+      let bbox = this.getBBox();
+      textTokenWidths[i] = +Number(bbox.width).toFixed(2);
+      if (textTokenHeight == null) {
+        textTokenHeight = bbox.height;
+      }
+    });
+
+    hiddenTextGroup.remove();
+    hiddenTexts.remove();
+
+    return {textTokenWidths: textTokenWidths, textTokenHeight: textTokenHeight};
+  };
+
+  const initSVG = () => {
     svg = d3.select(svg)
       .attr('width', SVGWidth)
       .attr('height', SVGHeight);
@@ -55,40 +79,26 @@
       .attr('stroke-width', 1)
       .attr('markerUnits', 'userSpaceOnUse')
       .append('path')
-      //.attr('d', 'M0,5 L0,15 L8,10')
       .attr('d', 'M 0 0 L 10 5 L 0 10 z')
       .attr('stroke', 'black')
       .attr('fill', 'black');
 
+    SVGInitialized = true;
+  };
+
+  const drawGraph = () => {
+    if (!SVGInitialized) {
+      initSVG();
+    }
+
     const depList = data.list;
     let tokens = data.words;
 
-    let textTokenWidths = {};
-    let textTokenHeight = null;
-
-    // Before drawing the tree, pre-render all texts to figure out thier widths
-    let hiddenTextGroup = svg.append('g')
-      .attr('class', 'hidden-text')
-      .style('opacity', 0);
-
-    let hiddenTexts = hiddenTextGroup.selectAll('.text-token')
-      .data(tokens)
-      .join('text')
-      .attr('class', 'text-token')
-      .text(d => d);
-    
-    // After the text elements are created, we need to query again to get the
-    // length and width of these elements
-    hiddenTexts.each(function(_, i) {
-      let bbox = this.getBBox();
-      textTokenWidths[i] = +Number(bbox.width).toFixed(2);
-      if (textTokenHeight == null) {
-        textTokenHeight = bbox.height;
-      }
-    });
-
-    hiddenTextGroup.remove();
-    hiddenTexts.remove();
+    // Before drawing the tree, pre-render all texts to figure out their widths
+    console.log(svg);
+    let textTokenSize = getTokenWidth(tokens);
+    let textTokenWidths = textTokenSize.textTokenWidths;
+    let textTokenHeight = textTokenSize.textTokenHeight;
 
     console.log(textTokenWidths, textTokenHeight);
 
@@ -280,65 +290,16 @@
   };
 
   const drawTree = () => {
-    svg = d3.select(svg)
-      .attr('width', SVGWidth)
-      .attr('height', SVGHeight);
-
-    // Add a border
-    svg.append('rect')
-      .attr('class', 'border-rect')
-      .attr('width', SVGWidth)
-      .attr('height', SVGHeight)
-      .style('stroke', 'black')
-      .style('fill', 'none');
-
-    // Add arrow markers
-    svg.append('defs')
-      .append('marker')
-      .attr('id', 'arrow')
-      .attr('viewBox', [0, 0, 10, 10])
-      .attr('refX', 0)
-      .attr('refY', 5)
-      .attr('markerWidth', 10)
-      .attr('markerHeight', 7)
-      .attr('orient', 'auto')
-      .attr('stroke-width', 1)
-      .attr('markerUnits', 'userSpaceOnUse')
-      .append('path')
-      //.attr('d', 'M0,5 L0,15 L8,10')
-      .attr('d', 'M 0 0 L 10 5 L 0 10 z')
-      .attr('stroke', 'black')
-      .attr('fill', 'black');
+    if (!SVGInitialized) {
+      initSVG();
+    }
 
     const depList = data.list;
     let tokens = data.words;
 
-    let textTokenWidths = {};
-    let textTokenHeight = null;
-
-    // Before drawing the tree, pre-render all texts to figure out thier widths
-    let hiddenTextGroup = svg.append('g')
-      .attr('class', 'hidden-text')
-      .style('opacity', 0);
-
-    let hiddenTexts = hiddenTextGroup.selectAll('.text-token')
-      .data(tokens)
-      .join('text')
-      .attr('class', 'text-token')
-      .text(d => d);
-    
-    // After the text elements are created, we need to query again to get the
-    // length and width of these elements
-    hiddenTexts.each(function(_, i) {
-      let bbox = this.getBBox();
-      textTokenWidths[i] = +Number(bbox.width).toFixed(2);
-      if (textTokenHeight == null) {
-        textTokenHeight = bbox.height;
-      }
-    });
-
-    hiddenTextGroup.remove();
-    hiddenTexts.remove();
+    let textTokenSize = getTokenWidth(tokens);
+    let textTokenWidths = textTokenSize.textTokenWidths;
+    let textTokenHeight = textTokenSize.textTokenHeight;
 
     // Convert flat data to hierarchy
     let root = d3.stratify()
@@ -427,11 +388,10 @@
   };
 
   onMount(async () => {
-    console.log('loading data');
-    data = await d3.json('/data/twitter-dep-0877.json');
-    console.log('loaded data');
-
-    // drawGraph();
+    // Load the dependency data
+    if (data === null) {
+      data = await d3.json('/data/twitter-dep-0877.json');
+    }
   });
 
   instanceViewConfigStore.subscribe(async value => {
@@ -441,24 +401,26 @@
         instanceViewConfig.compWidth !== value.compWidth)
       ){
         instanceViewConfig = value;
-        //SVGWidth = instanceViewConfig.compWidth;
+        
+        SVGWidth = instanceViewConfig.compWidth;
         SVGHeight = instanceViewConfig.compHeight;
 
-        data = await d3.json('/data/twitter-dep-0877.json');
-        // drawGraph();
-        drawTree();
+        if (data === null) {
+          data = await d3.json('/data/twitter-dep-0877.json');
+        }
+
+        drawGraph();
+        // drawTree();
       }
     }
-  }) 
+  });
 
 </script>
 
 <style type='text/scss'>
 
   .svg-container {
-    // width: 800px;
     overflow: scroll;
-    border: 1px solid skyblue;
     cursor: default;
   }
 
