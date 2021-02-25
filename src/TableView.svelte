@@ -7,6 +7,11 @@
   let tableViewConfig = undefined;
 
   let tableData = [];
+  let twitterLabelMap = {
+    'positive': 0,
+    'neutral': 1,
+    'negative': 2
+  }
 
   let sortBy = {col: "id", ascending: true};
   
@@ -52,37 +57,46 @@
 <style type="text/scss">
   table, th, td {
     border: 1px solid black;
-    border-collapse: collapse;
+    font-size: 0.9em;
+  }
+
+  th {
+    position: sticky;
+    z-index: 100;
+    top: 0;
+    background: #ababab;
+    background-clip: padding-box;
+    padding: 0px 2px 0px 2px;
   }
 
   table {
     background: #eee;
-    width: 50%;
+    width: 100%;
+    table-layout: auto;
     text-align: center;
+    border-collapse: separate;
   }
 </style>
 
 <div class='table-view'>
   <table>
-  <thead>
-    <tr>
-      <th on:click={sort("id")}>id</th>
-      <th on:click={sort("sentence")}>sentence</th>
-      <th on:click={sort("true_label")}>true label</th>
-      <th on:click={sort("predicted_label")}>predicted label</th>
-      <th on:click={sort("logit_distance")}>logit distance</th>
-    </tr>
-  </thead>
-  <tbody>
-    {#each tableData as row}
+    <thead>
       <tr>
-        <td>{row.id}</td>
-        <td>{row.sentence}</td>
-        <td>{row.true_label}</td>
-        <td>{row.predicted_label}</td>
-        <td>{Number((row.logit_distance).toFixed(2))}</td>
+        <th on:click={sort("sentence")}>sentence</th>
+        <th on:click={sort("true_label")}>true label</th>
+        <th on:click={sort("predicted_label")}>predicted label</th>
+        <th on:click={sort("logit_distance")}>logit distance</th>
       </tr>
-    {/each}
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      {#each tableData as row}
+        <tr>
+          <td>{row.sentence}</td>
+          <td>{twitterLabelMap[row.true_label]}</td>
+          <td>{twitterLabelMap[row.predicted_label]}</td>
+          <td>{Number((row.logit_distance).toFixed(2))}</td>
+        </tr>
+      {/each}
+    </tbody>
+  </table>
 </div>
