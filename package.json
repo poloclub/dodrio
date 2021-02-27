@@ -23,6 +23,8 @@
   },
   "dependencies": {
     "d3": "^6.4.0",
-    "sirv-cli": "^1.0.0"
+    "sirv-cli": "^1.0.0",
+    "spin.js": "^4.1.0",
+    "svelte-loading-spinners": "^0.1.4"
   }
 }

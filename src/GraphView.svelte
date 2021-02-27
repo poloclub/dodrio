@@ -3,7 +3,7 @@
   import GraphMatrix from './GraphMatrix.svelte';
   import * as d3 from 'd3';
   import { onMount } from 'svelte';
-import Header from './Header.svelte';
+  import { Circle } from 'svelte-loading-spinners';
   
   // Shared states
   let graphViewCompConfig = undefined;
@@ -40,19 +40,21 @@ import Header from './Header.svelte';
 
   // Control panel variables
   let curHeadMode = 'gradient';
-  let headLists = {
-    'semantic': [1, 2, 3],
-    'syntactic': [4, 5, 6],
-    'gradient': [7, 8, 9]
-  };
   let relevantAttentions = [];
-  let listK = 20;
+  const listKIncreasement = 10;
+  const initListK = 20;
+  let listK = initListK;
+  
   let curLayer = 3;
   let curHead = 8;
   let attentionData = undefined;
   let gradSortedIndexes = undefined;
   let semanticSortedIndexes = undefined;
   let syntacticSortedIndexes = undefined;
+
+  // Spinner options
+  let showSpinner = false;
+  let lastScrollBotTime = 0;
 
   const ease = d3.easeCubicInOut;
   const animationTime = 300;
@@ -885,7 +887,7 @@ import Header from './Header.svelte';
     let indexes = [];
     switch (curHeadMode) {
     case 'gradient':
-      for (let i = 0; i < listK; i++) {
+      for (let i = 0; i < Math.min(listK, gradSortedIndexes.length); i++) {
         indexes.push(gradSortedIndexes[i][1]);
       }
       break;
@@ -896,7 +898,7 @@ import Header from './Header.svelte';
     }
 
     // Collect attention matrices based on the sorted index
-    relevantAttentions = [];
+    let relevantAttentions = [];
     indexes.forEach(d => {
       let curLayer = d[0];
       let curHead = d[1];
@@ -908,6 +910,8 @@ import Header from './Header.svelte';
         head: curHead
       });
     });
+
+    return relevantAttentions;
   };
 
   const listItemClicked = (layer, head) => {
@@ -916,11 +920,36 @@ import Header from './Header.svelte';
     console.log(curLayer, curHead);
   };
 
+  const listScrolled = (e) => {
+    let listElem = e.target;
+
+    // Check if users have reached the bottom of the list
+    // Check the time of last scrolling to bottom to avoid double counting
+    if (listElem.scrollTop + listElem.offsetHeight === listElem.scrollHeight){
+      
+      let curTime = new Date().getTime();
+      if (curTime - lastScrollBotTime > 800) {
+        lastScrollBotTime = curTime;
+        
+        console.log(listK);
+        if (listK < gradSortedIndexes.length) {
+          // Load more heads to the list
+          listK += listKIncreasement;
+          showSpinner = true;
+          d3.timeout(() => {
+            relevantAttentions = loadAttentionMatrix();
+            showSpinner = false;
+          }, 500);
+        }
+      }
+    }
+  };
+
   onMount(async() => {
     attentionData = await d3.json(`/data/twitter-attention-data/attention-${padZero(instanceID, 4)}.json`);
     gradSortedIndexes = await d3.json('/data/twitter-sorted-grad-heads.json');
     gradSortedIndexes = gradSortedIndexes[instanceID];
-    loadAttentionMatrix();
+    relevantAttentions = loadAttentionMatrix();
   });
 
 
@@ -982,8 +1011,8 @@ import Header from './Header.svelte';
     flex-direction: column;
     align-items: center;
     justify-content: flex-start;
-    padding: 0 0 5px 0;
-    overflow-y: scroll;
+    padding: 0 0 0 0;
+    overflow-y: hidden;
     overflow-x: hidden;
   }
 
@@ -991,17 +1020,18 @@ import Header from './Header.svelte';
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 15px 5px 15px 5px;
+    padding: 10px 5px 10px 5px;
     position: sticky;
     top: 0px;
     width: 100%;
     background: hsl(0, 0%, 98%);
-    border-bottom: 1px solid hsla(0, 0%, 0%, 0.1);
+    border-bottom: 1px solid hsla(0, 0%, 0%, 0.2);
     font-size: 0.93rem;
+    cursor: default;
   }
 
   .list-title-text {
-    font-size: 1.2rem;
+    font-size: 1.1rem;
     margin-bottom: 5px;
   }
 
@@ -1015,13 +1045,14 @@ import Header from './Header.svelte';
   }
 
   .icon-wrapper {
-    width: 26px;
-    height: 26px;
+    width: 20px;
+    height: 20px;
     border-radius: 20%;
     display: flex;
     justify-content: center;
     align-items: center;
     border: 2px solid hsla(0, 0%, 60%, 50%);
+    font-size: 12px;
     cursor: pointer;
     color: hsl(0, 0%, 60%, 80%);
 
@@ -1035,6 +1066,17 @@ import Header from './Header.svelte';
     }
   }
 
+  .list-items {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    overflow-y: scroll;
+    overflow-x: hidden;
+    padding-bottom: 10px;
+  }
+
   .list-item {
     padding: 14px 0 6px 0;
     display: flex;
@@ -1042,24 +1084,34 @@ import Header from './Header.svelte';
     justify-content: flex-start;
     align-items: center;
     width: 100%;
-    font-size: 0.9rem;
     cursor: pointer;
+    font-size: 0.9rem;
     transition: background 80ms ease-in-out;
 
     &:hover {
-      background: hsla(0, 0%, 0%, 0.04);
+      background: hsla(0, 0%, 0%, 0.05);
     }
 
     &.selected {
-      background: hsla(0, 0%, 0%, 0.08);
+      background: hsla(0, 0%, 0%, 0.1);
     }
   }
 
-  .list-item-text {
-    cursor: default;
+  .spinner-container {
+    padding: 10px 0 10px 0;
+    position: relative;
+  }
+
+  .paused {
+    visibility: hidden;
+    
+    :global(.circle) {
+      animation-play-state: paused;
+    }
   }
 
 </style>
+
 
 <div class='graph-view'>
 
@@ -1068,6 +1120,7 @@ import Header from './Header.svelte';
   </div>
 
   <div class='list' style='width: {rightListWidth + 'px'};'>
+
     <div class='list-title'>
       <div class='list-title-text'>
         Relevant Heads
@@ -1095,22 +1148,30 @@ import Header from './Header.svelte';
           <i class="fas fa-adjust"></i> 
         </div>
       </div>
-      
+
     </div>
 
-    {#each relevantAttentions as item}
-      <div class='list-item'
-        class:selected={item.layer === curLayer && item.head === curHead}
-        on:click={() => listItemClicked(item.layer, item.head)}
-      >
-        <GraphMatrix curAttention={item.attention}/>
-        <div class='list-item-text'>
-          Layer {item.layer} Head {item.head}
+    <div class='list-items' on:scroll={listScrolled}>
+
+      {#each relevantAttentions as item}
+        <div class='list-item'
+          class:selected={item.layer === curLayer && item.head === curHead}
+          on:click={() => listItemClicked(item.layer, item.head)}
+        >
+          <GraphMatrix curAttention={item.attention}/>
+          <div class='list-item-text'>
+            Layer {item.layer} Head {item.head}
+          </div>
         </div>
+      {/each}
+
+      <div class='spinner-container' class:paused={!showSpinner}>
+        <Circle size="25" color="hsl(205, 87%, 61%)" unit="px" duration="1s" />
       </div>
-    {/each}
+
+    </div>
   </div>
-  
+
 </div>
 
   <!-- <div class='control-panel'>
