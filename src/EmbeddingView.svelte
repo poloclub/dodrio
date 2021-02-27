@@ -19,11 +19,17 @@
   let tooltipLeft = 0;
   let tooltipTop = 0;
   let tooltipHtml = 'tooltip';
-  let tooltipWidth = 100;
+  let tooltipWidth = 150;
   let tooltipShow = false;
-  let toolTipFontSize = '0.5em';
+  let toolTipFontSize = '0.65em';
   let charactersToIncludeInTooltip = 30;
 
+  let circleRadius = 5;
+  let selectedCircleRadius = 9;
+  let hoveredCircleRadius = 7;
+  let circleOpacity = 0.3;
+  let selectedCircleOpacity = 1;
+  let hoveredCircleOpacity = 1;
   let labelColorMap = {
     0 : 'red',
     1 : 'grey',
@@ -34,11 +40,12 @@
     // When selectedInstanceId store value changes, update
     // embedding highlight.
     d3.select('#circle-' + previousSelectedInstanceId)
-      .attr('r', 5)
-      .style('opacity', 0.3);
+      .attr('r', circleRadius)
+      .style('opacity', circleOpacity);
     d3.select('#circle-' + selectedInstanceId)
-      .attr('r', 9)
-      .style('opacity', 1);
+      .attr('r', selectedCircleRadius)
+      .style('opacity', selectedCircleOpacity)
+      .raise();
     previousSelectedInstanceId = selectedInstanceId;
   }();
 
@@ -58,11 +65,13 @@
       .call(zoom);
 
     let x = d3.scaleLinear()
-      .domain([-6, 14])
+      .domain([Math.min(...embeddingData.map(({coords}) => coords[0])),
+              Math.max(...embeddingData.map(({coords}) => coords[0]))])
       .range([ 0, SVGWidth ]);
 
     let y = d3.scaleLinear()
-      .domain([0, 12])
+      .domain([Math.min(...embeddingData.map(({coords}) => coords[1])),
+              Math.max(...embeddingData.map(({coords}) => coords[1]))])
       .range([ SVGHeight, 0]);
 
     // Add dots
@@ -75,17 +84,21 @@
       .attr('cx', function (d) { return x(d.coords[0]); } )
       .attr('cy', function (d) { return y(d.coords[1]); } )
       .attr('r', function(d) {
-        return d.id == selectedInstanceId ? 9 : 5;
+        return d.id == selectedInstanceId ? selectedCircleRadius : circleRadius;
       })
       .style('fill', function (d) { return labelColorMap[d.label] })
       .style('opacity', function(d) {
-        return d.id == selectedInstanceId ? 1 : 0.3;
+        return d.id == selectedInstanceId ? selectedCircleOpacity : circleOpacity;
       }) 
       .style('stroke', 'white')
       .on('click', transferEmbeddingPointHighlights)
-      .on("mouseover", showTooltip)
-      .on("mouseleave", function(d) {
+      .on("mouseover", function(event, d) {
+        showTooltip(event, d);
+        highlightCircleOnMouseover(d);
+      })
+      .on("mouseleave", function(event, d) {
         tooltipShow = false;
+        unhighlightCircleOnMouseout(d);
       } );
   };
 
@@ -102,39 +115,58 @@
     tooltipTop = tooltipCenterY;
   }
 
+  // We want to split the sentence around the halfway point
+  // but not split the sentence mid-word.
   function buildTooltipSentenceHtml(sentence) {
-    // We want to split the sentence around the halfway point
-    // but not split the sentence mid-word.
-  
-    let sentenceHalfwayIdx = Math.floor(charactersToIncludeInTooltip/2);
+    let sentenceHalfwayIdx = Math.floor(charactersToIncludeInTooltip / 2);
     let sentenceSplitIdxBeforeHalf = sentenceHalfwayIdx
     let sentenceSplitIdxAfterHalf = sentenceHalfwayIdx
-    while(sentence.charAt(sentenceSplitIdxBeforeHalf) != ' ') {
+    while(sentenceSplitIdxBeforeHalf >= 0 && sentence.charAt(sentenceSplitIdxBeforeHalf) != ' ') {
       sentenceSplitIdxBeforeHalf--;
     }
-    while(sentence.charAt(sentenceSplitIdxAfterHalf) != ' ') {
+    while(sentenceSplitIdxAfterHalf < Math.min(charactersToIncludeInTooltip, sentence.length)
+          && sentence.charAt(sentenceSplitIdxAfterHalf) != ' ') {
       sentenceSplitIdxAfterHalf++;
     }
     let sentenceSplitIdx = (Math.min(Math.abs(sentenceHalfwayIdx - sentenceSplitIdxBeforeHalf))
                           > Math.min(Math.abs(sentenceHalfwayIdx - sentenceSplitIdxAfterHalf))) 
                           ? sentenceSplitIdxAfterHalf : sentenceSplitIdxBeforeHalf;
+    // If we can't find a spot to split the sentence, just split it in half
+    sentenceSplitIdx = sentenceSplitIdx == sentence.length ? sentenceHalfwayIdx : sentenceSplitIdx;
 
     tooltipHtml = sentence.substring(0, sentenceSplitIdx)
                 + '<br>'
-                + sentence.substring(sentenceSplitIdx, Math.floor(charactersToIncludeInTooltip))
+                + sentence.substring(sentenceSplitIdx, charactersToIncludeInTooltip)
                 + '...';
     return tooltipHtml;
   }
 
-  function transferEmbeddingPointHighlights(d) {
-    let data = d.originalTarget.__data__;
+  function transferEmbeddingPointHighlights(event, d) {
     d3.select('#circle-' + selectedInstanceId)
-      .attr('r', 5)
-      .style('opacity', 0.3);
-    currInstanceStore.set(data.id);
+      .attr('r', circleRadius)
+      .style('opacity', circleOpacity);
+    currInstanceStore.set(d.id);
     d3.select(this)
-      .attr('r', 9)
-      .style('opacity', 1);
+      .attr('r', selectedCircleRadius)
+      .style('opacity', selectedCircleOpacity)
+      .raise();
+  }
+
+  function highlightCircleOnMouseover(d) {
+    if (d.id != selectedInstanceId) {
+      d3.select('#circle-' + d.id)
+        .attr('r', hoveredCircleRadius)
+        .style('opacity', hoveredCircleOpacity)
+        .raise();
+    }
+  }
+
+  function unhighlightCircleOnMouseout(d) {
+    if (d.id != selectedInstanceId) {
+      d3.select('#circle-' + d.id)
+        .attr('r', circleRadius)
+        .style('opacity', circleOpacity);
+    }
   }
 
   const renderEmbeddings = async () => {
@@ -174,13 +206,13 @@
 
   <div class='svg-container'>
     <Tooltip bind:this={tooltip}
-    left={tooltipLeft}
-    top={tooltipTop}
-    tooltipHtml={tooltipHtml}
-    width={tooltipWidth}
-    tooltipShow={tooltipShow}
-    fontSize={toolTipFontSize}
-  />
+      left={tooltipLeft}
+      top={tooltipTop}
+      tooltipHtml={tooltipHtml}
+      width={tooltipWidth}
+      tooltipShow={tooltipShow}
+      fontSize={toolTipFontSize}
+    />
     <svg class='embedding-svg' bind:this={embeddingSVG}></svg>
   </div>
   
