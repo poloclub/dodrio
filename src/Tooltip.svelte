@@ -6,11 +6,13 @@
   export let left = 0;
   export let top = 0;
   export let width = 80;
+  export let maxWidth = 80;
   export let fontSize = '1em';
 
   let tooltip = null;
 
-  $: style = `left: ${left}px; top: ${top}px; width: ${width}px; font-size: ${fontSize}`;
+  $: style = `left: ${left}px; top: ${top}px; width: ${width}px; max-width: 
+              ${maxWidth}px; font-size: ${fontSize}`;
   $: tooltipShow, function() {
     if (tooltip === null) return;
     let selection = d3.select(tooltip)
@@ -43,7 +45,7 @@
     position: absolute;
     color: white;
     background-color: black;
-    padding: 3px 3px;
+    padding: 5px 5px;
     border-radius: 5px;
     opacity: 1;
     z-index: 10;

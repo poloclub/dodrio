@@ -20,16 +20,19 @@
   let tooltipTop = 0;
   let tooltipHtml = 'tooltip';
   let tooltipWidth = 150;
+  let tooltipMaxWidth = 200;
   let tooltipShow = false;
   let toolTipFontSize = '0.65em';
-  let charactersToIncludeInTooltip = 30;
+  let charactersToIncludeInTooltip = 40;
 
+  let selectedCircleStrokeColor = 'rgb(100, 149, 237)';
   let circleRadius = 5;
-  let selectedCircleRadius = 9;
+  let selectedCircleRadius = 7;
   let hoveredCircleRadius = 7;
   let circleOpacity = 0.3;
   let selectedCircleOpacity = 1;
-  let hoveredCircleOpacity = 1;
+  let hoveredCircleOpacity = 1
+  let nonHoveredCircleOpacity = 0.2;
   let labelColorMap = {
     0 : 'red',
     1 : 'grey',
@@ -90,7 +93,10 @@
       .style('opacity', function(d) {
         return d.id == selectedInstanceId ? selectedCircleOpacity : circleOpacity;
       }) 
-      .style('stroke', 'white')
+      .style('stroke', function(d) { 
+        return d.id == selectedInstanceId ? selectedCircleStrokeColor : 'white';
+      })
+      .style('stroke-width', '2px')
       .on('click', transferEmbeddingPointHighlights)
       .on("mouseover", function(event, d) {
         showTooltip(event, d);
@@ -100,6 +106,10 @@
         tooltipShow = false;
         unhighlightCircleOnMouseout(d);
       } );
+
+    // Raise selected embedding point
+    svg.select('#circle-' + selectedInstanceId)
+      .raise();
   };
 
   function showTooltip(event, d) {
@@ -110,60 +120,53 @@
     let tooltipCenterY = position.y - 40 + window.scrollY;
     tooltipShow = true;
 
-    tooltipHtml = buildTooltipSentenceHtml(d.sentence)
+    tooltipHtml = d.sentence.substring(0, charactersToIncludeInTooltip)
+                + '...';
     tooltipLeft = tooltipCenterX - tooltipWidth / 2;
     tooltipTop = tooltipCenterY;
-  }
-
-  // We want to split the sentence around the halfway point
-  // but not split the sentence mid-word.
-  function buildTooltipSentenceHtml(sentence) {
-    let sentenceHalfwayIdx = Math.floor(charactersToIncludeInTooltip / 2);
-    let sentenceSplitIdxBeforeHalf = sentenceHalfwayIdx
-    let sentenceSplitIdxAfterHalf = sentenceHalfwayIdx
-    while(sentenceSplitIdxBeforeHalf >= 0 && sentence.charAt(sentenceSplitIdxBeforeHalf) != ' ') {
-      sentenceSplitIdxBeforeHalf--;
-    }
-    while(sentenceSplitIdxAfterHalf < Math.min(charactersToIncludeInTooltip, sentence.length)
-          && sentence.charAt(sentenceSplitIdxAfterHalf) != ' ') {
-      sentenceSplitIdxAfterHalf++;
-    }
-    let sentenceSplitIdx = (Math.min(Math.abs(sentenceHalfwayIdx - sentenceSplitIdxBeforeHalf))
-                          > Math.min(Math.abs(sentenceHalfwayIdx - sentenceSplitIdxAfterHalf))) 
-                          ? sentenceSplitIdxAfterHalf : sentenceSplitIdxBeforeHalf;
-    // If we can't find a spot to split the sentence, just split it in half
-    sentenceSplitIdx = sentenceSplitIdx == sentence.length ? sentenceHalfwayIdx : sentenceSplitIdx;
-
-    tooltipHtml = sentence.substring(0, sentenceSplitIdx)
-                + '<br>'
-                + sentence.substring(sentenceSplitIdx, charactersToIncludeInTooltip)
-                + '...';
-    return tooltipHtml;
   }
 
   function transferEmbeddingPointHighlights(event, d) {
     d3.select('#circle-' + selectedInstanceId)
       .attr('r', circleRadius)
-      .style('opacity', circleOpacity);
+      .style('opacity', circleOpacity)
+      .style('stroke', 'white');
     currInstanceStore.set(d.id);
     d3.select(this)
       .attr('r', selectedCircleRadius)
       .style('opacity', selectedCircleOpacity)
+      .style('stroke', selectedCircleStrokeColor)
       .raise();
   }
 
   function highlightCircleOnMouseover(d) {
+    d3.selectAll('circle')
+      .filter(function() { return this.id != 'circle-' + selectedInstanceId
+                           && this.id != 'circle-' + d.id })
+      .transition()
+      .duration(100)
+      .style('opacity', nonHoveredCircleOpacity);
     if (d.id != selectedInstanceId) {
       d3.select('#circle-' + d.id)
+        .transition()
+        .duration(100)
         .attr('r', hoveredCircleRadius)
-        .style('opacity', hoveredCircleOpacity)
-        .raise();
+        .style('opacity', hoveredCircleOpacity);
+      d3.select('#circle-' + d.id).raise();
     }
   }
 
   function unhighlightCircleOnMouseout(d) {
+    d3.selectAll('circle')
+      .filter(function() { return this.id != 'circle-' + selectedInstanceId
+                           && this.id != 'circle-' + d.id})
+      .transition()
+      .duration(100)
+      .style('opacity', circleOpacity);
     if (d.id != selectedInstanceId) {
       d3.select('#circle-' + d.id)
+        .transition()
+        .duration(100)
         .attr('r', circleRadius)
         .style('opacity', circleOpacity);
     }
@@ -212,6 +215,7 @@
       width={tooltipWidth}
       tooltipShow={tooltipShow}
       fontSize={toolTipFontSize}
+      maxWidth={tooltipMaxWidth}
     />
     <svg class='embedding-svg' bind:this={embeddingSVG}></svg>
   </div>
