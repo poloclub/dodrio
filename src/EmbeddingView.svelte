@@ -38,6 +38,7 @@
     1 : 'grey',
     2 : 'skyblue'
   };
+  let twitterLabels = ['negative', 'neutral', 'positive'];
 
   $: selectedInstanceId, function() {
     // When selectedInstanceId store value changes, update
@@ -108,10 +109,40 @@
         tooltipShow = false;
         unhighlightCircleOnMouseout(d);
       } );
-
     // Raise selected embedding point
     svg.select('#circle-' + selectedInstanceId)
       .raise();
+
+    // Draw legend
+    let labels = [...embeddingData.map(({label}) => label)];
+    let uniqueLabels = labels.filter((x, i, a) => a.indexOf(x) === i);
+    let rectangleWidth = 12;
+    let rectanglePadding = 2;
+    console.log(uniqueLabels.length)
+    let legend = svg.selectAll('.legend')
+      .data(uniqueLabels)
+      .enter()
+      .append('g')
+      .attr("class", "legend")
+      .attr("transform", function(d, i) { 
+        return "translate(0," + i * (rectangleWidth + rectanglePadding) + ")";
+      });
+
+    legend.append('rect')
+      .attr("x", SVGWidth - 100)
+      .attr("y", SVGHeight - (rectangleWidth * (uniqueLabels.length + 1)))
+      .attr("width", rectangleWidth)
+      .attr("height", rectangleWidth)
+      .style("fill", function(d) { return labelColorMap[d]} );
+
+    legend.append("text")
+      .attr('x', SVGWidth - 95 + rectangleWidth)
+      .attr('y', SVGHeight - (rectangleWidth * (uniqueLabels.length)))
+      .style('text-anchor', 'start')
+      .style('dominant-baseline', 'text-after-edge')
+      .style('fill', 'black')
+      .style('font-size', '0.7em')
+      .text(function(d) { return d + ' (' + twitterLabels[d] + ')'; });
   };
 
   function showTooltip(event, d) {
@@ -145,13 +176,9 @@
     d3.selectAll('circle')
       .filter(function() { return this.id != 'circle-' + selectedInstanceId
                            && this.id != 'circle-' + d.id })
-      .transition()
-      .duration(100)
       .style('opacity', nonHoveredCircleOpacity);
     if (d.id != selectedInstanceId) {
       d3.select('#circle-' + d.id)
-        .transition()
-        .duration(100)
         .attr('r', hoveredCircleRadius)
         .style('opacity', hoveredCircleOpacity);
       d3.select('#circle-' + d.id).raise();
@@ -162,13 +189,9 @@
     d3.selectAll('circle')
       .filter(function() { return this.id != 'circle-' + selectedInstanceId
                            && this.id != 'circle-' + d.id})
-      .transition()
-      .duration(100)
       .style('opacity', circleOpacity);
     if (d.id != selectedInstanceId) {
       d3.select('#circle-' + d.id)
-        .transition()
-        .duration(100)
         .attr('r', circleRadius)
         .style('opacity', circleOpacity);
     }
