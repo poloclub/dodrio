@@ -956,6 +956,7 @@
 </script>
 
 <style type="text/scss">
+  @import 'define';
 
   .graph-view {
     display: flex;
@@ -1004,6 +1005,10 @@
     fill: none;
   }
 
+  :global(.border-rect) {
+    display: none;
+  }
+
   .list {
     background: hsl(0, 0%, 98%);
     height: 100%;
@@ -1014,6 +1019,7 @@
     padding: 0 0 0 0;
     overflow-y: hidden;
     overflow-x: hidden;
+    border-left: 1px solid $gray-border;
   }
 
   .list-title {
@@ -1025,7 +1031,7 @@
     top: 0px;
     width: 100%;
     background: hsl(0, 0%, 98%);
-    border-bottom: 1px solid hsla(0, 0%, 0%, 0.2);
+    border-bottom: 1px solid $gray-border;
     font-size: 0.93rem;
     cursor: default;
   }
@@ -1057,8 +1063,8 @@
     color: hsl(0, 0%, 60%, 80%);
 
     &.active {
-      color: hsl(207, 78%, 62%);
-      border: 2px solid hsla(207, 78%, 62%, 100%);
+      color: $blue-icon;
+      border: 2px solid $blue-icon;
     }
 
     :global(svg) {
@@ -1109,6 +1115,117 @@
       animation-play-state: paused;
     }
   }
+  
+  .svg-container {
+    position: relative;
+  }
+
+  .svg-control-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    // width: 100px;
+    // height: 40px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;;
+    justify-content: flex-start;
+
+    font-size: 0.9rem;
+    border-radius: 5px;
+    border: 1px solid hsl(0, 0%, 93.3%);
+    box-shadow: 0 3px 3px hsla(0, 0%, 0%, 0.05);
+    background: hsla(0, 0%, 100%, 0.85);
+
+    .name {
+      font-size: 0.9rem;
+      padding: 5px 10px;
+    }
+
+    .drop-down {
+      font-size: 0.9rem;
+      padding: 5px 10px;
+    }
+  }
+
+  .sep-line-horizontal {
+    height: 0;
+    width: 95%;
+    border: 1px solid $gray-sep;
+  }
+
+  .sep-line-vertical {
+    height: 20px;
+    width: 0;
+    border: 1px solid $gray-sep;
+    margin-left: 0.5em;
+  }
+
+  select {
+    background: inherit;
+    border-color: hsla(0, 0%, 0%, 0);
+    padding: 0 1em 0 0.4em;
+  }
+
+  .select:not(.is-multiple):not(.is-loading)::after{
+    right: 0.2em;
+    border-color: $blue-icon;
+  }
+
+  .select-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .setting-icon {
+    padding: 0.1em 0.3em;
+    margin: 0 0.2em;
+    font-size: 1.1em;
+    color: $blue-icon;
+    cursor: pointer;
+    //margin-left: -0.5em;
+
+    &:hover {
+      background: change-color($blue-icon, $alpha: 0.1);
+    }
+  }
+
+  .slider-container {
+    font-size: 0.9em;
+    padding: 5px 15px 0 15px;
+
+    input {
+      width: 130px;
+    }
+
+    .sep-line-horizontal {
+      width: 70%;
+      margin: 3px 0 10px 0;
+    }
+  }
+
+  .slider-title {
+    color: change-color(black, $alpha: 0.5);
+  }
+
+  .slider-text {
+    display: flex;
+    flex-direction: row;
+
+    label {
+      margin-right: 5px;
+    }
+  }
+
+  .slider-value {
+    border-radius: 3px;
+    padding: 0 3px;
+    background: change-color($blue-icon, $alpha: 0.2);
+    color: change-color($blue-icon, $lightness: 40%);
+  }
 
 </style>
 
@@ -1116,6 +1233,88 @@
 <div class='graph-view'>
 
   <div class='svg-container'>
+    <!-- Control panel on top of the SVG -->
+    <div class='svg-control-panel'>
+      <div class='name'>
+        Layer {2} Head {2}
+      </div>
+
+      <div class='sep-line-horizontal'></div>
+
+      <div class='select-row'>
+        <div class='select'>
+          <select name='layout' id='select-layout'>
+            {#each Object.values(layoutOptions) as opt}
+              <option value={opt.value}>{opt.name}</option>
+            {/each}
+          </select>
+        </div>
+
+        <div class='sep-line-vertical'></div>
+
+        <div class='setting-icon'><i class="fas fa-sliders-h"></i></div>
+      </div>
+
+      <div class='sep-line-horizontal'></div>
+
+      <div class='slider-container'>
+
+        <div class='slider'>
+          <div class='slider-title'>Edge Force</div>
+
+          <div class='sep-line-horizontal'></div>
+
+          <div class='slider-text'>
+            <label for='attention'>Attention</label>
+            <div class='slider-value'>
+              {config.autoAttention ? 'auto' : round(forceStrength.force.attention, 2)}
+            </div>
+          </div>
+
+          <input type="range" min="0" max="1000" value="500" class="slider" id="attention">
+        </div>
+
+        <div class='slider'>
+
+          <div class='slider-text'>
+            <label for='textOrder'>Text Order</label>
+            <div class='slider-value'>
+              {round(forceStrength.force.textOrder, 2)}
+            </div>
+          </div>
+
+          <input type="range" min="0" max="1000" value="500" class="slider" id="textOrder">
+        </div>
+
+        <div class='slider'>
+
+          <div class='slider-text'>
+            <label for='manyBody'>ManyBody</label>
+            <div class='slider-value'>
+              {round(forceStrength.force.manyBody, 2)}
+            </div>
+          </div>
+
+          <input type="range" min="0" max="1000" value="500" class="slider" id="manyBody">
+        </div>
+
+        <div class='slider'>
+
+          <div class='slider-text'>
+            <label for='collide'>Node Distance</label>
+            <div class='slider-value'>
+              {round(forceStrength.force.collideRadius, 2)}
+            </div>
+          </div>
+
+          <input type="range" min="0" max="1000" value="500" class="slider" id="collideRadius">
+        </div>
+      </div>
+
+
+    </div>
+
+
     <svg class='graph-svg' bind:this={graphSVG}></svg>
   </div>
 
