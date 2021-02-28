@@ -44,10 +44,12 @@
     // embedding highlight.
     d3.select('#circle-' + previousSelectedInstanceId)
       .attr('r', circleRadius)
-      .style('opacity', circleOpacity);
+      .style('opacity', circleOpacity)
+      .style('stroke', 'white');
     d3.select('#circle-' + selectedInstanceId)
       .attr('r', selectedCircleRadius)
       .style('opacity', selectedCircleOpacity)
+      .style('stroke', selectedCircleStrokeColor)
       .raise();
     previousSelectedInstanceId = selectedInstanceId;
   }();

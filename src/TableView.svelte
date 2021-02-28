@@ -137,6 +137,11 @@
     border-collapse: separate;
   }
 
+  tr:hover { 
+    background-color: #DCDCDC;
+    cursor: default;
+  }
+
   tr:first-child {
     background-color: rgba(228, 241, 254, 1);
   }
