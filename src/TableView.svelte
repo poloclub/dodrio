@@ -138,7 +138,7 @@
   }
 
   tr:hover { 
-    background-color: #DCDCDC;
+    background-color: #DCDCDC !important;
     cursor: default;
   }
 
