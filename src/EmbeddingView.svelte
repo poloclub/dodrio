@@ -31,7 +31,7 @@
   let hoveredCircleRadius = 7;
   let circleOpacity = 0.3;
   let selectedCircleOpacity = 1;
-  let hoveredCircleOpacity = 1
+  let hoveredCircleOpacity = 1;
   let nonHoveredCircleOpacity = 0.2;
   let labelColorMap = {
     0 : 'red',
@@ -43,11 +43,13 @@
   $: selectedInstanceId, function() {
     // When selectedInstanceId store value changes, update
     // embedding highlight.
-    d3.select('#circle-' + previousSelectedInstanceId)
+    d3.select(embeddingSVG)
+      .select('#circle-' + previousSelectedInstanceId)
       .attr('r', circleRadius)
       .style('opacity', circleOpacity)
       .style('stroke', 'white');
-    d3.select('#circle-' + selectedInstanceId)
+    d3.select(embeddingSVG)
+      .select('#circle-' + selectedInstanceId)
       .attr('r', selectedCircleRadius)
       .style('opacity', selectedCircleOpacity)
       .style('stroke', selectedCircleStrokeColor)
@@ -61,23 +63,23 @@
       .on('zoom', (event) => {
         svg.select('g').attr('transform', event.transform);
       })
-      .scaleExtent([0.5, 10])
+      .scaleExtent([0.5, 10]);
 
     let svg = d3.select(embeddingSVG)
       .attr('width', SVGWidth)
       .attr('height', SVGHeight)
-      .attr("viewBox", [0, 0, SVGWidth, SVGHeight])
+      .attr('viewBox', [0, 0, SVGWidth, SVGHeight])
       .style('fill', '#eee')
       .call(zoom);
 
     let x = d3.scaleLinear()
       .domain([Math.min(...embeddingData.map(({coords}) => coords[0])),
-              Math.max(...embeddingData.map(({coords}) => coords[0]))])
+        Math.max(...embeddingData.map(({coords}) => coords[0]))])
       .range([ 0, SVGWidth ]);
 
     let y = d3.scaleLinear()
       .domain([Math.min(...embeddingData.map(({coords}) => coords[1])),
-              Math.max(...embeddingData.map(({coords}) => coords[1]))])
+        Math.max(...embeddingData.map(({coords}) => coords[1]))])
       .range([ SVGHeight, 0]);
 
     // Add dots
@@ -101,11 +103,11 @@
       })
       .style('stroke-width', '2px')
       .on('click', transferEmbeddingPointHighlights)
-      .on("mouseover", function(event, d) {
+      .on('mouseover', function(event, d) {
         showTooltip(event, d);
         highlightCircleOnMouseover(d);
       })
-      .on("mouseleave", function(event, d) {
+      .on('mouseleave', function(event, d) {
         tooltipShow = false;
         unhighlightCircleOnMouseout(d);
       } );
@@ -118,24 +120,24 @@
     let uniqueLabels = labels.filter((x, i, a) => a.indexOf(x) === i);
     let rectangleWidth = 12;
     let rectanglePadding = 2;
-    console.log(uniqueLabels.length)
+    console.log(uniqueLabels.length);
     let legend = svg.selectAll('.legend')
       .data(uniqueLabels)
       .enter()
       .append('g')
-      .attr("class", "legend")
-      .attr("transform", function(d, i) { 
-        return "translate(0," + i * (rectangleWidth + rectanglePadding) + ")";
+      .attr('class', 'legend')
+      .attr('transform', function(d, i) { 
+        return 'translate(0,' + i * (rectangleWidth + rectanglePadding) + ')';
       });
 
     legend.append('rect')
-      .attr("x", SVGWidth - 100)
-      .attr("y", SVGHeight - (rectangleWidth * (uniqueLabels.length + 1)))
-      .attr("width", rectangleWidth)
-      .attr("height", rectangleWidth)
-      .style("fill", function(d) { return labelColorMap[d]} );
+      .attr('x', SVGWidth - 100)
+      .attr('y', SVGHeight - (rectangleWidth * (uniqueLabels.length + 1)))
+      .attr('width', rectangleWidth)
+      .attr('height', rectangleWidth)
+      .style('fill', function(d) { return labelColorMap[d]} );
 
-    legend.append("text")
+    legend.append('text')
       .attr('x', SVGWidth - 95 + rectangleWidth)
       .attr('y', SVGHeight - (rectangleWidth * (uniqueLabels.length)))
       .style('text-anchor', 'start')
@@ -160,7 +162,8 @@
   }
 
   function transferEmbeddingPointHighlights(event, d) {
-    d3.select('#circle-' + selectedInstanceId)
+    d3.select(embeddingSVG)
+      .select('#circle-' + selectedInstanceId)
       .attr('r', circleRadius)
       .style('opacity', circleOpacity)
       .style('stroke', 'white');
@@ -173,25 +176,30 @@
   }
 
   function highlightCircleOnMouseover(d) {
-    d3.selectAll('circle')
+    d3.select(embeddingSVG)
+      .selectAll('circle')
       .filter(function() { return this.id != 'circle-' + selectedInstanceId
                            && this.id != 'circle-' + d.id })
       .style('opacity', nonHoveredCircleOpacity);
     if (d.id != selectedInstanceId) {
-      d3.select('#circle-' + d.id)
+      d3.select(embeddingSVG)
+        .select('#circle-' + d.id)
         .attr('r', hoveredCircleRadius)
         .style('opacity', hoveredCircleOpacity);
-      d3.select('#circle-' + d.id).raise();
+      d3.select(embeddingSVG)
+        .select('#circle-' + d.id).raise();
     }
   }
 
   function unhighlightCircleOnMouseout(d) {
-    d3.selectAll('circle')
+    d3.select(embeddingSVG)
+      .selectAll('circle')
       .filter(function() { return this.id != 'circle-' + selectedInstanceId
                            && this.id != 'circle-' + d.id})
       .style('opacity', circleOpacity);
     if (d.id != selectedInstanceId) {
-      d3.select('#circle-' + d.id)
+      d3.select(embeddingSVG)
+        .select('#circle-' + d.id)
         .attr('r', circleRadius)
         .style('opacity', circleOpacity);
     }
