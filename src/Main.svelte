@@ -56,7 +56,7 @@
   @import 'define';
   
   .main-content {
-    border: solid 2px $gray-light;
+    border-bottom: solid 1px $gray-border;
     height: min(800px, calc(100vh - 50px));
     width: 100vw;
     display: flex;
@@ -64,7 +64,7 @@
   }
 
   .select-container {
-    border: solid 2px $gray-light;
+    border-right: solid 1px $gray-border;
     width: min(700px, 80%);
     height: 100%;
     display: flex;
@@ -74,7 +74,7 @@
   }
 
   .attention-container {
-    border: solid 2px $gray-light;
+    //border: solid 1px $gray-border;
     width: 100%;
     height: 100%;
     display: flex;
@@ -84,7 +84,7 @@
   }
 
   .embedding-container {
-    border: solid 2px $gray-light;
+    border-bottom: solid 1px $gray-border;
     width: 100%;
     height: 80%;
     box-sizing: border-box;
@@ -92,7 +92,7 @@
   }
 
   .table-container {
-    border: solid 2px $gray-light;
+    //border-bottom: solid 1px $gray-border;
     width: 100%;
     height: 100%;
     overflow:scroll;
@@ -100,7 +100,7 @@
   }
 
   .instance-container {
-    border: solid 2px $gray-light;
+    border-bottom: solid 1px $gray-border;
     width: 100%;
     height: 50%;
     overflow: hidden;
@@ -108,7 +108,7 @@
   }
 
   .graph-container {
-    border: solid 2px $gray-light;
+    //border: solid 1px $gray-border;
     width: 100%;
     height: 100%;
     overflow: hidden;
