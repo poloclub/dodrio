@@ -349,7 +349,7 @@
       .data(rootLinks, d => `${d.source.id}-${d.target.id}`)
       .join('text')
       .attr('class', 'text-link');
-    
+ 
     let linkPathTexts = linkTexts.append('textPath')
       .attr('href', d => `#link-${d.source.id}-${d.target.id}`)
       .attr('startOffset', '50%')

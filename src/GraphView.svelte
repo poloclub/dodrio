@@ -16,15 +16,15 @@
   let SVGHeight = undefined;
   
   // View configs
-  const rightListWidth = 180;
+  const rightListWidth = 150;
 
   const SVGPadding = {top: 3, left: 3, right: 3, bottom: 3};
 
   const minNodeRadius = 19;
   const maxNodeRadius = 40;
   
-  const radialRadius = 300;
-  const radialCurveAlpha = 3 / 5;
+  const radialRadius = 225;
+  const radialCurveAlpha = 0.3;
 
   const gridRowSize = 10;
   const gridRowGap = 25;
@@ -38,15 +38,22 @@
   let hiddenLinks = null;
   let gridLinks = null;
 
-  // Control panel variables
+  // Head panel variables
   let curHeadMode = 'gradient';
   let relevantAttentions = [];
   const listKIncreasement = 10;
   const initListK = 20;
   let listK = initListK;
+
+  // Control panel variables
+  let settingIconActive = false;
   
+  let weightThreshold = undefined;
   let curLayer = 3;
   let curHead = 8;
+
+  // Data
+  let mounted = false;
   let attentionData = undefined;
   let gradSortedIndexes = undefined;
   let semanticSortedIndexes = undefined;
@@ -84,10 +91,10 @@
 
   let forceStrength = {
     force: {
-      manyBody: -1300,
+      manyBody: -840,
       attention: 0.5,
       textOrder: 1.6,
-      collideRadius: 10
+      collideRadius: 1
     },
     radial: {
       textOrder: 0.5,
@@ -341,6 +348,8 @@
       .strength(forceStrength.radial.textOrder)
     );
 
+    let smallDimensionWidth = Math.min(SVGHeight, SVGAElement);
+
     // Force 2 (Custom radial force)
     simulation.force('posY', d3.forceY()
       .y((d, i) => {
@@ -355,7 +364,7 @@
       .x((d, i) => {
         let curLen = nodes.filter(d => !d.hidden).length;
         let curAngle = -Math.PI / 2 + i * (Math.PI * 2 / curLen);
-        return SVGHeight / 2 + Math.cos(curAngle) * radialRadius;
+        return SVGWidth / 2 + Math.cos(curAngle) * radialRadius;
       })
       .strength(forceStrength.radial.radial)
     );
@@ -519,7 +528,7 @@
 
   const drawGraph = () => {
     // Filter the links based on the weight
-    const weightThreshold = 0.05;
+    weightThreshold = 0.05;
 
     let svg = d3.select(graphSVG)
       .attr('width', SVGWidth)
@@ -534,6 +543,9 @@
       .style('fill', 'none');
 
     // Create the data lists
+    let weights = graphData.links.map(d => d.weight);
+    console.log(d3.extent(weights));
+
     links = graphData.links.filter(d => d.weight > weightThreshold);
     links = links.map(d => Object.create(d));
 
@@ -945,11 +957,21 @@
     }
   };
 
+  const settingIconClicked = (e) => {
+    if (settingIconActive) {
+      settingIconActive = false;
+    } else {
+      settingIconActive = true;
+    }
+  };
+
   onMount(async() => {
     attentionData = await d3.json(`/data/twitter-attention-data/attention-${padZero(instanceID, 4)}.json`);
     gradSortedIndexes = await d3.json('/data/twitter-sorted-grad-heads.json');
     gradSortedIndexes = gradSortedIndexes[instanceID];
     relevantAttentions = loadAttentionMatrix();
+
+    mounted = true;
   });
 
 
@@ -970,12 +992,6 @@
     flex-direction: column;
     align-items: center;
     margin-right: 50px;
-  }
-
-  .slider {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
   }
 
   .checkbox {
@@ -1124,8 +1140,7 @@
     position: absolute;
     top: 0;
     left: 0;
-    // width: 100px;
-    // height: 40px;
+    cursor: default;
 
     display: flex;
     flex-direction: column;
@@ -1136,17 +1151,17 @@
     border-radius: 5px;
     border: 1px solid hsl(0, 0%, 93.3%);
     box-shadow: 0 3px 3px hsla(0, 0%, 0%, 0.05);
-    background: hsla(0, 0%, 100%, 0.85);
+    background: hsla(0, 0%, 100%, 0.65);
 
     .name {
-      font-size: 0.9rem;
+      font-size: 1rem;
       padding: 5px 10px;
     }
 
-    .drop-down {
-      font-size: 0.9rem;
-      padding: 5px 10px;
-    }
+    // .drop-down {
+    //   font-size: 0.9rem;
+    //   padding: 5px 10px;
+    // }
   }
 
   .sep-line-horizontal {
@@ -1159,7 +1174,6 @@
     height: 20px;
     width: 0;
     border: 1px solid $gray-sep;
-    margin-left: 0.5em;
   }
 
   select {
@@ -1181,21 +1195,39 @@
   }
 
   .setting-icon {
-    padding: 0.1em 0.3em;
+    padding: 0.1em 0.4em;
     margin: 0 0.2em;
     font-size: 1.1em;
     color: $blue-icon;
     cursor: pointer;
-    //margin-left: -0.5em;
+    border-radius: 3px;
+
+    transition: background 100ms ease-in-out;
 
     &:hover {
       background: change-color($blue-icon, $alpha: 0.1);
+    }
+
+    &.active {
+      background: change-color($blue-icon, $alpha: 0.2);
+
+      &:hover {
+        background: change-color($blue-icon, $alpha: 0.2);
+      }
     }
   }
 
   .slider-container {
     font-size: 0.9em;
-    padding: 5px 15px 0 15px;
+    padding: 0 15px 0 15px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 150ms ease-in-out;
 
     input {
       width: 130px;
@@ -1204,7 +1236,23 @@
     .sep-line-horizontal {
       width: 70%;
       margin: 3px 0 10px 0;
+
+      &.longer-line {
+        width: 115%;
+        margin: 0 0 10px 0;
+      }
     }
+
+    &.active {
+      max-height: 500px;
+      transition: max-height 300ms ease-in-out;
+    }
+  }
+
+  .slider {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
   .slider-title {
@@ -1242,6 +1290,16 @@
       <div class='sep-line-horizontal'></div>
 
       <div class='select-row'>
+
+        <div class='setting-icon'
+          on:click={settingIconClicked}
+          class:active={settingIconActive}
+        >
+          <i class="fas fa-sliders-h"></i>
+        </div>
+
+        <div class='sep-line-vertical'></div>
+
         <div class='select'>
           <select name='layout' id='select-layout'>
             {#each Object.values(layoutOptions) as opt}
@@ -1250,19 +1308,19 @@
           </select>
         </div>
 
-        <div class='sep-line-vertical'></div>
-
-        <div class='setting-icon'><i class="fas fa-sliders-h"></i></div>
       </div>
 
-      <div class='sep-line-horizontal'></div>
+      <!-- Slider panel -->
+      <div class='slider-container'
+        class:active={settingIconActive}
+      >
+        <div class='sep-line-horizontal longer-line'></div>
 
-      <div class='slider-container'>
+        <div class='slider-title'>Edge Force</div>
+
+        <div class='sep-line-horizontal'></div>
 
         <div class='slider'>
-          <div class='slider-title'>Edge Force</div>
-
-          <div class='sep-line-horizontal'></div>
 
           <div class='slider-text'>
             <label for='attention'>Attention</label>
@@ -1309,6 +1367,23 @@
 
           <input type="range" min="0" max="1000" value="500" class="slider" id="collideRadius">
         </div>
+
+        <div class='slider-title'>Edge Threshold</div>
+
+        <div class='sep-line-horizontal'></div>
+
+        <div class='slider'>
+
+          <div class='slider-text'>
+            <label for='attention'>Top Attention</label>
+            <div class='slider-value'>
+              {weightThreshold}%
+            </div>
+          </div>
+
+          <input type="range" min="10" max="100" value="10" step="15" class="slider" id="threshold">
+        </div>
+        
       </div>
 
 
