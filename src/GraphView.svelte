@@ -32,11 +32,23 @@
 
   // Graph vis variables
   let tokenSize = null;
-  let nodes = null;
-  let links = null;
-  let biLinks = null;
-  let hiddenLinks = null;
-  let gridLinks = null;
+  let originalNodes = null;
+
+  let weightThreshold = 0.05;
+  let weightThresholdMin = 0.02;
+  let weightThresholdMax = 0.2;
+  let weightThresholdSteps = 6;
+  let weightThresholdGap = (weightThresholdMax - weightThresholdMin) / (weightThresholdSteps - 1);
+
+  let linkArrays = {};
+  let intermediateNodes = {};
+  let curLinkI = 0;
+  let linkWidth = null;
+
+  // let links = null;
+  // let biLinks = null;
+  // let hiddenLinks = null;
+  // let gridLinks = null;
 
   // Head panel variables
   let curHeadMode = 'gradient';
@@ -48,7 +60,6 @@
   // Control panel variables
   let settingIconActive = false;
   
-  let weightThreshold = 0.05;
   let curLayer = 3;
   let curHead = 8;
 
@@ -227,6 +238,7 @@
     slider.on('input', () => {
       let sliderValue = +slider.property('value');
       let value = (sliderValue / 1000) * (max - min) + min;
+      let step = sliderValue / 200;
       forceStrength.force[name] = value;
 
       switch (name) {
@@ -247,8 +259,8 @@
         simulation.force('collide').radius(d => nodeRadiusScale(d.saliency) + value);
         break;
       case 'threshold':
-        weightThreshold = value;
-        weightThresholdUpdated();
+        weightThreshold = weightThresholdMin + step * weightThresholdGap;
+        weightThresholdUpdated(step, simulation, nodeRadiusScale);
         break;
       }
 
@@ -333,12 +345,12 @@
     simulation.force('center', d3.forceCenter(SVGWidth / 2, SVGHeight / 2));
 
     // Force 3 (Link force)
-    simulation.force('attentionLink', d3.forceLink(links)
+    simulation.force('attentionLink', d3.forceLink(linkArrays[curLinkI].links)
       .id(d => d.id)
     );
     
     // Force 4 (Text order link force)
-    simulation.force('textLink', d3.forceLink(hiddenLinks)
+    simulation.force('textLink', d3.forceLink(linkArrays[curLinkI].hiddenLinks)
       .id(d => d.id)
       .strength(d => d.target.index === 0 ? 0 : forceStrength.force.textOrder)
     );
@@ -351,17 +363,15 @@
 
   const initRadialSim = (simulation) => {
     // Force 1 (Tex order link force)
-    simulation.force('textLink', d3.forceLink(hiddenLinks)
+    simulation.force('textLink', d3.forceLink(linkArrays[curLinkI].hiddenLinks)
       .id(d => d.id)
       .strength(forceStrength.radial.textOrder)
     );
 
-    let smallDimensionWidth = Math.min(SVGHeight, SVGAElement);
-
     // Force 2 (Custom radial force)
     simulation.force('posY', d3.forceY()
       .y((d, i) => {
-        let curLen = nodes.filter(d => !d.hidden).length;
+        let curLen = originalNodes.filter(d => !d.hidden).length;
         let curAngle = -Math.PI / 2 + i * (Math.PI * 2 / curLen);
         return SVGHeight / 2 + Math.sin(curAngle) * radialRadius;
       })
@@ -370,7 +380,7 @@
 
     simulation.force('posX', d3.forceX()
       .x((d, i) => {
-        let curLen = nodes.filter(d => !d.hidden).length;
+        let curLen = originalNodes.filter(d => !d.hidden).length;
         let curAngle = -Math.PI / 2 + i * (Math.PI * 2 / curLen);
         return SVGWidth / 2 + Math.cos(curAngle) * radialRadius;
       })
@@ -388,7 +398,7 @@
     let ys = Math.floor((SVGHeight - columnLength) / 2);
 
     // Force 3 (Grid force)
-    simulation.force('grid', d3.forceLink(gridLinks)
+    simulation.force('grid', d3.forceLink(linkArrays[curLinkI].gridLinks)
       .iterations(80)
       .distance(50)
       .id(d => d.id)
@@ -534,28 +544,62 @@
       + 'L' + modTCoord.left + ',' + modTCoord.top;
   };
 
-  const weightThresholdUpdated = () => {
-    console.log('weightThresholdUpdated');
+  const weightThresholdUpdated = (step, simulation, nodeRadiusScale) => {
+    curLinkI = step;
+
+    // Update the svg
+    let linkLines = d3.select(graphSVG)
+      .select('g.attention-link-group')
+      .selectAll('path.link')
+      .data(linkArrays[curLinkI].biLinks, d => `${d[0].id}-${d[1].id}`);
+
+    // Enter
+    linkLines.enter()
+      .append('path')
+      .attr('marker-end', 'url(#arrow)')
+      .attr('class', 'link')
+      .attr('id', d => `link-${d[0].id}-${d[1].id}`)
+      .style('stroke', 'hsl(150, 74%, 51%)')
+      .style('stroke-width', d => linkWidth(d.attention))
+      .transition()
+      .duration(animationTime * 3)
+      .ease(ease)
+      .style('stroke', '#C2C2C2');
+    
+    // Exit
+    linkLines.exit()
+      .style('stroke', 'hsl(349, 81%, 57%)')
+      .transition()
+      .duration(animationTime * 3)
+      .ease(ease)
+      .style('opacity', 0)
+      .on('end', (d, i, g) => {
+        d3.select(g[i]).remove();
+      });
+    
+    // Update the simulation
+    initForceSim(simulation, nodeRadiusScale);
   };
 
   // Create related link arrays (hiddenLinks, biLinks, and gridLinks)
   const createGraphLinks = (curLinks, nodeByID, nodeIndexArray) => {
     curLinks = curLinks.map(d => Object.create(d));
+    let curNodes = originalNodes.slice();
 
     // Add text order hidden links
     let curHiddenLinks = [];
-    for (let i = 0; i < nodes.length - 1; i++) {
+    for (let i = 0; i < curNodes.length - 1; i++) {
       let hiddenLink = {
-        source: +nodes[i].id,
-        target: +nodes[i + 1].id
+        source: +curNodes[i].id,
+        target: +curNodes[i + 1].id
       };
       curHiddenLinks.push(hiddenLink);
     }
 
     // Add a connection between the first and last token
     curHiddenLinks.push({
-      source: +nodes[nodes.length - 1].id,
-      target: nodes[0].id
+      source: +curNodes[curNodes.length - 1].id,
+      target: curNodes[0].id
     });
 
     curHiddenLinks = curHiddenLinks.map(d => Object.create(d));
@@ -573,9 +617,18 @@
       // Add a hidden node if there is a self-loop
       if (source === target) {
         curBilink.selfLoop = true;
+
+        // We cannot keep creating new intermediate nodes (need to be the same
+        // object across different threshold)
         let intermediate = {hidden: true};
+        if (intermediateNodes.source !== undefined) {
+          intermediate = intermediateNodes.source;
+        } else {
+          intermediateNodes.source = intermediate;
+        }
+
         curBilink.push(intermediate);
-        nodes.push(intermediate);
+        curNodes.push(intermediate);
         curLinks.push(
           {source: intermediate, target: source}
         );
@@ -583,11 +636,14 @@
 
       curBiLinks.push(curBilink);
     });
-    
+
+    // Sort the bilinks
+    curBiLinks.sort((a, b) => `${a[0].id}-${a[1].id}`.localeCompare(`${b[0].id}-${b[1].id}`));
+
     // Create grid links
     let curGridLinks = [];
     nodeIndexArray.sort((a, b) => +a - +b);
-    for (let i = 0; i < nodes.length; i++) {
+    for (let i = 0; i < curNodes.length; i++) {
       if (i % gridRowSize !== gridRowSize - 1 & nodeByID.has(i + 1)) {
         curGridLinks.push({source: nodeByID.get(i), target: nodeByID.get(i + 1)});
       }
@@ -600,7 +656,8 @@
       links: curLinks,
       hiddenLinks: curHiddenLinks,
       biLinks: curBiLinks,
-      gridLinks: curGridLinks
+      gridLinks: curGridLinks,
+      nodes: curNodes
     };
   };
 
@@ -620,13 +677,10 @@
       .style('stroke', 'black')
       .style('fill', 'none');
 
-    // Create the data lists
-    let weights = graphData.links.map(d => d.weight);
-    console.log(d3.extent(weights));
-
     // Map nodes and links to arrays of objects
-    nodes = graphData.nodes.map(d => Object.create(d));
+    let nodes = graphData.nodes.map(d => Object.create(d));
     nodes.sort((a, b) => +a.id - +b.id);
+    originalNodes = nodes.slice();
 
     // Maintain a set of all existing node indices
     let nodeIndices = new Set();
@@ -637,12 +691,21 @@
     let nodeByID = new Map(nodes.map(d => [d.id, d]));
 
     // Create link arrays at different range steps
-    links = graphData.links.filter(d => d.weight > weightThreshold);
-    let linkResult = createGraphLinks(links, nodeByID, nodeIndexArray);
-    links = linkResult.links;
-    hiddenLinks = linkResult.hiddenLinks;
-    biLinks = linkResult.biLinks;
-    gridLinks = linkResult.gridLinks;
+    for (let i  = 0; i < weightThresholdSteps; i++) {
+      let curWeightThreshold = round(weightThresholdMin + i * weightThresholdGap, 2);
+      let links = graphData.links.filter(d => d.weight > curWeightThreshold);
+      let linkResult = createGraphLinks(links, nodeByID, nodeIndexArray);
+
+      linkArrays[i] = {
+        links: linkResult.links.slice(),
+        hiddenLinks: linkResult.hiddenLinks.slice(),
+        biLinks: linkResult.biLinks.slice(),
+        gridLinks: linkResult.gridLinks.slice(),
+        nodes: linkResult.nodes.slice()
+      };
+    }
+
+    console.log(linkArrays);
 
     // Create a scale for the node radius
     let allSaliencyScores = nodes.map(d => +d.saliency);
@@ -653,14 +716,15 @@
       .nice();
 
     // Create a scale for link stroke width
-    let attentionWeights = links.map(d => +d.weight);
-    let linkWidth = d3.scaleLinear()
+    let attentionWeights = linkArrays[0].links.map(d => +d.weight);
+    linkWidth = d3.scaleLinear()
       .domain(d3.extent(attentionWeights))
       .range([0.5, 2.5])
       .nice();
     
     // Define the force
-    let simulation = d3.forceSimulation(nodes);
+    // Use the min threshold to init the simulation (it includes the most hidden nodes)
+    let simulation = d3.forceSimulation(linkArrays[0].nodes);
 
     switch(currentLayout.value) {
     case 'force':
@@ -701,24 +765,13 @@
       .attr('class', 'attention-link-group')
       .attr('stroke', '#C2C2C2');
 
-    let linkLines = linkLineGroup.selectAll('path')
-      .data(biLinks, d => `${d[0].id}-${d[1].id}`)
+    let linkLines = linkLineGroup.selectAll('path.link')
+      .data(linkArrays[curLinkI].biLinks, d => `${d[0].id}-${d[1].id}`)
       .join('path')
-      .attr('marker-end', 'url(#arrow)')
       .attr('class', 'link')
-      .attr('data-name', d => `${d[0].id}-${d[1].id}`)
+      .attr('id', d => `link-${d[0].id}-${d[1].id}`)
+      .attr('marker-end', 'url(#arrow)')
       .style('stroke-width', d => linkWidth(d.attention));
-
-    // Add hidden text order links
-    let textLinkLines = svg.append('g')
-      .attr('class', 'text-link-group')
-      .style('visibility', config.showHiddenLink ? 'visible' : 'hidden')
-      .style('stroke', 'red')
-      .style('stroke-opacity', 1)
-      .selectAll('line')
-      .data(hiddenLinks)
-      .join('line')
-      .attr('class', 'link');
 
     // Add token nodes
     let nodeGroup = svg.append('g')
@@ -726,7 +779,7 @@
 
     let nodeGroups = nodeGroup.selectAll('g.node')
       // Need to filter out intermediate nodes
-      .data(nodes.filter(d => d.id !== undefined), d => d.id)
+      .data(linkArrays[curLinkI].nodes.filter(d => d.id !== undefined), d => d.id)
       .join('g')
       .attr('class', 'node')
       .attr('transform', `translate(${SVGWidth / 2}, ${SVGHeight / 2})`)
@@ -736,66 +789,68 @@
         let curID = curNode.data()[0].id;
 
         // Delete the node from the nodes array
-        for (let i = nodes.length - 1; i >= 0; i--) {
-          if (nodes[i].id === curID) {
-            nodes.splice(i, 1);
+        for (let i = linkArrays[curLinkI].nodes.length - 1; i >= 0; i--) {
+          if (linkArrays[curLinkI].nodes[i].id === curID) {
+            linkArrays[curLinkI].nodes.splice(i, 1);
           }
         }
 
         // Remove the node element on screen
         nodeGroup.selectAll('g.node')
-          .data(nodes.filter(d => d.id !== undefined), d => d.id)
+          .data(linkArrays[curLinkI].nodes.filter(d => d.id !== undefined), d => d.id)
           .exit()
           .remove();
 
         // Delete all links connecting to this node
-        for (let i = biLinks.length - 1; i >= 0; i--) {
-          if (biLinks[i][0].id === curID | biLinks[i][1].id === curID) {
-            biLinks.splice(i, 1);
+        for (let i = linkArrays[curLinkI].biLinks.length - 1; i >= 0; i--) {
+          if (linkArrays[curLinkI].biLinks[i][0].id === curID |
+            linkArrays[curLinkI].biLinks[i][1].id === curID) {
+            linkArrays[curLinkI].biLinks.splice(i, 1);
           }
         }
 
         // Delete all attention links connecting to this node
-        for (let i = links.length - 1; i >= 0; i--) {
-          if (links[i].source.id === curID | links[i].target.id === curID) {
-            links.splice(i, 1);
+        for (let i = linkArrays[curLinkI].links.length - 1; i >= 0; i--) {
+          if (linkArrays[curLinkI].links[i].source.id === curID |
+            linkArrays[curLinkI].links[i].target.id === curID) {
+            linkArrays[curLinkI].links.splice(i, 1);
           }
         }
 
         // Rewire the text order link array
-        for (let i = hiddenLinks.length - 1; i >= 0; i--) {
-          if (hiddenLinks[i].source.id === curID) {
-            hiddenLinks.splice(i, 1);
-          } else if (hiddenLinks[i].target.id === curID) {
-            if (i + 1 < hiddenLinks.length) {
-              hiddenLinks[i].target = hiddenLinks[i + 1].source;
+        for (let i = linkArrays[curLinkI].hiddenLinks.length - 1; i >= 0; i--) {
+          if (linkArrays[curLinkI].hiddenLinks[i].source.id === curID) {
+            linkArrays[curLinkI].hiddenLinks.splice(i, 1);
+          } else if (linkArrays[curLinkI].hiddenLinks[i].target.id === curID) {
+            if (i + 1 < linkArrays[curLinkI].hiddenLinks.length) {
+              linkArrays[curLinkI].hiddenLinks[i].target = linkArrays[curLinkI].hiddenLinks[i + 1].source;
             } else {
-              hiddenLinks[i].target = hiddenLinks[0].source;
+              linkArrays[curLinkI].hiddenLinks[i].target = linkArrays[curLinkI].hiddenLinks[0].source;
             }
           }
         }
 
         // Need to reconstruct the grid links
-        gridLinks = [];
+        linkArrays[curLinkI].gridLinks = [];
         nodeIndices = new Set();
-        nodes.forEach(d => {if (d.id !== undefined) nodeIndices.add(+d.id);});
+        linkArrays[curLinkI].nodes.forEach(d => {if (d.id !== undefined) nodeIndices.add(+d.id);});
         nodeIndexArray = Array.from(nodeIndices);
         nodeIndexArray.sort((a, b) => +a - +b);
 
         for (let i = 0; i < nodeIndexArray.length - 1; i++) {
           let curI = nodeIndexArray[i];
           if (i % gridRowSize !== gridRowSize - 1 & nodeByID.has(nodeIndexArray[i + 1])) {
-            gridLinks.push({source: nodeByID.get(curI),
+            linkArrays[curLinkI].gridLinks.push({source: nodeByID.get(curI),
               target: nodeByID.get(nodeIndexArray[i + 1])});
           }
           if (nodeByID.has(nodeIndexArray[i + gridRowSize])) {
-            gridLinks.push({source: nodeByID.get(curI),
+            linkArrays[curLinkI].gridLinks.push({source: nodeByID.get(curI),
               target: nodeByID.get(nodeIndexArray[i + gridRowSize])});
           }
         }
 
         linkLineGroup.selectAll('path.link')
-          .data(biLinks, d => `${d[0].id}-${d[1].id}`)
+          .data(linkArrays[curLinkI].biLinks, d => `${d[0].id}-${d[1].id}`)
           .exit()
           .remove();
 
@@ -824,24 +879,13 @@
     nodeGroups.append('title')
       .text(d => d.token);
 
-    // Add hidden nodes
-    let hiddenNodeGroups = svg.append('g')
-      .attr('class', 'hidden-node-group')
-      .style('visibility', config.showHiddenNode ? 'visible' : 'hidden')
-      .selectAll('g.hidden-node')
-      // Need to select intermediate nodes
-      .data(nodes.filter(d => d.id == undefined))
-      .join('g')
-      .attr('class', 'hidden-node');
-
-    hiddenNodeGroups.append('circle')
-      .attr('class', 'hidden-node-circle')
-      .attr('r', 3)
-      .style('fill', 'lightgreen');
-
     // Simulation tick updates
     simulation.on('tick', () => {
       console.log('Tick');
+
+      let linkLines = d3.select(graphSVG)
+        .select('g.attention-link-group')
+        .selectAll('path.link');
 
       // Update the attention links
       switch (currentLayout.value) {
@@ -860,20 +904,6 @@
 
       // Update the nodes
       nodeGroups.attr('transform', d => tickNodeForce(d, nodeRadiusScale));
-
-      // Update the hidden nodes
-      if (config.showHiddenNode) {
-        hiddenNodeGroups.attr('transform', d => tickNodeForce(d, nodeRadiusScale));
-      }
-
-      // Update the text links
-      if (config.showHiddenLink) {
-        textLinkLines
-          .attr('x1', d => borderConstraint(d.source, nodeRadiusScale).left)
-          .attr('y1', d => borderConstraint(d.source, nodeRadiusScale).top)
-          .attr('x2', d => borderConstraint(d.target, nodeRadiusScale).left)
-          .attr('y2', d => borderConstraint(d.target, nodeRadiusScale).top);
-      }
     });
 
     // Register UI elements from the control panel
@@ -881,9 +911,9 @@
     bindSlider('textOrder', simulation, 0, 10, forceStrength.force.textOrder);
     bindSlider('manyBody', simulation, -2000, 0, forceStrength.force.manyBody);
     bindSlider('collideRadius', simulation, 0, 20, forceStrength.force.collideRadius, nodeRadiusScale);
-    bindSlider('threshold', simulation, 0.05, 0.9, weightThreshold);
+    bindSlider('threshold', simulation, 0.05, 0.9, weightThreshold, nodeRadiusScale);
 
-    bindCheckBox(simulation, links);
+    bindCheckBox(simulation, linkArrays[curLinkI].links);
 
     bindSelect(simulation, nodeRadiusScale, nodeGroups);
   };
