@@ -5,6 +5,7 @@
 
   let svg = null;
   let data = null;
+  let saliencies = null;
 
   let SVGWidth = 800;
   let SVGHeight = 800;
@@ -14,7 +15,6 @@
 
   const SVGPadding = {top: 3, left: 3, right: 3, bottom: 3};
   const textTokenPadding = {top: 3, left: 3, right: 3, bottom: 3};
-
 
   const ease = d3.easeCubicInOut;
   const animationTime = 300;
@@ -84,6 +84,101 @@
       .attr('fill', 'black');
 
     SVGInitialized = true;
+  };
+  
+  const drawParagraph = () => {
+    if (!SVGInitialized) {
+      initSVG();
+    }
+
+    console.log(saliencies);
+
+    // Give each saliency token a unique name
+    let tokenCount = {};
+    saliencies.tokens.forEach(d => {
+      let curCount = 0;
+      if (tokenCount[d.token] === undefined) {
+        tokenCount[d.token] = curCount + 1;
+      } else {
+        curCount = tokenCount[d.token];
+        tokenCount[d.token] += 1;
+      }
+      d.id = `${d.token}-${curCount}`;
+    });
+    let tokens = saliencies.tokens;
+    
+    let key = saliencies.meta['predicted_label'];
+    let largestAbs = d3.max(saliencies.tokens.map(d => Math.abs(d[key])));
+
+    let tokenColorScale = d3.scaleLinear()
+      .domain([-largestAbs, 0, largestAbs])
+      .range([d3.rgb('#eb2f06'), d3.rgb('#ffffff'), d3.rgb('#458FC1')]);
+
+    console.log(saliencies);
+
+    // Before drawing the texts, pre-render all texts to figure out their widths
+    let textTokenSize = getTokenWidth(tokens.map(d => d.token));
+    let textTokenWidths = textTokenSize.textTokenWidths;
+    let textTokenHeight = textTokenSize.textTokenHeight;
+
+    const tokenGap = 10;
+    const rowGap = textTokenHeight + textTokenPadding.top + textTokenPadding.bottom + 10;
+
+    // Add tokens
+    let tokenGroup = svg.append('g')
+      .attr('class', 'token-group')
+      .attr('transform', `translate(${SVGPadding.left}, ${SVGPadding.top})`);
+    
+    let nodes = tokenGroup.append('g')
+      .attr('class', 'node-group')
+      .selectAll('g')
+      .data(tokens, d => d.id)
+      .join('g')
+      .attr('class', 'node');
+
+    // Dynamically change the position of each token node
+    // Change the positions of tokens based on their width
+    let curPos = {x: 0, y: 0};
+    let tokenNum = Object.keys(textTokenWidths).length;
+    let textTokenPositions = {};
+    let containerWidth = 500;
+
+    // Change the position of the text token
+    nodes.each(function(_, i) {
+      d3.select(this)
+        .attr('transform', `translate(${curPos.x}, ${curPos.y})`);
+      
+      // Record the new position
+      textTokenPositions[i] = {x: curPos.x, y: curPos.y};
+
+      // Update the next position
+      let curLineLength = curPos.x + textTokenWidths[i] + textTokenPadding.left +
+                          textTokenPadding.right + tokenGap;
+      if (i + 1 < tokenNum) {
+        curLineLength += textTokenWidths[i + 1];
+      }
+
+      // Shift to next row if needed
+      if (curLineLength > containerWidth) {
+        curPos.y += rowGap;
+        curPos.x = 0;
+      } else {
+        curPos.x = curPos.x + textTokenWidths[i] + textTokenPadding.left + textTokenPadding.right + tokenGap;
+      }
+    });
+
+    nodes.append('rect')
+      .attr('width', (d, i) => textTokenWidths[i] + textTokenPadding.left + textTokenPadding.right)
+      .attr('height', textTokenHeight + textTokenPadding.top + textTokenPadding.bottom)
+      .attr('rx', 5)
+      .style('fill', d => tokenColorScale(+d[key]))
+      .style('stroke', 'hsl(180, 1%, 80%)');
+
+    nodes.append('text')
+      .attr('class', 'text-token-arc')
+      .attr('x', textTokenPadding.left)
+      .attr('y', textTokenPadding.top + 2)
+      .text(d => d.token);
   };
 
   const drawGraph = () => {
@@ -172,18 +267,11 @@
           + textTokenWidths[d.parent] - 5;
         targetX = tokenXs[d.child] + 5;
 
-        // if (Math.abs(d.parent - d.child) === 1) {
-        //   targetX -= 10;
-        // }
         middleX = sourceX + (targetX - sourceX) / 2;
       } else {
         sourceX = tokenXs[d.parent] + 5;
         targetX = tokenXs[d.child] + textTokenPadding.left + textTokenPadding.right
           + textTokenWidths[d.child] - 5;
-        
-        // if (Math.abs(d.parent - d.child) === 1) {
-        //   targetX += 10;
-        // }
 
         middleX = targetX + (sourceX - targetX) / 2;
       }
@@ -413,6 +501,10 @@
     if (data === null) {
       data = await d3.json('/data/twitter-dep-0877.json');
     }
+
+    if (saliencies === null) {
+      saliencies = await d3.json('/data/saliency_list.json');
+    }
   });
 
   instanceViewConfigStore.subscribe(async value => {
@@ -430,8 +522,13 @@
           data = await d3.json('/data/twitter-dep-0877.json');
         }
 
-        drawGraph();
+        if (saliencies === null) {
+          saliencies = await d3.json('/data/twitter-saliency-data/saliency-1718.json');
+        }
+
+        // drawGraph();
         // drawTree();
+        drawParagraph();
       }
     }
   });

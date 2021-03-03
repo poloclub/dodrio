@@ -712,8 +712,6 @@
       };
     }
 
-    console.log(linkArrays);
-
     // Create a scale for the node radius
     let allSaliencyScores = nodes.map(d => +d.saliency);
     let nodeRadiusScale = d3.scaleLinear()

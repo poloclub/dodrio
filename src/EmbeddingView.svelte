@@ -120,7 +120,8 @@
     let uniqueLabels = labels.filter((x, i, a) => a.indexOf(x) === i);
     let rectangleWidth = 12;
     let rectanglePadding = 2;
-    console.log(uniqueLabels.length);
+    // console.log(uniqueLabels.length);
+
     let legend = svg.selectAll('.legend')
       .data(uniqueLabels)
       .enter()
