@@ -119,7 +119,8 @@
     let curX = 0;
     tokens.forEach((d, i) => {
       tokenXs[i] = curX;
-      curX += textTokenWidths[i] + tokenGaps[i] + textTokenPadding.left + textTokenPadding.right;
+      // curX += textTokenWidths[i] + tokenGaps[i] + textTokenPadding.left + textTokenPadding.right;
+      curX += textTokenWidths[i] + minTokenGap + textTokenPadding.left + textTokenPadding.right;
     });
 
     let fullWidth = curX + SVGPadding.left + SVGPadding.right - minTokenGap;
@@ -132,7 +133,7 @@
     // Add tokens
     let tokenGroup = svg.append('g')
       .attr('class', 'token-group')
-      .attr('transform', `translate(${SVGPadding.left}, ${SVGHeight / 2 + SVGPadding.top})`);
+      .attr('transform', `translate(${SVGPadding.left}, ${SVGHeight * 2 / 3 + SVGPadding.top})`);
     
     let nodes = tokenGroup.append('g')
       .attr('class', 'node-group')
@@ -171,18 +172,18 @@
           + textTokenWidths[d.parent] - 5;
         targetX = tokenXs[d.child] + 5;
 
-        if (Math.abs(d.parent - d.child) === 1) {
-          targetX -= 10;
-        }
+        // if (Math.abs(d.parent - d.child) === 1) {
+        //   targetX -= 10;
+        // }
         middleX = sourceX + (targetX - sourceX) / 2;
       } else {
         sourceX = tokenXs[d.parent] + 5;
         targetX = tokenXs[d.child] + textTokenPadding.left + textTokenPadding.right
           + textTokenWidths[d.child] - 5;
         
-        if (Math.abs(d.parent - d.child) === 1) {
-          targetX += 10;
-        }
+        // if (Math.abs(d.parent - d.child) === 1) {
+        //   targetX += 10;
+        // }
 
         middleX = targetX + (sourceX - targetX) / 2;
       }
@@ -209,11 +210,7 @@
         let iHigh = Math.max(d.child, d.parent);
         let curRank = tokenRelCount.slice(iLow, iHigh + 1).reduce((a, b) => Math.max(a, b));
 
-        if (d.gap === 1) {
-          curRank = 0;
-        } else {
-          tokenRelCount[Math.min(d.child, d.parent)] = curRank + 1;
-        }
+        tokenRelCount[Math.min(d.child, d.parent)] = curRank + 1;
 
         if (rankedDepMap[curRank] === undefined) {
           rankedDepMap[curRank] = [];
@@ -236,10 +233,38 @@
         .attr('d', d => {          
           let sourceX = d.sourceX;
           let targetX = d.targetX;
-          
-          let pathHeight = 20 * (i);
-          let pathCurve = 15;
 
+          let pathHeight = 20 * (i + 1);
+          let pathCurve = i === 0 ? 20 : 15;
+
+          // Special case for tokens that are next to each other
+          if (d.gap === 1) {
+            let curve = d3.line()
+              .x(d => d.x)
+              .y(d => d.y)
+              .curve(d3.curveMonotoneX);
+
+            let source = {x: sourceX, y: 0};
+            let target = {x: targetX, y: -5};
+            let alpha = 6;
+
+            let mid1 = {
+              x: sourceX < targetX ?
+                sourceX + (targetX - sourceX) / alpha :
+                sourceX - (sourceX - targetX) / alpha,
+              y: -pathHeight
+            };
+
+            let mid2 = {
+              x: sourceX < targetX ?
+                sourceX + (targetX - sourceX) / alpha * (alpha - 1) :
+                sourceX - (sourceX - targetX) / alpha * (alpha - 1),
+              y: -pathHeight
+            };
+
+            return curve([source, mid1, mid2, target]);
+          }
+          
           // Compute the control points and middle points
           let control1 = {
             x: sourceX < targetX ? sourceX + 2 : sourceX - 2,
@@ -264,27 +289,23 @@
           return `M${sourceX} ${0}
             Q${control1.x} ${control1.y}, ${mid1.x} ${mid1.y}
             L${mid2.x} ${mid2.y}
-            Q${control2.x} ${control2.y}, ${targetX} ${i === 0 ? 0 : -5}`;
+            Q${control2.x} ${control2.y}, ${targetX} ${-5}`;
         });
-
-      arcGroup.selectAll(`rect.arc-path-rect-${i}`)
-        .data(rankedDepMap[k], d => `${d.parent}-${d.child}`)
-        .join('rect')
-        .attr('class', `arc-rect arc-path-rect-${i}`)
-        .attr('x', d => d.middleX - d.relation.length * letterWidth / 2)
-        .attr('y', -20 * i - 5)
-        .attr('width', d => d.relation === 'root' ? 0 : d.relation.length * letterWidth - 0)
-        .attr('height', 10)
-        .attr('rx', 5)
-        .style('fill', 'white');
 
       arcGroup.selectAll(`text.arc-path-text-${i}`)
         .data(rankedDepMap[k], d => `${d.parent}-${d.child}`)
         .join('text')
         .attr('class', `arc-text arc-path-text-${i}`)
         .attr('x', d => d.middleX)
-        .attr('y', -20 * i)
-        .text(d => d.relation === 'root' ? '' : d.relation);
+        .attr('y', -20 * (i + 1))
+        .text(d => d.relation === 'root' ? '' : d.relation)
+        .clone(true)
+        .lower()
+        .attr('class', `arc-text arc-path-text-${i} shadow`)
+        .attr('stroke-width', 7)
+        .attr('stroke', 'white');
+
+      arcGroup.selectAll(`path.arc-path-${i}`).lower();
 
     });
   };
