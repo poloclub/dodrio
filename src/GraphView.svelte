@@ -48,7 +48,7 @@
   // Control panel variables
   let settingIconActive = false;
   
-  let weightThreshold = undefined;
+  let weightThreshold = 0.05;
   let curLayer = 3;
   let curHead = 8;
 
@@ -111,9 +111,13 @@
     return Math.round((num + Number.EPSILON) * (10 ** decimal)) / (10 ** decimal);
   };
 
-  const padZero = (num, digit) => {
+  const padZeroLeft = (num, digit) => {
     return Array(Math.max(digit - String(num).length + 1, 0)).join(0) + num;
-  }
+  };
+
+  const padZeroRight = (num, digit) => {
+    return num + Array(Math.max(digit - String(num).length + 1, 0)).join(0);
+  };
 
   const drag = (simulation) => {
   
@@ -241,6 +245,10 @@
         break;
       case 'collideRadius':
         simulation.force('collide').radius(d => nodeRadiusScale(d.saliency) + value);
+        break;
+      case 'threshold':
+        weightThreshold = value;
+        weightThresholdUpdated();
         break;
       }
 
@@ -526,9 +534,79 @@
       + 'L' + modTCoord.left + ',' + modTCoord.top;
   };
 
+  const weightThresholdUpdated = () => {
+    console.log('weightThresholdUpdated');
+  };
+
+  // Create related link arrays (hiddenLinks, biLinks, and gridLinks)
+  const createGraphLinks = (curLinks, nodeByID, nodeIndexArray) => {
+    curLinks = curLinks.map(d => Object.create(d));
+
+    // Add text order hidden links
+    let curHiddenLinks = [];
+    for (let i = 0; i < nodes.length - 1; i++) {
+      let hiddenLink = {
+        source: +nodes[i].id,
+        target: +nodes[i + 1].id
+      };
+      curHiddenLinks.push(hiddenLink);
+    }
+
+    // Add a connection between the first and last token
+    curHiddenLinks.push({
+      source: +nodes[nodes.length - 1].id,
+      target: nodes[0].id
+    });
+
+    curHiddenLinks = curHiddenLinks.map(d => Object.create(d));
+
+    // Add intermediate nodes to create bezier curves
+    let curBiLinks = [];
+
+    curLinks.forEach(d => {
+      let source = nodeByID.get(d.source);
+      let target = nodeByID.get(d.target);
+      let curBilink = [source, target];
+      curBilink.selfLoop = false;
+      curBilink.attention = +d.weight;
+
+      // Add a hidden node if there is a self-loop
+      if (source === target) {
+        curBilink.selfLoop = true;
+        let intermediate = {hidden: true};
+        curBilink.push(intermediate);
+        nodes.push(intermediate);
+        curLinks.push(
+          {source: intermediate, target: source}
+        );
+      }
+
+      curBiLinks.push(curBilink);
+    });
+    
+    // Create grid links
+    let curGridLinks = [];
+    nodeIndexArray.sort((a, b) => +a - +b);
+    for (let i = 0; i < nodes.length; i++) {
+      if (i % gridRowSize !== gridRowSize - 1 & nodeByID.has(i + 1)) {
+        curGridLinks.push({source: nodeByID.get(i), target: nodeByID.get(i + 1)});
+      }
+      if (nodeByID.has(i + gridRowSize)) {
+        curGridLinks.push({source: nodeByID.get(i), target: nodeByID.get(i + gridRowSize)});
+      }
+    }
+
+    return {
+      links: curLinks,
+      hiddenLinks: curHiddenLinks,
+      biLinks: curBiLinks,
+      gridLinks: curGridLinks
+    };
+  };
+
   const drawGraph = () => {
     // Filter the links based on the weight
-    weightThreshold = 0.05;
+    // weightThreshold = 0.05;
 
     let svg = d3.select(graphSVG)
       .attr('width', SVGWidth)
@@ -546,9 +624,6 @@
     let weights = graphData.links.map(d => d.weight);
     console.log(d3.extent(weights));
 
-    links = graphData.links.filter(d => d.weight > weightThreshold);
-    links = links.map(d => Object.create(d));
-
     // Map nodes and links to arrays of objects
     nodes = graphData.nodes.map(d => Object.create(d));
     nodes.sort((a, b) => +a.id - +b.id);
@@ -559,64 +634,15 @@
     let nodeIndexArray = Array.from(nodeIndices);
     tokenSize = nodeIndexArray.length;
 
-    // Add text order hidden links
-    hiddenLinks = [];
-    for (let i = 0; i < nodes.length - 1; i++) {
-      let hiddenLink = {
-        source: +nodes[i].id,
-        target: +nodes[i + 1].id
-      };
-      hiddenLinks.push(hiddenLink);
-    }
-
-    // Add a connection between the first and last token
-    hiddenLinks.push({
-      source: +nodes[nodes.length - 1].id,
-      target: nodes[0].id
-    });
-
-    hiddenLinks = hiddenLinks.map(d => Object.create(d));
-    
-    console.log(nodes, links, hiddenLinks);
-
-    // Add intermediate nodes to create bezier curves
     let nodeByID = new Map(nodes.map(d => [d.id, d]));
-    biLinks = [];
 
-    links.forEach(d => {
-      let source = nodeByID.get(d.source);
-      let target = nodeByID.get(d.target);
-      let curBilink = [source, target];
-      curBilink.selfLoop = false;
-      curBilink.attention = +d.weight;
-
-      // Add a hidden node if there is a self-loop
-      if (source === target) {
-        curBilink.selfLoop = true;
-        let intermediate = {hidden: true};
-        curBilink.push(intermediate);
-        nodes.push(intermediate);
-        links.push(
-          {source: intermediate, target: source}
-        );
-      }
-
-      biLinks.push(curBilink);
-    });
-    
-    // Create grid links
-    gridLinks = [];
-    nodeIndexArray.sort((a, b) => +a - +b);
-    for (let i = 0; i < nodes.length; i++) {
-      if (i % gridRowSize !== gridRowSize - 1 & nodeByID.has(i + 1)) {
-        gridLinks.push({source: nodeByID.get(i), target: nodeByID.get(i + 1)});
-      }
-      if (nodeByID.has(i + gridRowSize)) {
-        gridLinks.push({source: nodeByID.get(i), target: nodeByID.get(i + gridRowSize)});
-      }
-    }
-
-    console.log(gridLinks);
+    // Create link arrays at different range steps
+    links = graphData.links.filter(d => d.weight > weightThreshold);
+    let linkResult = createGraphLinks(links, nodeByID, nodeIndexArray);
+    links = linkResult.links;
+    hiddenLinks = linkResult.hiddenLinks;
+    biLinks = linkResult.biLinks;
+    gridLinks = linkResult.gridLinks;
 
     // Create a scale for the node radius
     let allSaliencyScores = nodes.map(d => +d.saliency);
@@ -855,6 +881,7 @@
     bindSlider('textOrder', simulation, 0, 10, forceStrength.force.textOrder);
     bindSlider('manyBody', simulation, -2000, 0, forceStrength.force.manyBody);
     bindSlider('collideRadius', simulation, 0, 20, forceStrength.force.collideRadius, nodeRadiusScale);
+    bindSlider('threshold', simulation, 0.05, 0.9, weightThreshold);
 
     bindCheckBox(simulation, links);
 
@@ -966,7 +993,7 @@
   };
 
   onMount(async() => {
-    attentionData = await d3.json(`/data/twitter-attention-data/attention-${padZero(instanceID, 4)}.json`);
+    attentionData = await d3.json(`/data/twitter-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`);
     gradSortedIndexes = await d3.json('/data/twitter-sorted-grad-heads.json');
     gradSortedIndexes = gradSortedIndexes[instanceID];
     relevantAttentions = loadAttentionMatrix();
@@ -1375,13 +1402,13 @@
         <div class='slider'>
 
           <div class='slider-text'>
-            <label for='attention'>Top Attention</label>
+            <label for='threshold'>Attention > </label>
             <div class='slider-value'>
-              {weightThreshold}%
+              {round(weightThreshold, 2)}
             </div>
           </div>
 
-          <input type="range" min="10" max="100" value="10" step="15" class="slider" id="threshold">
+          <input type="range" min="0" max="1000" value="500" step="200" class="slider" id="threshold">
         </div>
         
       </div>
