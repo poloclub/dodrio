@@ -136,6 +136,16 @@
       if (!event.active) simulation.alphaTarget(0.3).restart();
       event.subject.fx = event.subject.x;
       event.subject.fy = event.subject.y;
+
+      // Add a marker to indicate that the node is fixed
+      d3.select(event.sourceEvent.originalTarget.parentNode)
+        .append('rect')
+        .attr('class', 'fixed-marker')
+        .attr('x', -3)
+        .attr('y', 6)
+        .attr('width', 6)
+        .attr('height', 5)
+        .style('fill', 'white');
     };
     
     const dragged = (event) => {
@@ -145,8 +155,8 @@
     
     const dragended = (event) => {
       if (!event.active) simulation.alphaTarget(0);
-      event.subject.fx = null;
-      event.subject.fy = null;
+      // event.subject.fx = null;
+      // event.subject.fy = null;
     };
     
     return d3.drag()
@@ -637,9 +647,6 @@
       curBiLinks.push(curBilink);
     });
 
-    // Sort the bilinks
-    curBiLinks.sort((a, b) => `${a[0].id}-${a[1].id}`.localeCompare(`${b[0].id}-${b[1].id}`));
-
     // Create grid links
     let curGridLinks = [];
     nodeIndexArray.sort((a, b) => +a - +b);
@@ -784,6 +791,22 @@
       .attr('class', 'node')
       .attr('transform', `translate(${SVGWidth / 2}, ${SVGHeight / 2})`)
       .call(drag(simulation))
+      // Single click to remove fixing
+      .on('click', (e, d) => {
+        if (d.fx !== null && d.fy !== null) {
+          // Unfix the node
+          delete d.fx;
+          delete d.fy;
+
+          // Remove the fixing marker
+          d3.select(e.target.parentNode)
+            .selectAll('rect.fixed-marker')
+            .remove();
+          
+          simulation.alpha(0.2).restart();
+        }
+      })
+      // Double click to remove the node
       .on('dblclick', e => {
         let curNode = d3.select(e.target);
         let curID = curNode.data()[0].id;
