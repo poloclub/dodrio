@@ -334,7 +334,6 @@
       .style('fill', 'none');
     
     // Add svg control buttons
-
     
     let containerWidth = svgWidth - saliencySVGPadding.left - saliencySVGPadding.right;
     

@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { instanceViewConfigStore } from './store';
+  import { instanceViewConfigStore, hoverTokenStore } from './store';
   import * as d3 from 'd3';
 
   let svg = null;
@@ -16,11 +16,38 @@
   const SVGPadding = {top: 3, left: 3, right: 3, bottom: 3};
   const textTokenPadding = {top: 3, left: 3, right: 3, bottom: 3};
 
+  // Global stores
+  let curHoverToken = null;
+  
+  // Control panel variables
+  const layoutOptions = {
+    paragraph: {
+      value: 'saliency',
+      name: 'Saliency View'
+    },
+    dependency: {
+      value: 'dependency',
+      name: 'Dependency List'
+    },
+    tree: {
+      value: 'tree',
+      name: 'Dependency Tree'
+    } 
+  };
+
+  let currentLayout = layoutOptions.paragraph;
+
+
   const ease = d3.easeCubicInOut;
   const animationTime = 300;
 
   const round = (num, decimal) => {
     return Math.round((num + Number.EPSILON) * (10 ** decimal)) / (10 ** decimal);
+  };
+  
+  const bindSelect = () => {
+    let selectOption = d3.select('#instance-select')
+      .property('value', currentLayout.value);
   };
 
   const getTokenWidth = (tokens) => {
@@ -86,6 +113,66 @@
     SVGInitialized = true;
   };
   
+  const drawSaliencyLegend = (legendGroup, legendPos, largestAbs) => {    
+    // Define the gradient
+    let legentGradientDef = legendGroup.append('defs')
+      .append('linearGradient')
+      .attr('x1', 0)
+      .attr('y1', 1)
+      .attr('x2', 0)
+      .attr('y2', 0)
+      .attr('id', 'legend-gradient');
+    
+    legentGradientDef.append('stop')
+      .attr('stop-color', '#eb2f06')
+      .attr('offset', 0);
+
+    legentGradientDef.append('stop')
+      .attr('stop-color', '#ffffff')
+      .attr('offset', 0.5);
+    
+    legentGradientDef.append('stop')
+      .attr('stop-color', '#4690C2')
+      .attr('offset', 1);
+
+    legendGroup.append('rect')
+      .attr('x', 0)
+      .attr('y', 0)
+      .attr('width', legendPos.width)
+      .attr('height', legendPos.height)
+      .style('fill', 'url(#legend-gradient)')
+      .style('stroke', 'black');
+    
+    // Draw the legend axis
+    let legendScale = d3.scaleLinear()
+      .domain([-largestAbs, largestAbs])
+      .range([legendPos.height, 0])
+      .nice();
+    
+    legendGroup.append('g')
+      .attr('transform', `translate(${legendPos.width}, ${0})`)
+      .call(d3.axisRight(legendScale).ticks(10));
+    
+    legendGroup.append('text')
+      .attr('x', 5)
+      .attr('y', -15)
+      .style('font-size', '12px')
+      .style('dominant-baseline', 'end')
+      .style('text-anchor', 'middle')
+      .text('Saliency Score');
+  };
+  
+  /** Create CSS selector compatible name */
+  const tokenIDName = (tokenID) => {
+    if (tokenID == null) {
+      return null;
+    } else {
+      return tokenID.replace(/\./g, '/.')
+        .replace(/,/g, '/,')
+        .replace(/#/g, '/#');
+    }
+  }; 
+  
   const drawParagraph = () => {
     if (!SVGInitialized) {
       initSVG();
@@ -103,7 +190,7 @@
         curCount = tokenCount[d.token];
         tokenCount[d.token] += 1;
       }
-      d.id = `${d.token}-${curCount}`;
+      d.id = `${tokenIDName(d.token)}-${curCount}`;
     });
     let tokens = saliencies.tokens;
     
@@ -120,6 +207,8 @@
     let textTokenSize = getTokenWidth(tokens.map(d => d.token));
     let textTokenWidths = textTokenSize.textTokenWidths;
     let textTokenHeight = textTokenSize.textTokenHeight;
+    let containerWidthFactor = 4 / 5;
+    let containerWidth = SVGWidth * containerWidthFactor;
 
     const tokenGap = 10;
     const rowGap = textTokenHeight + textTokenPadding.top + textTokenPadding.bottom + 10;
@@ -127,21 +216,39 @@
     // Add tokens
     let tokenGroup = svg.append('g')
       .attr('class', 'token-group')
-      .attr('transform', `translate(${SVGPadding.left}, ${SVGPadding.top})`);
+      .attr('transform', `translate(${SVGPadding.left + SVGWidth * (1 - containerWidthFactor) / 2},
+        ${SVGPadding.top + 50})`);
     
     let nodes = tokenGroup.append('g')
       .attr('class', 'node-group')
       .selectAll('g')
       .data(tokens, d => d.id)
       .join('g')
-      .attr('class', 'node');
+      .attr('class', 'node')
+      .attr('id', d => `node-${d.id}`)
+      .on('mouseover', e => {
+        let curNode = d3.select(e.target);
+        curNode.style('stroke', 'hsl(0, 0%, 0%, 0.6)')
+          .style('stroke-width', 2);
+        let nodeID = curNode.data()[0].id;
+        curHoverToken = nodeID;
+        hoverTokenStore.set(curHoverToken);
+        console.log(curHoverToken);
+      })
+      .on('mouseleave', e => {
+        d3.select(e.target)
+          .select('rect')
+          .style('stroke', 'hsl(180, 1%, 80%)')
+          .style('stroke-width', 1);
+        curHoverToken = null;
+        hoverTokenStore.set(null);
+      });
 
     // Dynamically change the position of each token node
     // Change the positions of tokens based on their width
     let curPos = {x: 0, y: 0};
     let tokenNum = Object.keys(textTokenWidths).length;
     let textTokenPositions = {};
-    let containerWidth = 500;
 
     // Change the position of the text token
     nodes.each(function(_, i) {
@@ -178,7 +285,18 @@
       .attr('class', 'text-token-arc')
       .attr('x', textTokenPadding.left)
       .attr('y', textTokenPadding.top + 2)
+      .style('pointer-events', 'none')
       .text(d => d.token);
+    
+    // Create legend for the saliency map view
+    let legendGroup = svg.append('g')
+      .attr('class', 'legend-group')
+      .attr('transform', `translate(${SVGPadding.left + 10 + SVGWidth * (1/2 * containerWidthFactor + 1/2)},
+        ${SVGPadding.top + 50})`);
+
+    let legendPos = {width: 10, height: 150};
+
+    drawSaliencyLegend(legendGroup, legendPos, largestAbs);
   };
 
   const drawGraph = () => {
@@ -503,8 +621,10 @@
     }
 
     if (saliencies === null) {
-      saliencies = await d3.json('/data/saliency_list.json');
+      saliencies = await d3.json('/data/twitter-saliency-data/saliency-1718.json');
     }
+
+    bindSelect();
   });
 
   instanceViewConfigStore.subscribe(async value => {
@@ -532,10 +652,36 @@
       }
     }
   });
+  
+  hoverTokenStore.subscribe(value => {
+
+    if (svg == null) {return;}
+
+    if (value != null) {
+      // Highlight the corresponding node
+      curHoverToken = value;
+      svg.selectAll('.node')
+        .filter(d => d.id === value)
+        .select('rect')
+        .style('stroke', 'hsl(0, 0%, 0%, 0.6)')
+        .style('stroke-width', 2);
+    } else {
+      // Dehighlight the old node
+      svg.selectAll('.node')
+        .filter(d => d.id === curHoverToken)
+        .select('rect')
+        .style('stroke', 'hsl(180, 1%, 80%)')
+        .style('stroke-width', 1);
+      curHoverToken = value;
+    }
+
+  });
 
 </script>
 
 <style type='text/scss'>
+
+  @import 'define';
 
   .svg-container {
     overflow: scroll;
@@ -595,6 +741,96 @@
     stroke: #555;
   }
 
+ .svg-container {
+    position: relative;
+  }
+
+  .svg-control-panel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    cursor: default;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;;
+    justify-content: flex-start;
+
+    font-size: 0.9rem;
+    border-radius: 5px;
+    border: 1px solid hsl(0, 0%, 93.3%);
+    box-shadow: 0 3px 3px hsla(0, 0%, 0%, 0.05);
+    background: hsla(0, 0%, 100%, 0.65);
+
+    .name {
+      font-size: 1rem;
+      padding: 5px 10px;
+    }
+
+    // .drop-down {
+    //   font-size: 0.9rem;
+    //   padding: 5px 10px;
+    // }
+  }
+
+  .sep-line-horizontal {
+    height: 0;
+    width: 95%;
+    border: 1px solid $gray-sep;
+  }
+
+  .sep-line-vertical {
+    height: 20px;
+    width: 0;
+    border: 1px solid $gray-sep;
+  }
+
+  select {
+    background: inherit;
+    border-color: hsla(0, 0%, 0%, 0);
+    padding: 0 1em 0 0.4em;
+  }
+
+  .select select:not([multiple]) {
+    padding-right: 1em;
+  }
+
+  .select:not(.is-multiple):not(.is-loading)::after{
+    right: 0.4em;
+    border-color: $blue-icon;
+  }
+
+  .select-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .setting-icon {
+    padding: 0.1em 0.4em;
+    margin: 0 0.2em;
+    font-size: 1.1em;
+    color: $blue-icon;
+    cursor: pointer;
+    border-radius: 3px;
+
+    transition: background 100ms ease-in-out;
+
+    &:hover {
+      background: change-color($blue-icon, $alpha: 0.1);
+    }
+
+    &.active {
+      background: change-color($blue-icon, $alpha: 0.2);
+
+      &:hover {
+        background: change-color($blue-icon, $alpha: 0.2);
+      }
+    }
+  }
+
+
 
 
 </style>
@@ -602,6 +838,28 @@
 <div class='graph-view'>
 
   <div class='svg-container' style={`width: ${instanceViewConfig === undefined ? 800 : instanceViewConfig.compWidth}px`}>
+    <!-- Control panel on top of the SVG -->
+    <div class='svg-control-panel'>
+
+      <div class='select-row'>
+
+        <div class='setting-icon'>
+          <i class="fas fa-sliders-h"></i>
+        </div>
+
+        <div class='sep-line-vertical'></div>
+
+        <div class='select'>
+          <select name='instance-layout' id='instance-select'>
+            {#each Object.values(layoutOptions) as opt}
+              <option value={opt.value}>{opt.name}</option>
+            {/each}
+          </select>
+        </div>
+
+      </div>
+    </div>
+
     <svg class='dependency-svg' bind:this={svg}></svg>
   </div>
   

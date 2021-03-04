@@ -6,3 +6,5 @@ export const tableViewConfigStore = writable({});
 export const instanceViewConfigStore = writable({});
 export const svgStore = writable(undefined);
 export const currInstanceStore = writable(23);
+
+export const hoverTokenStore = writable();

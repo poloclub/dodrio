@@ -1,5 +1,5 @@
 <script>
-  import { graphViewConfigStore } from './store';
+  import { graphViewConfigStore, hoverTokenStore } from './store';
   import GraphMatrix from './GraphMatrix.svelte';
   import * as d3 from 'd3';
   import { onMount } from 'svelte';
@@ -14,6 +14,8 @@
 
   let SVGWidth = undefined;
   let SVGHeight = undefined;
+
+  let curHoverToken = null;
   
   // View configs
   const rightListWidth = 150;
@@ -45,10 +47,8 @@
   let curLinkI = 0;
   let linkWidth = null;
 
-  // let links = null;
-  // let biLinks = null;
-  // let hiddenLinks = null;
-  // let gridLinks = null;
+  let linkColor = 'hsl(0, 0%, 76%)';
+  let linkHoverColor = 'hsl(358, 94%, 73%)';
 
   // Head panel variables
   let curHeadMode = 'gradient';
@@ -574,7 +574,7 @@
       .transition()
       .duration(animationTime * 3)
       .ease(ease)
-      .style('stroke', '#C2C2C2');
+      .style('stroke', linkColor);
     
     // Exit
     linkLines.exit()
@@ -687,6 +687,20 @@
     // Map nodes and links to arrays of objects
     let nodes = graphData.nodes.map(d => Object.create(d));
     nodes.sort((a, b) => +a.id - +b.id);
+    
+    // Give each saliency token a unique name
+    let tokenCount = {};
+    nodes.forEach(d => {
+      let curCount = 0;
+      if (tokenCount[d.token] === undefined) {
+        tokenCount[d.token] = curCount + 1;
+      } else {
+        curCount = tokenCount[d.token];
+        tokenCount[d.token] += 1;
+      }
+      d.name = `${tokenIDName(d.token)}-${curCount}`;
+    });
+
     originalNodes = nodes.slice();
 
     // Maintain a set of all existing node indices
@@ -760,21 +774,37 @@
       .attr('stroke-width', 1)
       .attr('markerUnits', 'userSpaceOnUse')
       .append('path')
-      //.attr('d', 'M0,5 L0,15 L8,10')
       .attr('d', 'M 0 0 L 10 5 L 0 10 z')
-      .attr('stroke', '#C2C2C2')
-      .attr('fill', '#C2C2C2');
+      .attr('stroke', linkColor)
+      .attr('fill', linkColor);
+    
+    // Create a different arrow marked used when user hovers over a node
+    svg.append('defs')
+      .append('marker')
+      .attr('id', 'arrow-hover')
+      .attr('viewBox', [0, 0, 10, 10])
+      .attr('refX', 0)
+      .attr('refY', 5)
+      .attr('markerWidth', 12)
+      .attr('markerHeight', 9)
+      .attr('orient', 'auto')
+      .attr('stroke-width', 1)
+      .attr('markerUnits', 'userSpaceOnUse')
+      .append('path')
+      .attr('d', 'M 0 0 L 10 5 L 0 10 z')
+      .attr('stroke', linkHoverColor)
+      .attr('fill', linkHoverColor);
 
     // Add attention links
     let linkLineGroup = svg.append('g')
       .attr('class', 'attention-link-group')
-      .attr('stroke', '#C2C2C2');
+      .attr('stroke', linkColor);
 
     let linkLines = linkLineGroup.selectAll('path.link')
       .data(linkArrays[curLinkI].biLinks, d => `${d[0].id}-${d[1].id}`)
       .join('path')
       .attr('class', 'link')
-      .attr('id', d => `link-${d[0].id}-${d[1].id}`)
+      .attr('id', d => `link-${d[0].name}-${d[1].name}`)
       .attr('marker-end', 'url(#arrow)')
       .style('stroke-width', d => linkWidth(d.attention));
 
@@ -787,8 +817,20 @@
       .data(linkArrays[curLinkI].nodes.filter(d => d.id !== undefined), d => d.id)
       .join('g')
       .attr('class', 'node')
+      .attr('id', d => d.name)
       .attr('transform', `translate(${SVGWidth / 2}, ${SVGHeight / 2})`)
       .call(drag(simulation))
+      // Hover over effect
+      .on('mouseover', (e, d) => {
+        curHoverToken = d.name;
+        hoverTokenStore.set(curHoverToken);
+        highLightLink(curHoverToken);
+      })
+      .on('mouseleave', () => {
+        dehighlightLink(curHoverToken);
+        curHoverToken = null;
+        hoverTokenStore.set(curHoverToken);
+      })
       // Single click to remove fixing
       .on('click', (e, d) => {
         if (d.fx !== null && d.fy !== null) {
@@ -939,6 +981,38 @@
     bindSelect(simulation, nodeRadiusScale, nodeGroups);
   };
 
+  /** Create CSS selector compatible name */
+  const tokenIDName = (tokenID) => {
+    if (tokenID == null) {
+      return null;
+    } else {
+      return tokenID.replace(/\./g, '/.')
+        .replace(/,/g, '/,')
+        .replace(/#/g, '/#');
+    }
+  };
+
+  const highLightLink = (hoverToken) => {
+    d3.select(graphSVG)
+      .select('.attention-link-group')
+      .selectAll('path.link')
+      .filter((d, i, g) => d3.select(g[i]).attr('id').includes(hoverToken))
+      .attr('marker-end', 'url(#arrow-hover)')
+      .style('stroke', linkHoverColor)
+      .style('opacity', 1)
+      .raise();
+  };
+
+  const dehighlightLink = (hoverToken) => {
+    d3.select(graphSVG)
+      .select('.attention-link-group')
+      .selectAll('path.link')
+      .filter((d, i, g) => d3.select(g[i]).attr('id').includes(hoverToken))
+      .attr('marker-end', 'url(#arrow)')
+      .style('stroke', linkColor)
+      .style('opacity', null);
+  };
+
   const renderGraph = async () => {
     console.log('loading matrix');
     graphData = await d3.json('/data/twitter_graph_800_9_7.json');
@@ -1021,7 +1095,6 @@
       if (curTime - lastScrollBotTime > 800) {
         lastScrollBotTime = curTime;
         
-        console.log(listK);
         if (listK < gradSortedIndexes.length) {
           // Load more heads to the list
           listK += listKIncreasement;
@@ -1042,6 +1115,19 @@
       settingIconActive = true;
     }
   };
+
+  hoverTokenStore.subscribe(value => {
+    console.log('change', value);
+
+    if (value != null) {
+      curHoverToken = value;
+      highLightLink(curHoverToken);
+    } else {
+      dehighlightLink(curHoverToken);
+      curHoverToken = value;
+    }
+
+  });
 
   onMount(async() => {
     attentionData = await d3.json(`/data/twitter-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`);
