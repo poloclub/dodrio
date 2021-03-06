@@ -6,6 +6,7 @@
   let svg = null;
   let data = null;
   let saliencies = null;
+  let wordToSubwordMap = null;
 
   let SVGWidth = 800;
   let SVGHeight = 800;
@@ -36,6 +37,7 @@
   };
 
   let currentLayout = layoutOptions.paragraph;
+  let linkHoverColor = 'hsl(358, 94%, 73%)';
 
 
   const ease = d3.easeCubicInOut;
@@ -110,6 +112,22 @@
       .attr('stroke', 'black')
       .attr('fill', 'black');
 
+    svg.append('defs')
+      .append('marker')
+      .attr('id', 'dep-arrow-hover')
+      .attr('viewBox', [0, 0, 10, 10])
+      .attr('refX', 0)
+      .attr('refY', 5)
+      .attr('markerWidth', 10)
+      .attr('markerHeight', 7)
+      .attr('orient', 'auto')
+      .attr('stroke-width', 1)
+      .attr('markerUnits', 'userSpaceOnUse')
+      .append('path')
+      .attr('d', 'M 0 0 L 10 5 L 0 10 z')
+      .attr('stroke', linkHoverColor)
+      .attr('fill', linkHoverColor);
+
     SVGInitialized = true;
   };
   
@@ -167,11 +185,55 @@
     if (tokenID == null) {
       return null;
     } else {
-      return tokenID.replace(/\./g, '/.')
-        .replace(/,/g, '/,')
-        .replace(/#/g, '/#');
+      return tokenID.replace(/\./g, '\\.')
+        .replace(/,/g, '\\,')
+        .replace(/#/g, '')
+        .replace(/\[/g, '\\[')
+        .replace(/\]/g, '\\]');
     }
   }; 
+
+  const tokenNodeMouseover = e => {
+    let curNode = d3.select(e.target);
+    let nodeID = curNode.data()[0].id;
+    hoverTokenStore.set(nodeID);
+  };
+
+  const tokenNodeMouseleave = () => {
+    hoverTokenStore.set(null);
+  };
+
+  const hightLightNode = () => {
+    svg.selectAll(`.node-${curHoverToken}`)
+      .select('rect')
+      .style('stroke', linkHoverColor)
+      .style('stroke-width', 2);
+    
+    svg.selectAll('.arc-path')
+      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
+      .style('stroke', linkHoverColor)
+      .style('stroke-width', 2)
+      .attr('marker-end', 'url(#dep-arrow-hover)')
+      .raise();
+
+    svg.selectAll('.arc-text')
+      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
+      .style('stroke-width', 2)
+      .raise();
+  };
+
+  const deHighLightNode = () => {
+    svg.selectAll(`.node-${curHoverToken}`)
+      .select('rect')
+      .style('stroke', 'hsl(180, 1%, 80%)')
+      .style('stroke-width', 1);
+
+    svg.selectAll('.arc-path')
+      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
+      .style('stroke', null)
+      .style('stroke-width', 1)
+      .attr('marker-end', 'url(#dep-arrow)');
+  };
   
   const drawParagraph = () => {
     if (!SVGInitialized) {
@@ -181,17 +243,19 @@
     console.log(saliencies);
 
     // Give each saliency token a unique name
-    let tokenCount = {};
-    saliencies.tokens.forEach(d => {
-      let curCount = 0;
-      if (tokenCount[d.token] === undefined) {
-        tokenCount[d.token] = curCount + 1;
-      } else {
-        curCount = tokenCount[d.token];
-        tokenCount[d.token] += 1;
-      }
-      d.id = `${tokenIDName(d.token)}-${curCount}`;
-    });
+    if (saliencies.tokens[0].id !== undefined) {
+      let tokenCount = {};
+      saliencies.tokens.forEach(d => {
+        let curCount = 0;
+        if (tokenCount[d.token] === undefined) {
+          tokenCount[d.token] = curCount + 1;
+        } else {
+          curCount = tokenCount[d.token];
+          tokenCount[d.token] += 1;
+        }
+        d.id = `${tokenIDName(d.token)}-${curCount}`;
+      });
+    }
     let tokens = saliencies.tokens;
     
     let key = saliencies.meta['predicted_label'];
@@ -226,23 +290,8 @@
       .join('g')
       .attr('class', 'node')
       .attr('id', d => `node-${d.id}`)
-      .on('mouseover', e => {
-        let curNode = d3.select(e.target);
-        curNode.style('stroke', 'hsl(0, 0%, 0%, 0.6)')
-          .style('stroke-width', 2);
-        let nodeID = curNode.data()[0].id;
-        curHoverToken = nodeID;
-        hoverTokenStore.set(curHoverToken);
-        console.log(curHoverToken);
-      })
-      .on('mouseleave', e => {
-        d3.select(e.target)
-          .select('rect')
-          .style('stroke', 'hsl(180, 1%, 80%)')
-          .style('stroke-width', 1);
-        curHoverToken = null;
-        hoverTokenStore.set(null);
-      });
+      .on('mouseover', tokenNodeMouseover)
+      .on('mouseleave', tokenNodeMouseleave);
 
     // Dynamically change the position of each token node
     // Change the positions of tokens based on their width
@@ -299,17 +348,88 @@
     drawSaliencyLegend(legendGroup, legendPos, largestAbs);
   };
 
+  const initWordToSubwordMap = (tokens, saliencies) => {
+    const isSpecialToken = (t) => {
+      if (t === '[CLS]' || t === '[SEP]' || t === '[PAD]') {
+        return true;
+      } else {
+        return false;
+      }
+    };
+
+    wordToSubwordMap = {};
+    let j = 0;
+    while (isSpecialToken(saliencies.tokens[j].token)) {
+      j += 1;
+    }
+
+    for (let i = 0; i < tokens.length; i++) {
+      let curWord = tokens[i].token;
+      let curToken = saliencies.tokens[j].token;
+
+      if (curWord !== curToken) {
+        let nextWord = i + 1 < tokens.length ? tokens[i + 1].token : null;
+        wordToSubwordMap[curWord] = [];
+
+        while (saliencies.tokens[j].token !== nextWord) {
+          wordToSubwordMap[curWord].push(saliencies.tokens[j].id);
+          j += 1;
+        }
+      } else {
+        j += 1;
+      }
+    }
+
+  };
+
   const drawGraph = () => {
     if (!SVGInitialized) {
       initSVG();
     }
 
     const depList = data.list;
-    let tokens = data.words;
+
+    // Need to split the original words into sub-words if applicable
+    let tokens = data.words.map(d => {return {'token': d};});
+
+    // Give each saliency token a unique name
+    if (saliencies.tokens[0].id === undefined) {
+      let tokenCount = {};
+      saliencies.tokens.forEach(d => {
+        let curCount = 0;
+        if (tokenCount[d.token] === undefined) {
+          tokenCount[d.token] = curCount + 1;
+        } else {
+          curCount = tokenCount[d.token];
+          tokenCount[d.token] += 1;
+        }
+        d.id = `${tokenIDName(d.token)}-${curCount}`;
+      });
+    }
+
+    console.log(saliencies, tokens);
+
+    if (wordToSubwordMap == null) {
+      initWordToSubwordMap(tokens, saliencies);
+    }
+
+    console.log(wordToSubwordMap);
+
+    // Give each saliency token a unique name
+    let tokenCount = {};
+    tokens.forEach(d => {
+      let curCount = 0;
+      if (tokenCount[d.token] === undefined) {
+        tokenCount[d.token] = curCount + 1;
+      } else {
+        curCount = tokenCount[d.token];
+        tokenCount[d.token] += 1;
+      }
+      d.id = `${tokenIDName(d.token)}-${curCount}`;
+    });
 
     // Before drawing the tree, pre-render all texts to figure out their widths
-    console.log(svg);
-    let textTokenSize = getTokenWidth(tokens);
+    let textTokenSize = getTokenWidth(tokens.map(d => d.token));
     let textTokenWidths = textTokenSize.textTokenWidths;
     let textTokenHeight = textTokenSize.textTokenHeight;
 
@@ -353,8 +473,19 @@
       .selectAll('g')
       .data(tokens)
       .join('g')
-      .attr('class', 'node')
-      .attr('transform', (d, i) => `translate(${tokenXs[i]}, ${0})`);
+      .attr('class', d => {
+        let cls = `node node-${d.id}`;
+        if (wordToSubwordMap[d.token] !== undefined) {
+          wordToSubwordMap[d.token].forEach(n => {
+            cls += ` node-${n}`;
+          });
+        }
+        return cls;
+      })
+      .attr('id', d => `node-${d.id}`)
+      .attr('transform', (d, i) => `translate(${tokenXs[i]}, ${0})`)
+      .on('mouseover', tokenNodeMouseover)
+      .on('mouseleave', tokenNodeMouseleave);
 
     nodes.append('rect')
       .attr('width', (d, i) => textTokenWidths[i] + textTokenPadding.left + textTokenPadding.right)
@@ -367,7 +498,8 @@
       .attr('class', 'text-token-arc')
       .attr('x', textTokenPadding.left)
       .attr('y', textTokenPadding.top + 2)
-      .text(d => d);
+      .style('pointer-events', 'none')
+      .text(d => d.token);
 
     // Compute dependency link hierarchy based on the gaps between two tokens
     let rankedDepList = [];
@@ -431,10 +563,26 @@
 
     Object.keys(rankedDepMap).forEach((k, i) => {
 
-      arcGroup.selectAll(`path.arc-path-${i}`)
+      arcGroup.append('g')
+        .attr('class', 'arc-group-path')
+        .selectAll(`path.arc-path-${i}`)
         .data(rankedDepMap[k], d => `${d.parent}-${d.child}`)
         .join('path')
-        .attr('class', `arc-path arc-path-${i}`)
+        .attr('class', d => {
+          let cls = `arc-path arc-path-${i} arc-path-${tokens[d.parent].id}-${tokens[d.child].id}`;
+          if (wordToSubwordMap[tokens[d.parent].token] !== undefined) {
+            wordToSubwordMap[tokens[d.parent].token].forEach(n => {
+              cls += ` arc-path-${n}-${tokens[d.child].id}`;
+            });
+          }
+          if (wordToSubwordMap[tokens[d.child].token] !== undefined) {
+            wordToSubwordMap[tokens[d.child].token].forEach(n => {
+              cls += ` arc-path-${tokens[d.parent].id}-${n}`;
+            });
+          }
+          return cls;
+        })
+        .attr('id', d => `arc-path-${tokens[d.parent].id}-${tokens[d.child].id}`)
         .attr('marker-end', 'url(#dep-arrow)')
         .attr('d', d => {          
           let sourceX = d.sourceX;
@@ -498,10 +646,25 @@
             Q${control2.x} ${control2.y}, ${targetX} ${-5}`;
         });
 
-      arcGroup.selectAll(`text.arc-path-text-${i}`)
+      arcGroup.append('g')
+        .attr('class', 'arc-group-text')
+        .selectAll(`text.arc-path-text-${i}`)
         .data(rankedDepMap[k], d => `${d.parent}-${d.child}`)
         .join('text')
-        .attr('class', `arc-text arc-path-text-${i}`)
+        .attr('class', d => {
+          let cls = `arc-text arc-path-text-${i} arc-path-text-${tokens[d.parent].id}-${tokens[d.child].id}`;
+          if (wordToSubwordMap[tokens[d.parent].token] !== undefined) {
+            wordToSubwordMap[tokens[d.parent].token].forEach(n => {
+              cls += ` arc-path-text-${n}-${tokens[d.child].id}`;
+            });
+          }
+          if (wordToSubwordMap[tokens[d.child].token] !== undefined) {
+            wordToSubwordMap[tokens[d.child].token].forEach(n => {
+              cls += ` arc-path-text-${tokens[d.parent].id}-${n}`;
+            });
+          }
+          return cls;
+        })
         .attr('x', d => d.middleX)
         .attr('y', -20 * (i + 1))
         .text(d => d.relation === 'root' ? '' : d.relation)
@@ -511,7 +674,7 @@
         .attr('stroke-width', 7)
         .attr('stroke', 'white');
 
-      arcGroup.selectAll(`path.arc-path-${i}`).lower();
+      arcGroup.selectAll('.arc-group-path').lower();
 
     });
   };
@@ -646,9 +809,9 @@
           saliencies = await d3.json('/data/twitter-saliency-data/saliency-1718.json');
         }
 
-        // drawGraph();
+        drawGraph();
         // drawTree();
-        drawParagraph();
+        // drawParagraph();
       }
     }
   });
@@ -660,18 +823,10 @@
     if (value != null) {
       // Highlight the corresponding node
       curHoverToken = value;
-      svg.selectAll('.node')
-        .filter(d => d.id === value)
-        .select('rect')
-        .style('stroke', 'hsl(0, 0%, 0%, 0.6)')
-        .style('stroke-width', 2);
+      hightLightNode();
     } else {
       // Dehighlight the old node
-      svg.selectAll('.node')
-        .filter(d => d.id === curHoverToken)
-        .select('rect')
-        .style('stroke', 'hsl(180, 1%, 80%)')
-        .style('stroke-width', 1);
+      deHighLightNode();
       curHoverToken = value;
     }
 
@@ -829,8 +984,6 @@
       }
     }
   }
-
-
 
 
 </style>

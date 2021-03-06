@@ -986,9 +986,11 @@
     if (tokenID == null) {
       return null;
     } else {
-      return tokenID.replace(/\./g, '/.')
-        .replace(/,/g, '/,')
-        .replace(/#/g, '/#');
+      return tokenID.replace(/\./g, '\\.')
+        .replace(/,/g, '\\,')
+        .replace(/#/g, '')
+        .replace(/\[/g, '\\[')
+        .replace(/\]/g, '\\]');
     }
   };
 
@@ -996,7 +998,7 @@
     d3.select(graphSVG)
       .select('.attention-link-group')
       .selectAll('path.link')
-      .filter((d, i, g) => d3.select(g[i]).attr('id').includes(hoverToken))
+      .filter((d, i, g) => d3.select(g[i]).attr('id').includes(`-${hoverToken}`))
       .attr('marker-end', 'url(#arrow-hover)')
       .style('stroke', linkHoverColor)
       .style('opacity', 1)
@@ -1007,7 +1009,7 @@
     d3.select(graphSVG)
       .select('.attention-link-group')
       .selectAll('path.link')
-      .filter((d, i, g) => d3.select(g[i]).attr('id').includes(hoverToken))
+      .filter((d, i, g) => d3.select(g[i]).attr('id').includes(`-${hoverToken}`))
       .attr('marker-end', 'url(#arrow)')
       .style('stroke', linkColor)
       .style('opacity', null);
