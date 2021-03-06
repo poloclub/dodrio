@@ -1,5 +1,5 @@
 <script>
-  import { graphViewConfigStore, hoverTokenStore } from './store';
+  import { graphViewConfigStore, hoverTokenStore, wordToSubwordMapStore } from './store';
   import GraphMatrix from './GraphMatrix.svelte';
   import * as d3 from 'd3';
   import { onMount } from 'svelte';
@@ -11,6 +11,7 @@
 
   let graphSVG = null;
   let graphData = null;
+  let wordToSubwordMap = null;
 
   let SVGWidth = undefined;
   let SVGHeight = undefined;
@@ -817,7 +818,7 @@
       .data(linkArrays[curLinkI].nodes.filter(d => d.id !== undefined), d => d.id)
       .join('g')
       .attr('class', 'node')
-      .attr('id', d => d.name)
+      .attr('id', d => `node-${d.name}`)
       .attr('transform', `translate(${SVGWidth / 2}, ${SVGHeight / 2})`)
       .call(drag(simulation))
       // Hover over effect
@@ -1003,6 +1004,15 @@
       .style('stroke', linkHoverColor)
       .style('opacity', 1)
       .raise();
+
+    d3.select(graphSVG)
+      .select('.node-group')
+      .selectAll('.node')
+      .filter((d, i, g) => d3.select(g[i]).attr('id').includes(`-${hoverToken}`))
+      .raise()
+      .select('circle')
+      .style('stroke', linkHoverColor)
+      .style('stroke-width', 4);
   };
 
   const dehighlightLink = (hoverToken) => {
@@ -1013,6 +1023,14 @@
       .attr('marker-end', 'url(#arrow)')
       .style('stroke', linkColor)
       .style('opacity', null);
+
+    d3.select(graphSVG)
+      .select('.node-group')
+      .selectAll('.node')
+      .filter((d, i, g) => d3.select(g[i]).attr('id').includes(`-${hoverToken}`))
+      .select('circle')
+      .style('stroke', 'white')
+      .style('stroke-width', 1.5);
   };
 
   const renderGraph = async () => {
@@ -1036,6 +1054,10 @@
         renderGraph();
       }
     }
+  });
+
+  wordToSubwordMapStore.subscribe(value => {
+    wordToSubwordMap = value;
   });
 
   const headModeClicked = (e) => {
@@ -1123,9 +1145,29 @@
 
     if (value != null) {
       curHoverToken = value;
-      highLightLink(curHoverToken);
+
+      // Check if the coming word has split subwords in graph vis
+      if (wordToSubwordMap[curHoverToken.replace(/(.*)-\d*/, '$1')] !== undefined) {
+        wordToSubwordMap[curHoverToken.replace(/(.*)-\d*/, '$1')].forEach(t => {
+          highLightLink(t);
+        });
+      } else {
+        highLightLink(curHoverToken);
+      }
+      
     } else {
-      dehighlightLink(curHoverToken);
+
+      if (curHoverToken != null) {
+        // Check if the coming word has split subwords in graph vis
+        if (wordToSubwordMap[curHoverToken.replace(/(.*)-\d*/, '$1')] !== undefined) {
+          wordToSubwordMap[curHoverToken.replace(/(.*)-\d*/, '$1')].forEach(t => {
+            dehighlightLink(t);
+          });
+        } else {
+          dehighlightLink(curHoverToken);
+        }
+      }
+
       curHoverToken = value;
     }
 

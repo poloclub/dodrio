@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { instanceViewConfigStore, hoverTokenStore } from './store';
+  import { instanceViewConfigStore, hoverTokenStore, wordToSubwordMapStore } from './store';
   import * as d3 from 'd3';
 
   let svg = null;
@@ -204,7 +204,9 @@
   };
 
   const hightLightNode = () => {
-    svg.selectAll(`.node-${curHoverToken}`)
+    // Cannot directly select class because some weird special character selector bug on firefox
+    svg.selectAll('.node')
+      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
       .select('rect')
       .style('stroke', linkHoverColor)
       .style('stroke-width', 2);
@@ -215,15 +217,11 @@
       .style('stroke-width', 2)
       .attr('marker-end', 'url(#dep-arrow-hover)')
       .raise();
-
-    svg.selectAll('.arc-text')
-      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
-      .style('stroke-width', 2)
-      .raise();
   };
 
   const deHighLightNode = () => {
-    svg.selectAll(`.node-${curHoverToken}`)
+    svg.selectAll('.node')
+      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
       .select('rect')
       .style('stroke', 'hsl(180, 1%, 80%)')
       .style('stroke-width', 1);
@@ -379,7 +377,9 @@
         j += 1;
       }
     }
-
+    
+    // Update the store
+    wordToSubwordMapStore.set(wordToSubwordMap);
   };
 
   const drawGraph = () => {
