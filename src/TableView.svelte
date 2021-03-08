@@ -109,7 +109,7 @@
 
   onMount(async () => {
     console.log('loading table');
-    tableData = await d3.json('/data/table_list_top_300.json');
+    tableData = await d3.json('/data/table-list-sst2.json');
     console.log('loaded table');
   });
   
@@ -160,6 +160,10 @@
   tr:first-child {
     background-color: hsla(0, 0%, 0%, 0.1);
   }
+
+  td.numberRow {
+    text-align: right;
+  }
 </style>
 
 <div class='table-view'>
@@ -178,9 +182,9 @@
         <tr on:click={getInstance(this)}>
           <td style='display: none;'>{row.id}</td>
           <td>{row.sentence}</td>
-          <td>{twitterLabelMap[row.true_label]}</td>
-          <td>{twitterLabelMap[row.predicted_label]}</td>
-          <td>{Number((row.logit_distance).toFixed(2))}</td>
+          <td class="numberRow">{row.true_label}</td>
+          <td class="numberRow">{row.predicted_label}</td>
+          <td class="numberRow">{Number((row.logit_distance).toFixed(2))}</td>
         </tr>
       {/each}
     </tbody>

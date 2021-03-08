@@ -33,12 +33,17 @@
   let selectedCircleOpacity = 1;
   let hoveredCircleOpacity = 1;
   let nonHoveredCircleOpacity = 0.2;
-  let labelColorMap = {
+  let twitterLabelColorMap = {
     0 : 'red',
     1 : 'grey',
     2 : 'skyblue'
   };
+  let sst2LabelColorMap = {
+    0 : 'red',
+    1 : 'skyblue'
+  }
   let twitterLabels = ['negative', 'neutral', 'positive'];
+  let sst2Labels = ['negative', 'positive']
 
   $: selectedInstanceId, function() {
     // When selectedInstanceId store value changes, update
@@ -94,7 +99,7 @@
       .attr('r', function(d) {
         return d.id == selectedInstanceId ? selectedCircleRadius : circleRadius;
       })
-      .style('fill', function (d) { return labelColorMap[d.label] })
+      .style('fill', function (d) { return sst2LabelColorMap[d.label] })
       .style('opacity', function(d) {
         return d.id == selectedInstanceId ? selectedCircleOpacity : circleOpacity;
       }) 
@@ -136,7 +141,7 @@
       .attr('y', SVGHeight - (rectangleWidth * (uniqueLabels.length + 1)))
       .attr('width', rectangleWidth)
       .attr('height', rectangleWidth)
-      .style('fill', function(d) { return labelColorMap[d]} );
+      .style('fill', function(d) { return sst2LabelColorMap[d]} );
 
     legend.append('text')
       .attr('x', SVGWidth - 95 + rectangleWidth)
@@ -145,7 +150,7 @@
       .style('dominant-baseline', 'text-after-edge')
       .style('fill', 'black')
       .style('font-size', '0.7em')
-      .text(function(d) { return d + ' (' + twitterLabels[d] + ')'; });
+      .text(function(d) { return d + ' (' + sst2Labels[d] + ')'; });
   };
 
   function showTooltip(event, d) {
@@ -208,7 +213,7 @@
 
   const renderEmbeddings = async () => {
     console.log('loading embeddings');
-    embeddingData = await d3.json('/data/embeddings_twitter_top_300.json');
+    embeddingData = await d3.json('/data/embedding-list-sst2.json');
     console.log('loaded embeddings');
 
     drawEmbeddingsPlot();
