@@ -50,6 +50,29 @@
   const bindSelect = () => {
     let selectOption = d3.select('#instance-select')
       .property('value', currentLayout.value);
+
+    selectOption.on('change', () => {
+      let newLayoutValue = selectOption.property('value');
+
+      // Need to switch layout
+      if (newLayoutValue !== currentLayout.value) {
+
+        switch(newLayoutValue) {
+        case 'saliency':
+          console.log('change to saliency view');
+          break;
+
+        case 'dependency':
+          console.log('change to dependency view');
+          break;
+
+        case 'tree':
+          console.log('change to tree view');
+          break;
+        }
+
+      }
+    });
   };
 
   const getTokenWidth = (tokens) => {
@@ -995,12 +1018,6 @@
     <div class='svg-control-panel'>
 
       <div class='select-row'>
-
-        <div class='setting-icon'>
-          <i class="fas fa-sliders-h"></i>
-        </div>
-
-        <div class='sep-line-vertical'></div>
 
         <div class='select'>
           <select name='instance-layout' id='instance-select'>
