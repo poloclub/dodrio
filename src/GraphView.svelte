@@ -11,6 +11,7 @@
 
   let graphSVG = null;
   let graphData = null;
+  let saliencyData = null;
   let wordToSubwordMap = null;
 
   let SVGWidth = undefined;
@@ -25,6 +26,9 @@
 
   const minNodeRadius = 19;
   const maxNodeRadius = 40;
+
+  // const minNodeRadius = 10;
+  // const maxNodeRadius = 20;
   
   const radialRadius = 225;
   const radialCurveAlpha = 0.3;
@@ -37,7 +41,7 @@
   let tokenSize = null;
   let originalNodes = null;
 
-  let weightThreshold = 0.05;
+  let weightThreshold = 0.02;
   let weightThresholdMin = 0.02;
   let weightThresholdMax = 0.2;
   let weightThresholdSteps = 6;
@@ -66,7 +70,7 @@
 
   // Data
   let mounted = false;
-  let attentionData = undefined;
+  let attentionData = null;
   let gradSortedIndexes = undefined;
   let semanticSortedIndexes = undefined;
   let syntacticSortedIndexes = undefined;
@@ -801,7 +805,7 @@
       .attr('class', 'attention-link-group')
       .attr('stroke', linkColor);
 
-    let linkLines = linkLineGroup.selectAll('path.link')
+    linkLineGroup.selectAll('path.link')
       .data(linkArrays[curLinkI].biLinks, d => `${d[0].id}-${d[1].id}`)
       .join('path')
       .attr('class', 'link')
@@ -1033,8 +1037,51 @@
       .style('stroke-width', 1.5);
   };
 
+  const createGraphData = (layer, head) => {
+    let curAttention = attentionData[layer][head];
+    let curAttentionData = {'nodes': [], 'links': []};
+    let curInstance = 106;
+    let curPredictedLabel = saliencyData[String(curInstance)]['meta']['predicted_label'];
+
+    // Add nodes
+    saliencyData[String(curInstance)]['tokens'].forEach((d, i) => {
+      curAttentionData.nodes.push({
+        token: d.token,
+        saliency: d[curPredictedLabel],
+        id: i
+      });
+    });
+
+    // Add links
+    for (let i = 0; i < curAttentionData.nodes.length; i++) {
+      for (let j = 0; j < curAttentionData.nodes.length; j++) {
+        curAttentionData.links.push({
+          source: i,
+          target: j,
+          weight: curAttention[i][j]
+        });
+      }
+    }
+
+    return curAttentionData;
+  };
+
   const renderGraph = async () => {
     console.log('loading matrix');
+
+    // Load data from files if they have not been loaded
+    if (attentionData == null) {
+      attentionData = await d3.json(`/data/twitter-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`);
+    }
+    if (saliencyData == null) {
+      saliencyData = await d3.json('/data/sst2-saliency-list-grad-l1.json');
+    }
+
+    // Create graph data
+    let curLayer = 9;
+    let curHead = 8;
+    // graphData = createGraphData(curLayer, curHead);
+
     graphData = await d3.json('/data/twitter_graph_800_9_7.json');
     console.log('loaded matrix');
 
@@ -1132,7 +1179,7 @@
     }
   };
 
-  const settingIconClicked = (e) => {
+  const settingIconClicked = () => {
     if (settingIconActive) {
       settingIconActive = false;
     } else {
@@ -1173,11 +1220,22 @@
   });
 
   onMount(async() => {
-    attentionData = await d3.json(`/data/twitter-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`);
+    if (attentionData == null) {
+      attentionData = await d3.json(`/data/twitter-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`);
+    }
+
+    if (saliencyData == null) {
+      saliencyData = await d3.json('/data/sst2-saliency-list-grad-l1.json');
+    }
+
+    // TODO: change the hard code number
+    tokenSize = 40;
     gradSortedIndexes = await d3.json('/data/twitter-sorted-grad-heads.json');
     gradSortedIndexes = gradSortedIndexes[instanceID];
     relevantAttentions = loadAttentionMatrix();
+    console.log(relevantAttentions);
 
+    
     mounted = true;
   });
 
@@ -1654,59 +1712,3 @@
   </div>
 
 </div>
-
-  <!-- <div class='control-panel'>
-    <!- - Sliders - ->
-    <div class='slider'>
-      <label for='attention'>Attention Strength
-        [{config.autoAttention ? 'auto' : round(forceStrength.force.attention, 2)}]
-      </label>
-      <input type="range" min="0" max="1000" value="500" class="slider" id="attention">
-    </div>
-
-    <div class='slider'>
-      <label for='textOrder'>Text Order Strength [{round(forceStrength.force.textOrder, 2)}]</label>
-      <input type="range" min="0" max="1000" value="500" class="slider" id="textOrder">
-    </div>
-
-    <div class='slider'>
-      <label for='manyBody'>ManyBody Strength [{round(forceStrength.force.manyBody, 2)}]</label>
-      <input type="range" min="0" max="1000" value="500" class="slider" id="manyBody">
-    </div>
-
-    <div class='slider'>
-      <label for='collide'>Node Distance [{round(forceStrength.force.collideRadius, 2)}]</label>
-      <input type="range" min="0" max="1000" value="500" class="slider" id="collideRadius">
-    </div>
-
-    <!- - Checkboxes - ->
-    <div class='checkbox'>
-      <input type="checkbox" id="checkbox-auto-attention">
-      <label for="checkbox-auto-attention">Auto attention strength </label>
-    </div>
-
-    <div class='checkbox'>
-      <input type="checkbox" id="checkbox-hidden-link">
-      <label for="checkbox-hidden-link">Show hidden link</label>
-    </div>
-
-    <div class='checkbox'>
-      <input type="checkbox" id="checkbox-hidden-node">
-      <label for="checkbox-hidden-node">Show hidden node</label>
-    </div>
-
-    <div class='checkbox'>
-      <input type="checkbox" id="checkbox-border">
-      <label for="checkbox-border">Border Constraint</label>
-    </div>
-    
-    <!- - Selection - ->
-    <div class='select'>
-      <select name='layout' id='select-layout'>
-        {#each Object.values(layoutOptions) as opt}
-          <option value={opt.value}>{opt.name}</option>
-        {/each}
-      </select>
-    </div>
-    
-  </div> -->
