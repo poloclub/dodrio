@@ -1141,7 +1141,6 @@
   };
 
   hoverTokenStore.subscribe(value => {
-    console.log('change', value);
 
     if (value != null) {
       curHoverToken = value;

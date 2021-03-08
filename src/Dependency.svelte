@@ -22,7 +22,7 @@
   
   // Control panel variables
   const layoutOptions = {
-    paragraph: {
+    saliency: {
       value: 'saliency',
       name: 'Saliency View'
     },
@@ -35,8 +35,11 @@
       name: 'Dependency Tree'
     } 
   };
+  let dependencyViewInitialized = false;
+  let saliencyViewInitialized = false;
+  let treeViewInitialized = false;
 
-  let currentLayout = layoutOptions.paragraph;
+  let currentLayout = layoutOptions.dependency;
   let linkHoverColor = 'hsl(358, 94%, 73%)';
 
 
@@ -59,15 +62,81 @@
 
         switch(newLayoutValue) {
         case 'saliency':
-          console.log('change to saliency view');
+          // Hide the old view
+          if (currentLayout.value === 'dependency' && dependencyViewInitialized) {
+            svg.select('g.token-group')
+              .style('display', 'none');
+          }
+
+          if (currentLayout.value === 'tree' && treeViewInitialized) {
+            svg.select('g.tree-group')
+              .style('display', 'none');
+          }
+
+          // Draw the new view
+          if (saliencyViewInitialized) {
+            svg.select('g.token-group-saliency')
+              .style('display', null);
+            svg.select('g.legend-group')
+              .style('display', null);
+          } else {
+            drawParagraph();
+          }
+          currentLayout = layoutOptions[newLayoutValue];
           break;
 
         case 'dependency':
           console.log('change to dependency view');
+
+          // Hide the old view
+          if (currentLayout.value === 'tree' && treeViewInitialized) {
+            svg.select('g.tree-group')
+              .style('display', 'none');
+          }
+
+          if (currentLayout.value === 'saliency' && saliencyViewInitialized) {
+            svg.select('g.token-group-saliency')
+              .style('display', 'none');
+            svg.select('g.legend-group')
+              .style('display', 'none');
+          }
+
+          // Draw the new view
+          if (dependencyViewInitialized) {
+            svg.select('g.token-group')
+              .style('display', null);
+          } else {
+            drawGraph();
+          }
+
+          currentLayout = layoutOptions[newLayoutValue];
           break;
 
         case 'tree':
           console.log('change to tree view');
+
+          // Hide the old view
+          if (currentLayout.value === 'dependency' && dependencyViewInitialized) {
+            svg.select('g.token-group')
+              .style('display', 'none');
+          }
+
+          if (currentLayout.value === 'saliency' && saliencyViewInitialized) {
+            svg.select('g.token-group-saliency')
+              .style('display', 'none');
+            svg.select('g.legend-group')
+              .style('display', 'none');
+          }
+
+          // Draw the new view
+          if (treeViewInitialized) {
+            svg.select('g.tree-group')
+              .style('display', null);
+          } else {
+            drawTree();
+          }
+
+          currentLayout = layoutOptions[newLayoutValue];
           break;
         }
 
@@ -300,7 +369,7 @@
 
     // Add tokens
     let tokenGroup = svg.append('g')
-      .attr('class', 'token-group')
+      .attr('class', 'token-group-saliency')
       .attr('transform', `translate(${SVGPadding.left + SVGWidth * (1 - containerWidthFactor) / 2},
         ${SVGPadding.top + 50})`);
     
@@ -367,6 +436,8 @@
     let legendPos = {width: 10, height: 150};
 
     drawSaliencyLegend(legendGroup, legendPos, largestAbs);
+
+    saliencyViewInitialized = true;
   };
 
   const initWordToSubwordMap = (tokens, saliencies) => {
@@ -700,6 +771,8 @@
       arcGroup.selectAll('.arc-group-path').lower();
 
     });
+
+    dependencyViewInitialized = true;
   };
 
   const drawTree = () => {
@@ -797,7 +870,8 @@
       .attr('class', 'text-token')
       .attr('y', 1)
       .text(d => tokens[d.id]);
-
+    
+    treeViewInitialized = true;
   };
 
   onMount(async () => {
@@ -832,9 +906,19 @@
           saliencies = await d3.json('/data/twitter-saliency-data/saliency-1718.json');
         }
 
-        drawGraph();
-        // drawTree();
-        // drawParagraph();
+        switch(currentLayout.value) {
+        case 'saliency':
+          drawParagraph();
+          break;
+        
+        case 'dependency':
+          drawGraph();
+          break;
+
+        case 'tree':
+          drawTree();
+          break; 
+        }
       }
     }
   });
