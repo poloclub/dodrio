@@ -295,7 +295,13 @@
     hoverTokenStore.set(null);
   };
 
-  const hightLightNode = () => {
+  const tokenNodeMouseoverTree = (tokens, e) => {
+    let curNode = d3.select(e.target);
+    let nodeID = tokens[curNode.data()[0].id].id;
+    hoverTokenStore.set(nodeID);
+  };
+
+  const highLightNode = () => {
     // Cannot directly select class because some weird special character selector bug on firefox
     svg.selectAll('.node')
       .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
@@ -378,7 +384,15 @@
       .selectAll('g')
       .data(tokens, d => d.id)
       .join('g')
-      .attr('class', 'node')
+      .attr('class', d => {
+        let cls = `node node-${d.id}`;
+        if (wordToSubwordMap[d.token] !== undefined) {
+          wordToSubwordMap[d.token].forEach(n => {
+            cls += ` node-${n}`;
+          });
+        }
+        return cls;
+      })
       .attr('id', d => `node-${d.id}`)
       .on('mouseover', tokenNodeMouseover)
       .on('mouseleave', tokenNodeMouseleave);
@@ -781,9 +795,47 @@
     }
 
     const depList = data.list;
-    let tokens = data.words;
 
-    let textTokenSize = getTokenWidth(tokens);
+    // Need to split the original words into sub-words if applicable
+    let tokens = data.words.map(d => {return {'token': d};});
+
+    // Give each saliency token a unique name
+    if (saliencies.tokens[0].id === undefined) {
+      let tokenCount = {};
+      saliencies.tokens.forEach(d => {
+        let curCount = 0;
+        if (tokenCount[d.token] === undefined) {
+          tokenCount[d.token] = curCount + 1;
+        } else {
+          curCount = tokenCount[d.token];
+          tokenCount[d.token] += 1;
+        }
+        d.id = `${tokenIDName(d.token)}-${curCount}`;
+      });
+    }
+
+    console.log(saliencies, tokens);
+
+    if (wordToSubwordMap == null) {
+      initWordToSubwordMap(tokens, saliencies);
+    }
+
+    console.log(wordToSubwordMap);
+
+    // Give each saliency token a unique name
+    let tokenCount = {};
+    tokens.forEach(d => {
+      let curCount = 0;
+      if (tokenCount[d.token] === undefined) {
+        tokenCount[d.token] = curCount + 1;
+      } else {
+        curCount = tokenCount[d.token];
+        tokenCount[d.token] += 1;
+      }
+      d.id = `${tokenIDName(d.token)}-${curCount}`;
+    });
+
+    let textTokenSize = getTokenWidth(tokens.map(d => d.token));
     let textTokenWidths = textTokenSize.textTokenWidths;
     let textTokenHeight = textTokenSize.textTokenHeight;
 
@@ -854,8 +906,19 @@
       .selectAll('g')
       .data(root.descendants())
       .join('g')
-      .attr('class', 'node')
-      .attr('transform', d => `translate(${d.x}, ${d.y})`);
+      .attr('class', d => {
+        let curNode = tokens[Number(d.id)];
+        let cls = `node node-${curNode.id}`;
+        if (wordToSubwordMap[curNode.token] !== undefined) {
+          wordToSubwordMap[curNode.token].forEach(n => {
+            cls += ` node-${n}`;
+          });
+        }
+        return cls;
+      })
+      .attr('transform', d => `translate(${d.x}, ${d.y})`)
+      .on('mouseover', e => tokenNodeMouseoverTree(tokens, e))
+      .on('mouseleave', tokenNodeMouseleave);
 
     nodes.append('rect')
       .attr('x', d => -(textTokenWidths[d.id] + textTokenPadding.left + textTokenPadding.right) / 2)
@@ -869,7 +932,7 @@
     nodes.append('text')
       .attr('class', 'text-token')
       .attr('y', 1)
-      .text(d => tokens[d.id]);
+      .text(d => tokens[d.id].token);
     
     treeViewInitialized = true;
   };
@@ -930,7 +993,7 @@
     if (value != null) {
       // Highlight the corresponding node
       curHoverToken = value;
-      hightLightNode();
+      highLightNode();
     } else {
       // Dehighlight the old node
       deHighLightNode();
