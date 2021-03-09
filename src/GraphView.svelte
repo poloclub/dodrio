@@ -7,7 +7,9 @@
   
   // Shared states
   let graphViewCompConfig = undefined;
-  let instanceID = 1718;
+  let instanceID = 106;
+  let curLayer = 9;
+  let curHead = 8;
 
   let graphSVG = null;
   let graphData = null;
@@ -34,8 +36,8 @@
   const radialCurveAlpha = 0.3;
 
   const gridRowSize = 10;
-  const gridRowGap = 25;
-  const gridColumnGap = 20;
+  const gridRowGap = 35;
+  const gridColumnGap = 35;
 
   // Graph vis variables
   let tokenSize = null;
@@ -64,9 +66,6 @@
 
   // Control panel variables
   let settingIconActive = false;
-  
-  let curLayer = 3;
-  let curHead = 8;
 
   // Data
   let mounted = false;
@@ -404,13 +403,29 @@
   };
 
   const initGridSim = (simulation) => {
-    const gridColumnSize = Math.ceil(tokenSize / gridRowSize);
+    let curGridRowSize = gridRowSize;
+    let gridColumnSize = Math.ceil(tokenSize / curGridRowSize);
+    console.log(tokenSize, gridRowSize, gridColumnSize);
 
     let rowLength = gridRowSize * 2 * minNodeRadius + (gridRowSize - 1) * gridColumnGap;
     let columnLength = gridColumnSize * 2 * minNodeRadius + (gridColumnSize - 1) * gridRowGap;
 
+    // Check if we need to increase the row size
+    while (columnLength > SVGHeight) {
+      curGridRowSize = gridRowSize + 1;
+      rowLength = gridRowSize * 2 * minNodeRadius + (gridRowSize - 1) * gridColumnGap;
+      columnLength = gridColumnSize * 2 * minNodeRadius + (gridColumnSize - 1) * gridRowGap;
+
+      if (rowLength > SVGWidth) {
+        console.log('Failed to initialize grid layout');
+        break;
+      }
+    }
+
     let xs = Math.floor((SVGWidth - rowLength) / 2);
     let ys = Math.floor((SVGHeight - columnLength) / 2);
+    
+    console.log(columnLength, SVGHeight);
 
     // Force 3 (Grid force)
     simulation.force('grid', d3.forceLink(linkArrays[curLinkI].gridLinks)
@@ -713,7 +728,6 @@
     let nodeIndices = new Set();
     graphData.nodes.forEach(d => nodeIndices.add(+d.id));
     let nodeIndexArray = Array.from(nodeIndices);
-    tokenSize = nodeIndexArray.length;
 
     let nodeByID = new Map(nodes.map(d => [d.id, d]));
 
@@ -1007,7 +1021,7 @@
       .filter((d, i, g) => d3.select(g[i]).attr('id').includes(`-${hoverToken}`))
       .attr('marker-end', 'url(#arrow-hover)')
       .style('stroke', linkHoverColor)
-      .style('opacity', 1)
+      .style('opacity', 0.7)
       .raise();
 
     d3.select(graphSVG)
@@ -1041,11 +1055,10 @@
   const createGraphData = (layer, head) => {
     let curAttention = attentionData[layer][head];
     let curAttentionData = {'nodes': [], 'links': []};
-    let curInstance = 106;
-    let curPredictedLabel = saliencyData[String(curInstance)]['meta']['predicted_label'];
+    let curPredictedLabel = saliencyData[String(instanceID)]['meta']['predicted_label'];
 
     // Add nodes
-    saliencyData[String(curInstance)]['tokens'].forEach((d, i) => {
+    saliencyData[String(instanceID)]['tokens'].forEach((d, i) => {
       curAttentionData.nodes.push({
         token: d.token,
         saliency: d[curPredictedLabel],
@@ -1065,54 +1078,6 @@
     }
 
     return curAttentionData;
-  };
-
-  const renderGraph = async () => {
-    console.log('loading matrix');
-
-    // Load data from files if they have not been loaded
-    if (attentionData == null) {
-      attentionData = await d3.json(`/data/twitter-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`);
-    }
-    if (saliencyData == null) {
-      saliencyData = await d3.json('/data/sst2-saliency-list-grad-l1.json');
-    }
-
-    // Create graph data
-    let curLayer = 9;
-    let curHead = 8;
-    graphData = createGraphData(curLayer, curHead);
-
-    // graphData = await d3.json('/data/twitter_graph_800_9_7.json');
-    console.log('loaded matrix');
-
-    drawGraph();
-  };
-
-  graphViewConfigStore.subscribe(value => {
-    if (value.compHeight !== undefined && value.compWidth !== undefined){
-      if (graphViewCompConfig === undefined ||
-        (graphViewCompConfig.compHeight !== value.compHeight &&
-        graphViewCompConfig.compWidth !== value.compWidth)
-      ){
-        // Update the height and width
-        graphViewCompConfig = value;
-        SVGHeight = graphViewCompConfig.compHeight;
-        SVGWidth = graphViewCompConfig.compWidth - rightListWidth;
-        renderGraph();
-      }
-    }
-  });
-
-  wordToSubwordMapStore.subscribe(value => {
-    wordToSubwordMap = value;
-  });
-
-  const headModeClicked = (e) => {
-    let newMode = e.target.dataset.mode;
-    if (newMode !== curHeadMode) {
-      curHeadMode = newMode;
-    }
   };
 
   /**
@@ -1220,26 +1185,73 @@
 
   });
 
+  const renderGraph = async () => {
+    console.log('loading matrix');
+
+    // Load data from files if they have not been loaded
+    if (attentionData == null) {
+      attentionData = await d3.json(`/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`);
+    }
+    if (saliencyData == null) {
+      saliencyData = await d3.json('/data/sst2-saliency-list-grad-l1.json');
+      tokenSize = saliencyData[instanceID].tokens.length;
+    }
+
+    // Create graph data
+    graphData = createGraphData(curLayer, curHead);
+
+    // graphData = await d3.json('/data/twitter_graph_800_9_7.json');
+    console.log('loaded matrix');
+
+    drawGraph();
+  };
+
   onMount(async() => {
     if (attentionData == null) {
-      attentionData = await d3.json(`/data/twitter-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`);
+      attentionData = await d3.json(`/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`);
     }
 
     if (saliencyData == null) {
       saliencyData = await d3.json('/data/sst2-saliency-list-grad-l1.json');
+      tokenSize = saliencyData[instanceID].tokens.length;
     }
 
-    // TODO: change the hard code number
-    tokenSize = 40;
-    gradSortedIndexes = await d3.json('/data/twitter-sorted-grad-heads.json');
+    gradSortedIndexes = await d3.json('/data/sst2-sorted-grad-heads.json');
+    console.log(gradSortedIndexes);
     gradSortedIndexes = gradSortedIndexes[instanceID];
     relevantAttentions = loadAttentionMatrix();
-    console.log(relevantAttentions);
+    console.log(relevantAttentions, saliencyData);
+    console.log(tokenSize);
 
     
     mounted = true;
   });
 
+  graphViewConfigStore.subscribe(value => {
+    if (value.compHeight !== undefined && value.compWidth !== undefined){
+      if (graphViewCompConfig === undefined ||
+        (graphViewCompConfig.compHeight !== value.compHeight &&
+        graphViewCompConfig.compWidth !== value.compWidth)
+      ){
+        // Update the height and width
+        graphViewCompConfig = value;
+        SVGHeight = graphViewCompConfig.compHeight;
+        SVGWidth = graphViewCompConfig.compWidth - rightListWidth;
+        renderGraph();
+      }
+    }
+  });
+
+  wordToSubwordMapStore.subscribe(value => {
+    wordToSubwordMap = value;
+  });
+
+  const headModeClicked = (e) => {
+    let newMode = e.target.dataset.mode;
+    if (newMode !== curHeadMode) {
+      curHeadMode = newMode;
+    }
+  };
 
 </script>
 
@@ -1550,7 +1562,7 @@
     <!-- Control panel on top of the SVG -->
     <div class='svg-control-panel'>
       <div class='name'>
-        Layer {2} Head {2}
+        Layer {curLayer} Head {curHead}
       </div>
 
       <div class='sep-line-horizontal'></div>
