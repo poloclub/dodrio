@@ -48,7 +48,7 @@
   let weightThresholdGap = (weightThresholdMax - weightThresholdMin) / (weightThresholdSteps - 1);
 
   let linkArrays = {};
-  let intermediateNodes = {};
+  let intermediateNodeMap = new Map();
   let curLinkI = 0;
   let linkWidth = null;
 
@@ -634,12 +634,13 @@
         curBilink.selfLoop = true;
 
         // We cannot keep creating new intermediate nodes (need to be the same
-        // object across different threshold)
+        // object for each source across different threshold)
         let intermediate = {hidden: true};
-        if (intermediateNodes.source !== undefined) {
-          intermediate = intermediateNodes.source;
+
+        if (intermediateNodeMap.has(source)) {
+          intermediate = intermediateNodeMap.get(source);
         } else {
-          intermediateNodes.source = intermediate;
+          intermediateNodeMap.set(source, intermediate);
         }
 
         curBilink.push(intermediate);
@@ -1080,9 +1081,9 @@
     // Create graph data
     let curLayer = 9;
     let curHead = 8;
-    // graphData = createGraphData(curLayer, curHead);
+    graphData = createGraphData(curLayer, curHead);
 
-    graphData = await d3.json('/data/twitter_graph_800_9_7.json');
+    // graphData = await d3.json('/data/twitter_graph_800_9_7.json');
     console.log('loaded matrix');
 
     drawGraph();

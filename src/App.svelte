@@ -19,14 +19,11 @@
 
 
 <div class='app-page'>
-  <!-- <Saliency width={950}/> -->
+
   <!-- <div class='saliency'>
     <GraphView />
-    <DependencyView />
   </div> -->
   
   <Main />
-  <!-- <RadialView /> -->
-  <!-- <CircleView /> -->
-  <!-- <GridView /> -->
+
 </div>
