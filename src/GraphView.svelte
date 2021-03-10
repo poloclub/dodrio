@@ -135,7 +135,7 @@
     return num + Array(Math.max(digit - String(num).length + 1, 0)).join(0);
   };
 
-  const drag = (simulation) => {
+  const drag = () => {
   
     const dragstarted = (event) => {
       if (!event.active) simulation.alphaTarget(0.3).restart();
@@ -797,6 +797,35 @@
     simulation.alpha(0.3).restart();
   };
 
+  const simulationTick = (nodeRadiusScale) => {
+    console.log('Tick');
+
+    let linkLines = d3.select(graphSVG)
+      .select('g.attention-link-group')
+      .selectAll('path.link');
+
+    // Update the attention links
+    switch (currentLayout.value) {
+    case 'force':
+      linkLines.attr('d', d => tickLinkForce(d, nodeRadiusScale));
+      break;
+    case 'radial':
+      linkLines.attr('d', d => tickLinkRadial(d, nodeRadiusScale));
+      break;
+    case 'grid':
+      linkLines.attr('d', d => tickLinkGrid(d, nodeRadiusScale));
+      break;
+    default:
+      console.log('Unexpected case.');
+    }
+
+    // Update the nodes
+    d3.select(graphSVG)
+      .select('g.node-group')
+      .selectAll('g.node')
+      .attr('transform', d => tickNodeForce(d, nodeRadiusScale));
+  };
+
   const initGraph = () => {
     let svg = d3.select(graphSVG);
 
@@ -881,7 +910,7 @@
       .attr('class', 'node')
       .attr('id', d => `node-${d.name}`)
       .attr('transform', `translate(${SVGWidth / 2}, ${SVGHeight / 2})`)
-      .call(drag(simulation))
+      .call(drag())
       // Hover over effect
       .on('mouseover', (e, d) => {
         curHoverToken = d.name;
@@ -960,31 +989,7 @@
     }
 
     // Simulation tick updates
-    simulation.on('tick', () => {
-      console.log('Tick');
-
-      let linkLines = d3.select(graphSVG)
-        .select('g.attention-link-group')
-        .selectAll('path.link');
-
-      // Update the attention links
-      switch (currentLayout.value) {
-      case 'force':
-        linkLines.attr('d', d => tickLinkForce(d, nodeRadiusScale));
-        break;
-      case 'radial':
-        linkLines.attr('d', d => tickLinkRadial(d, nodeRadiusScale));
-        break;
-      case 'grid':
-        linkLines.attr('d', d => tickLinkGrid(d, nodeRadiusScale));
-        break;
-      default:
-        console.log('Unexpected case.');
-      }
-
-      // Update the nodes
-      nodeGroups.attr('transform', d => tickNodeForce(d, nodeRadiusScale));
-    });
+    simulation.on('tick', () => simulationTick(nodeRadiusScale));
 
     return nodeRadiusScale;
   };

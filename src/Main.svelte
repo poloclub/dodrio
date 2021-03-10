@@ -102,7 +102,7 @@
   .instance-container {
     border-bottom: solid 1px $gray-border;
     width: 100%;
-    height: 50%;
+    height: 100%;
     overflow: hidden;
     box-sizing: border-box;
   }
@@ -110,7 +110,7 @@
   .graph-container {
     //border: solid 1px $gray-border;
     width: 100%;
-    height: 100%;
+    // height: 100%;
     overflow: hidden;
     box-sizing: border-box;
   }
@@ -145,7 +145,7 @@
 
       <!-- Graph View -->
       <div class='graph-container' bind:this={graphViewDIV} >
-        <GraphView />
+        <!-- <GraphView /> -->
       </div>
 
     </div>
