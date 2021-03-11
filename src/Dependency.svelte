@@ -6,11 +6,12 @@
   let svg = null;
   let data = null;
   let saliencies = null;
+  let attentions = null;
   let headOrder = null;
   let wordToSubwordMap = null;
   let relations = [];
   let selectedRelations = {};
-  let instanceID = 106;
+  let instanceID = 1562;
 
   let SVGWidth = 800;
   let SVGHeight = 800;
@@ -458,14 +459,16 @@
     saliencyViewInitialized = true;
   };
 
+  const isSpecialToken = (t) => {
+    if (t === '[CLS]' || t === '[SEP]' || t === '[PAD]') {
+      return true;
+    } else {
+      return false;
+    }
+  };
+
   const initWordToSubwordMap = (tokens, saliencies) => {
-    const isSpecialToken = (t) => {
-      if (t === '[CLS]' || t === '[SEP]' || t === '[PAD]') {
-        return true;
-      } else {
-        return false;
-      }
-    };
+    console.log(tokens, saliencies);
 
     wordToSubwordMap = {};
     let j = 0;
@@ -571,14 +574,7 @@
     let fullWidth = curX + SVGPadding.left + SVGPadding.right - minTokenGap;
 
     // Change svg width to fit the single line
-    svg.attr('width', fullWidth)
-      .select('rect.border-rect')
-      .attr('width', fullWidth);
-    
-    // Also need to change the svg-container's width to make sticky DIV work
-    d3.select('.instance-container')
-      .select('.panel-container')
-      .style('width', `${fullWidth}px`);
+    updateSVGWidth(fullWidth);
 
     // Add tokens
     let tokenGroup = svg.append('g')
@@ -947,16 +943,154 @@
     treeViewInitialized = true;
   };
 
+  /**
+   * Create a dependency graph list using the attention data. For each token,
+   * we uses the token it most attends to as the dependency target. Since some
+   * tokens are split into sub-words, we need to carefully handle this case. We
+   * take sum of their out-attentions, and mean of their in-attentions.
+   * @param {int} layer
+   * @param {int} head 
+   */
+  const getDependencyListFromAttention = (layer, head) => {
+    layer = 10;
+    head = 3;
+    let curAttention = attentions[layer][head];
+    console.log(layer, head, curAttention);
+
+    // Create a mapping between original words and sub-words
+    let wordToSubwordIndexes = new Map();
+    let attentionIndexToWord = new Map();
+    let tokens = data.words.map(d => {return {'token': d};});
+
+    let j = 0;
+    while (isSpecialToken(saliencies.tokens[j].token)) {
+      j += 1;
+    }
+
+    // We cannot directly use word/token in the map, because there can be duplicates
+    // in the instance. We use word-count to create unique IDs.
+    // let wordCount = {};
+
+    // const updateAttentionIndexToWord = (index, curWordIndex) => {
+    //   if (wordCount[curWordIndex] === undefined) {
+    //     // attentionIndexToWord.set(index, `${tokenIDName(curWord)}-${0}`);
+    //     attentionIndexToWord.set(index, curWordIndex);
+    //   } else {
+    //     attentionIndexToWord.set(index, curWordIndex);
+    //     wordCount[curWordIndex] += 1;
+    //   }
+    // };
+
+    for (let i = 0; i < tokens.length; i++) {
+      let curWord = tokens[i].token;
+      
+      let curToken = saliencies.tokens[j].token;
+
+      if (curWord !== curToken) {
+        let curIndexes = [];
+        let nextWord = i + 1 < tokens.length ? tokens[i + 1].token : null;
+
+        while (saliencies.tokens[j].token !== nextWord) {
+          curIndexes.push(j);
+          attentionIndexToWord.set(j, i);
+          j += 1;
+        }
+        wordToSubwordIndexes.set(curIndexes[0], curIndexes);
+      } else {
+        attentionIndexToWord.set(j, i);
+        j += 1;
+      }
+    }
+
+    console.log(attentionIndexToWord);
+
+    // Track the max attention
+    let maxAttentionMap = [];
+    
+    // Iterate through the attention matrix row
+    for (let i = 0; i < saliencies.tokens.length; i++) {
+
+      // Skip the special token
+      if (isSpecialToken(saliencies.tokens[i].token)) continue;
+
+      let curMaxWord = null;
+      let curMaxAttention = -1;
+
+      // Iterate through the columns in this row
+      let curRow = curAttention[i];
+
+      // Check if the current row is a sub-word; if so we need to take mean of
+      // all associated sub-words
+      if (wordToSubwordIndexes.has(i)) {
+        let subWordIndexes = wordToSubwordIndexes.get(i);
+        for (let w = 0; w < curRow.length; w++) {
+          let curSum = 0;
+          for (let ws = 0; ws < subWordIndexes.length; ws++) {
+            curSum += curAttention[ws][w];
+          }
+          curRow[w] = curSum / subWordIndexes.length;
+        }
+
+        // Skip the following sub-words for the iteration on i
+        i = subWordIndexes[subWordIndexes.length - 1];
+      }
+
+      for (let j = 0; j < saliencies.tokens.length; j++) {
+        // Skip the special token
+        if (isSpecialToken(saliencies.tokens[j].token)) continue;
+
+        let curWordAttention = 0;
+
+        // Check if the current column is a sub-word
+        if (wordToSubwordIndexes.has(j)) {
+          // Take sum of all sub-words
+          wordToSubwordIndexes.get(j).forEach(s => {
+            j = s;
+            curWordAttention += curRow[j];
+          });
+        } else {
+          curWordAttention = curRow[j];
+        }
+
+        if (curWordAttention > curMaxAttention) {
+          curMaxWord = attentionIndexToWord.get(j);
+          curMaxAttention = curWordAttention;
+        }
+
+      }
+
+      maxAttentionMap.push({parent: attentionIndexToWord.get(i), child: curMaxWord});
+    }
+
+    return maxAttentionMap;
+  };
+
+  const updateSVGWidth = (width) => {
+    // Change svg width to fit the single line
+    svg.attr('width', width)
+      .select('rect.border-rect')
+      .attr('width', width);
+    
+    // Also need to change the svg-container's width to make sticky DIV work
+    d3.select('.instance-container')
+      .select('.panel-container')
+      .style('width', `${width}px`);
+  };
+
   const drawDependencyComparison = (topHeads) => {
     let oldTranslate = svg.select('.token-group')
       .attr('transform');
     let oldTranslateX = +oldTranslate.replace(/translate\((.*),\s.*\)/, '$1');
     let oldTranslateY = +oldTranslate.replace(/translate\(.*,\s(.*)\)/, '$1');
 
+    // Update the svg width before moving
+    let moveX = 100;
+    updateSVGWidth(+svg.attr('width') + moveX);
+
     let tokenGroup = svg.select('.token-group')
       .transition('move-x')
       .duration(500)
-      .attr('transform', `translate(${oldTranslateX + 100}, ${oldTranslateY})`);
+      .attr('transform', `translate(${oldTranslateX + moveX}, ${oldTranslateY})`);
     
     let tokenHeight = tokenGroup.select('.node')
       .node()
@@ -968,14 +1102,24 @@
       .attr('transform', `translate(${SVGPadding.left}, ${oldTranslateY + tokenHeight + 5})`);
     
     headNameGroup.selectAll('text.name')
-      .data(topHeads.slice(0, 5), d => `${d[0][0]}-${d[0][1]}`)
+      .data(topHeads.slice(0, 5), d => `${d.id.layer}-${d.id.head}`)
       .join('text')
       .attr('class', 'name')
       .style('font-size', '12px')
       .style('dominant-baseline', 'hanging')
       .attr('x', 0)
       .attr('y', (d, i) => i * 80)
-      .text(d => `layer ${d[0][0]} head ${d[0][1]}`);
+      .text(d => `layer ${d.id.layer} head ${d.id.head}`);
+    
+    // Get the dependency list
+    let maxAttentionMap = getDependencyListFromAttention(topHeads[0].id.layer,
+      topHeads[0].id.head);
+    
+    console.log(maxAttentionMap);
+  };
+  
+  const padZeroLeft = (num, digit) => {
+    return Array(Math.max(digit - String(num).length + 1, 0)).join(0) + num;
   };
 
   const checkboxChanged = (e) => {
@@ -984,7 +1128,15 @@
     let curRel = e.target.dataset.rel;
     selectedRelations[curRel] = e.target.checked;
     let topHeads = getInterestingHeads();
-    drawDependencyComparison(topHeads);
+
+    if (attentions == null) {
+      console.log('here!');
+      initAttentionData(
+        `/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`
+      ).then(() => drawDependencyComparison(topHeads));
+    } else {
+      drawDependencyComparison(topHeads);
+    }
   };
 
   /**
@@ -1014,7 +1166,15 @@
 
     // Sort the heads
     let sortedHeads = [...potentialHeads.entries()].sort((a, b) => b[1] - a[1]);
-    return sortedHeads;
+    let sortedObjHeads = sortedHeads.map(d => ({
+      id: {
+        layer: d[0][0],
+        head: d[0][1]
+      },
+      acc: d[1]
+    }));
+
+    return sortedObjHeads;
   };
 
   const initData = async (dependencyFile, saliencyFile, orderFile) => {
@@ -1042,6 +1202,13 @@
 
     // Init the dependency layer/head accuracy list
     headOrder = await d3.json(orderFile);
+  };
+
+  const initAttentionData = async (attentionFile) => {
+    console.log('start loading');
+    attentions = await d3.json(attentionFile);
+    console.log('end loading');
+    console.log(attentions);
   };
 
   onMount(async () => {
@@ -1208,7 +1375,7 @@
     border-radius: 5px;
     border: 1px solid hsl(0, 0%, 93.3%);
     box-shadow: 0 3px 5px hsla(0, 0%, 0%, 0.05);
-    background: hsla(0, 0%, 100%, 0.65);
+    background: hsla(0, 0%, 100%, 0.9);
     user-select: none;
   }
 
@@ -1230,7 +1397,7 @@
     border-radius: 5px;
     border: 1px solid hsl(0, 0%, 93.3%);
     box-shadow: 0 3px 3px hsla(0, 0%, 0%, 0.05);
-    background: hsla(0, 0%, 100%, 0.65);
+    background: hsla(0, 0%, 100%, 0.95);
   }
 
   .check-box-wrapper {
