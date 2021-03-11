@@ -7,6 +7,9 @@
   let data = null;
   let saliencies = null;
   let wordToSubwordMap = null;
+  let relations = [];
+  let selectedRelations = {};
+  let instanceID = 106;
 
   let SVGWidth = 800;
   let SVGHeight = 800;
@@ -570,6 +573,11 @@
     svg.attr('width', fullWidth)
       .select('rect.border-rect')
       .attr('width', fullWidth);
+    
+    // Also need to change the svg-container's width to make sticky DIV work
+    d3.select('.instance-container')
+      .select('.panel-container')
+      .style('width', `${fullWidth}px`);
 
     // Add tokens
     let tokenGroup = svg.append('g')
@@ -937,14 +945,38 @@
     treeViewInitialized = true;
   };
 
-  onMount(async () => {
-    // Load the dependency data
-    if (data === null) {
-      data = await d3.json('/data/twitter-dep-0877.json');
-    }
+  const checkboxChanged =() => {
+    console.log(selectedRelations);
+  };
 
-    if (saliencies === null) {
-      saliencies = await d3.json('/data/twitter-saliency-data/saliency-1718.json');
+  const initData = async (dependencyFile, saliencyFile) => {
+    // Init dependency data
+    data = await d3.json(dependencyFile);
+    data = data[instanceID];
+
+    let relationCounter = new Map();
+    selectedRelations = {};
+    data.list.forEach(d => {
+      if (relationCounter.has(d.relation)) {
+        relationCounter.set(d.relation, relationCounter.get(d.relation) + 1);
+      } else {
+        relationCounter.set(d.relation, 1);
+        // Select all relations in initialization
+        selectedRelations[d.relation] = true;
+      }
+    });
+    relationCounter = new Map([...relationCounter.entries()].sort((a, b) => b[1] - a[1]));
+    relations = [...relationCounter.entries()];
+
+    // Init saliency data
+    saliencies = await d3.json(saliencyFile);
+    saliencies = saliencies[instanceID];
+  };
+
+  onMount(async () => {
+    // Load the dependency and saliency data
+    if (data == null || saliencies == null) {
+      initData('/data/sst2-dependencies.json', '/data/sst2-saliency-list-grad-l1.json');
     }
 
     bindSelect();
@@ -961,27 +993,32 @@
         SVGWidth = instanceViewConfig.compWidth;
         SVGHeight = instanceViewConfig.compHeight;
 
-        if (data === null) {
-          data = await d3.json('/data/twitter-dep-0877.json');
+        const createGraph = () => {
+          switch(currentLayout.value) {
+          case 'saliency':
+            drawParagraph();
+            break;
+          
+          case 'dependency':
+            console.log(data == null);
+            drawGraph();
+            break;
+
+          case 'tree':
+            drawTree();
+            break; 
+          }
+        };
+
+        // Load the dependency and saliency data
+        if (data == null || saliencies == null) {
+          initData('/data/sst2-dependencies.json',
+            '/data/sst2-saliency-list-grad-l1.json')
+            .then(createGraph);
+        } else {
+          createGraph();
         }
 
-        if (saliencies === null) {
-          saliencies = await d3.json('/data/twitter-saliency-data/saliency-1718.json');
-        }
-
-        switch(currentLayout.value) {
-        case 'saliency':
-          drawParagraph();
-          break;
-        
-        case 'dependency':
-          drawGraph();
-          break;
-
-        case 'tree':
-          drawTree();
-          break; 
-        }
       }
     }
   });
@@ -1081,7 +1118,7 @@
     top: 0;
     left: 0;
     cursor: default;
-    max-width: 165px;
+    width: 165px;
     max-height: 76px;
     overflow: visible;
 
@@ -1095,13 +1132,14 @@
     border: 1px solid hsl(0, 0%, 93.3%);
     box-shadow: 0 3px 5px hsla(0, 0%, 0%, 0.05);
     background: hsla(0, 0%, 100%, 0.65);
+    user-select: none;
   }
 
   .relation-checkboxes {
     position: absolute;
     top: 0;
-    left: 155px;
-    width: 300px;
+    left: 162px;
+    width: 600px;
     padding: 5px 10px;
     cursor: default;
     
@@ -1137,15 +1175,15 @@
   select {
     background: inherit;
     border-color: hsla(0, 0%, 0%, 0);
-    padding: 0 1em 0 0.4em;
+    padding: 0 1.6em 0 0.4em;
   }
 
   .select select:not([multiple]) {
-    padding-right: 1em;
+    padding-right: 1.6em;
   }
 
   .select:not(.is-multiple):not(.is-loading)::after{
-    right: 0.4em;
+    right: 0.8em;
     border-color: $blue-icon;
   }
 
@@ -1163,7 +1201,7 @@
   }
 
   .relation {
-    padding: 0 1.6em 0 0.4em;
+    padding: 0 2em 0 0.4em;
     height: 2.5em;
     font-size: 1em;
     display: flex;
@@ -1188,7 +1226,7 @@
       width: .625em;
 
       border-color: $blue-icon;
-      right: 0.4em;
+      right: 0.9em;
     }
   }
 
@@ -1196,12 +1234,16 @@
     display: none;
   }
 
+  .light-gray {
+    color: $gray-light;
+  }
+
 
 </style>
 
 <div class='graph-view'>
 
-  <div class='svg-container' style={`width: ${instanceViewConfig === undefined ? 800 : instanceViewConfig.compWidth}px`}>
+  <div class='svg-container'>
     <div class='panel-container'>
 
       <!-- Control panel on top of the SVG -->
@@ -1229,11 +1271,13 @@
 
         <!-- Control panel after syntactic relation item is selected -->
         <div class='relation-checkboxes' class:hide={!showRelationCheckboxes}>
-          {#each new Array(20).fill(0).map((d, i) => i) as item}
+          {#each relations as entry}
 
             <label class="checkbox check-box-wrapper">
-              <input type="checkbox">
-              Rel {item}
+              <input type="checkbox" on:change={checkboxChanged}
+                bind:checked={selectedRelations[entry[0]]}>
+              {entry[0]}
+              <span class='light-gray'>({entry[1]})</span>
             </label>
               
           {/each}
