@@ -6,6 +6,7 @@
   let svg = null;
   let data = null;
   let saliencies = null;
+  let headOrder = null;
   let wordToSubwordMap = null;
   let relations = [];
   let selectedRelations = {};
@@ -17,7 +18,7 @@
   let instanceViewConfig = undefined;
   let SVGInitialized = false;
 
-  const SVGPadding = {top: 3, left: 3, right: 3, bottom: 3};
+  const SVGPadding = {top: 3, left: 15, right: 15, bottom: 3};
   const textTokenPadding = {top: 3, left: 3, right: 3, bottom: 3};
 
   // Global stores
@@ -582,7 +583,8 @@
     // Add tokens
     let tokenGroup = svg.append('g')
       .attr('class', 'token-group')
-      .attr('transform', `translate(${SVGPadding.left}, ${SVGHeight * 2 / 3 + SVGPadding.top})`);
+      .attr('transform', `translate(${SVGPadding.left},
+        ${Math.min(250, SVGHeight * 2 / 3 + SVGPadding.top)})`);
     
     let nodes = tokenGroup.append('g')
       .attr('class', 'node-group')
@@ -945,11 +947,77 @@
     treeViewInitialized = true;
   };
 
-  const checkboxChanged =() => {
-    console.log(selectedRelations);
+  const drawDependencyComparison = (topHeads) => {
+    let oldTranslate = svg.select('.token-group')
+      .attr('transform');
+    let oldTranslateX = +oldTranslate.replace(/translate\((.*),\s.*\)/, '$1');
+    let oldTranslateY = +oldTranslate.replace(/translate\(.*,\s(.*)\)/, '$1');
+
+    let tokenGroup = svg.select('.token-group')
+      .transition('move-x')
+      .duration(500)
+      .attr('transform', `translate(${oldTranslateX + 100}, ${oldTranslateY})`);
+    
+    let tokenHeight = tokenGroup.select('.node')
+      .node()
+      .getBBox()
+      .height;
+    
+    let headNameGroup = svg.append('g')
+      .attr('class', 'head-name-group')
+      .attr('transform', `translate(${SVGPadding.left}, ${oldTranslateY + tokenHeight + 5})`);
+    
+    headNameGroup.selectAll('text.name')
+      .data(topHeads.slice(0, 5), d => `${d[0][0]}-${d[0][1]}`)
+      .join('text')
+      .attr('class', 'name')
+      .style('font-size', '12px')
+      .style('dominant-baseline', 'hanging')
+      .attr('x', 0)
+      .attr('y', (d, i) => i * 80)
+      .text(d => `layer ${d[0][0]} head ${d[0][1]}`);
   };
 
-  const initData = async (dependencyFile, saliencyFile) => {
+  const checkboxChanged = (e) => {
+    // Need to change the selectedRelations again because there is a race between
+    // svelte's bind:checked call back and this function (on:change)
+    let curRel = e.target.dataset.rel;
+    selectedRelations[curRel] = e.target.checked;
+    let topHeads = getInterestingHeads();
+    drawDependencyComparison(topHeads);
+  };
+
+  /**
+   * Create a list of interesting heads based on their max accuracy on the selected
+   * syntactic dependencies.
+  */
+  const getInterestingHeads = () => {
+    let potentialHeads = new Map();
+
+    for (let key in selectedRelations) {
+      if (!selectedRelations[key] || headOrder[key] === undefined) {
+        continue;
+      }
+
+      let topHeads = headOrder[key]['top_heads'];
+
+      // Track the max accuracy
+      topHeads.forEach(d => {
+        if (potentialHeads.has(d.head)) {
+          potentialHeads.set(d.head,
+            Math.max(d.acc, potentialHeads.get(d.head)));
+        } else {
+          potentialHeads.set(d.head, d.acc);
+        }
+      });
+    }
+
+    // Sort the heads
+    let sortedHeads = [...potentialHeads.entries()].sort((a, b) => b[1] - a[1]);
+    return sortedHeads;
+  };
+
+  const initData = async (dependencyFile, saliencyFile, orderFile) => {
     // Init dependency data
     data = await d3.json(dependencyFile);
     data = data[instanceID];
@@ -971,12 +1039,17 @@
     // Init saliency data
     saliencies = await d3.json(saliencyFile);
     saliencies = saliencies[instanceID];
+
+    // Init the dependency layer/head accuracy list
+    headOrder = await d3.json(orderFile);
   };
 
   onMount(async () => {
     // Load the dependency and saliency data
     if (data == null || saliencies == null) {
-      initData('/data/sst2-dependencies.json', '/data/sst2-saliency-list-grad-l1.json');
+      initData('/data/sst2-dependencies.json',
+        '/data/sst2-saliency-list-grad-l1.json',
+        '/data/sst2-sorted-syntactic-heads.json');
     }
 
     bindSelect();
@@ -1000,8 +1073,8 @@
             break;
           
           case 'dependency':
-            console.log(data == null);
             drawGraph();
+            getInterestingHeads();
             break;
 
           case 'tree':
@@ -1013,7 +1086,8 @@
         // Load the dependency and saliency data
         if (data == null || saliencies == null) {
           initData('/data/sst2-dependencies.json',
-            '/data/sst2-saliency-list-grad-l1.json')
+            '/data/sst2-saliency-list-grad-l1.json',
+            '/data/sst2-sorted-syntactic-heads.json')
             .then(createGraph);
         } else {
           createGraph();
@@ -1046,7 +1120,10 @@
   @import 'define';
 
   .svg-container {
-    overflow: scroll;
+    width: 100%;
+    height: 100%;
+    overflow-x: scroll;
+    position: relative;
     cursor: default;
   }
 
@@ -1108,7 +1185,7 @@
   }
 
   .panel-container {
-    position: relative;
+    position: absolute;
     display: flex;
     flex-direction: row;
   }
@@ -1275,7 +1352,9 @@
 
             <label class="checkbox check-box-wrapper">
               <input type="checkbox" on:change={checkboxChanged}
-                bind:checked={selectedRelations[entry[0]]}>
+                bind:checked={selectedRelations[entry[0]]}
+                data-rel={entry[0]}
+              >
               {entry[0]}
               <span class='light-gray'>({entry[1]})</span>
             </label>
