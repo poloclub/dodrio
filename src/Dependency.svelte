@@ -8,10 +8,14 @@
   let saliencies = null;
   let attentions = null;
   let headOrder = null;
+
   let wordToSubwordMap = null;
   let relations = [];
   let selectedRelations = {};
   let instanceID = 1562;
+
+  let textTokenWidths = {};
+  let tokenXs = [];
 
   let SVGWidth = 800;
   let SVGHeight = 800;
@@ -46,6 +50,7 @@
 
   let currentLayout = layoutOptions.dependency;
   let linkHoverColor = 'hsl(358, 94%, 73%)';
+  let linkAttentionColor = 'hsla(0, 0%, 0%, 0.5)';
   let showRelationCheckboxes = false;
 
   const ease = d3.easeCubicInOut;
@@ -193,8 +198,9 @@
       .style('fill', 'none');
 
     // Add arrow markers
-    svg.append('defs')
-      .append('marker')
+    let arrowMarker = svg.append('defs');
+
+    arrowMarker.append('marker')
       .attr('id', 'dep-arrow')
       .attr('viewBox', [0, 0, 10, 10])
       .attr('refX', 0)
@@ -208,22 +214,20 @@
       .attr('d', 'M 0 0 L 10 5 L 0 10 z')
       .attr('stroke', 'black')
       .attr('fill', 'black');
-
-    svg.append('defs')
-      .append('marker')
+    
+    arrowMarker.clone(true)
+      .select('marker')
       .attr('id', 'dep-arrow-hover')
-      .attr('viewBox', [0, 0, 10, 10])
-      .attr('refX', 0)
-      .attr('refY', 5)
-      .attr('markerWidth', 10)
-      .attr('markerHeight', 7)
-      .attr('orient', 'auto')
-      .attr('stroke-width', 1)
-      .attr('markerUnits', 'userSpaceOnUse')
-      .append('path')
-      .attr('d', 'M 0 0 L 10 5 L 0 10 z')
+      .select('path')
       .attr('stroke', linkHoverColor)
       .attr('fill', linkHoverColor);
+
+    arrowMarker.clone(true)
+      .select('marker')
+      .attr('id', 'dep-attention-arrow')
+      .select('path')
+      .attr('stroke', 'none')
+      .attr('fill', linkAttentionColor);
 
     SVGInitialized = true;
   };
@@ -545,7 +549,7 @@
 
     // Before drawing the tree, pre-render all texts to figure out their widths
     let textTokenSize = getTokenWidth(tokens.map(d => d.token));
-    let textTokenWidths = textTokenSize.textTokenWidths;
+    textTokenWidths = textTokenSize.textTokenWidths;
     let textTokenHeight = textTokenSize.textTokenHeight;
 
     console.log(textTokenWidths, textTokenHeight);
@@ -563,7 +567,7 @@
     });
 
     // Compute the x positions for all tokens
-    let tokenXs = {};
+    tokenXs = {};
     let curX = 0;
     tokens.forEach((d, i) => {
       tokenXs[i] = curX;
@@ -948,14 +952,13 @@
    * we uses the token it most attends to as the dependency target. Since some
    * tokens are split into sub-words, we need to carefully handle this case. We
    * take sum of their out-attentions, and mean of their in-attentions.
-   * @param {int} layer
-   * @param {int} head 
+   * @param {number} layer
+   * @param {number} head 
+   * @param {number} threshold Only count attention's predicted dependency if the
+   *  attention is above this threshold
    */
-  const getDependencyListFromAttention = (layer, head) => {
-    layer = 10;
-    head = 3;
+  const getDependencyListFromAttention = (layer, head, threshold=0.02) => {
     let curAttention = attentions[layer][head];
-    console.log(layer, head, curAttention);
 
     // Create a mapping between original words and sub-words
     let wordToSubwordIndexes = new Map();
@@ -966,20 +969,6 @@
     while (isSpecialToken(saliencies.tokens[j].token)) {
       j += 1;
     }
-
-    // We cannot directly use word/token in the map, because there can be duplicates
-    // in the instance. We use word-count to create unique IDs.
-    // let wordCount = {};
-
-    // const updateAttentionIndexToWord = (index, curWordIndex) => {
-    //   if (wordCount[curWordIndex] === undefined) {
-    //     // attentionIndexToWord.set(index, `${tokenIDName(curWord)}-${0}`);
-    //     attentionIndexToWord.set(index, curWordIndex);
-    //   } else {
-    //     attentionIndexToWord.set(index, curWordIndex);
-    //     wordCount[curWordIndex] += 1;
-    //   }
-    // };
 
     for (let i = 0; i < tokens.length; i++) {
       let curWord = tokens[i].token;
@@ -1001,8 +990,6 @@
         j += 1;
       }
     }
-
-    console.log(attentionIndexToWord);
 
     // Track the max attention
     let maxAttentionMap = [];
@@ -1059,7 +1046,10 @@
 
       }
 
-      maxAttentionMap.push({parent: attentionIndexToWord.get(i), child: curMaxWord});
+      if (curMaxAttention > threshold) {
+        maxAttentionMap.push({parent: attentionIndexToWord.get(i), child: curMaxWord});
+      }
+      
     }
 
     return maxAttentionMap;
@@ -1075,6 +1065,136 @@
     d3.select('.instance-container')
       .select('.panel-container')
       .style('width', `${width}px`);
+  };
+
+  const createRankedDepMap = (maxAttentionLinks) => {
+    // Compute dependency link hierarchy based on the gaps between two tokens
+    let rankedDepList = [];
+
+    maxAttentionLinks.forEach(d => {
+      let gap = Math.abs(d.child - d.parent);
+
+      // Compute the middle point of the link for adding the text later
+      let middleX = undefined;
+      let sourceX = undefined;
+      let targetX = undefined;
+
+      if (d.parent < d.child) {
+        sourceX = tokenXs[d.parent] + textTokenPadding.left + textTokenPadding.right
+          + textTokenWidths[d.parent] - 5;
+        targetX = tokenXs[d.child] + 5;
+
+        middleX = sourceX + (targetX - sourceX) / 2;
+      } else {
+        sourceX = tokenXs[d.parent] + 5;
+        targetX = tokenXs[d.child] + textTokenPadding.left + textTokenPadding.right
+          + textTokenWidths[d.child] - 5;
+
+        middleX = targetX + (sourceX - targetX) / 2;
+      }
+
+      d.sourceX = round(sourceX, 3);
+      d.targetX = round(targetX, 3);
+      d.middleX = Number.isNaN(middleX) ? 0 : middleX;
+      d.gap = gap;
+
+      rankedDepList.push(d);
+    });
+
+    rankedDepList.sort((a, b) => a.gap - b.gap);
+
+    // Need to pre-fill 1 because the first level (line) is reserved for
+    // consecutive tokens only
+    let tokenRelCount = Array(Object.keys(tokenXs).length).fill(1);
+    let rankedDepMap = {};
+
+    // Rank the dependency based on token's dependency count
+    rankedDepList.forEach(d => {
+
+      let iLow = Math.min(d.child, d.parent);
+      let iHigh = Math.max(d.child, d.parent);
+
+      if (iLow !== iHigh) {
+        let curRank = tokenRelCount.slice(iLow, iHigh).reduce((a, b) => Math.max(a, b));
+
+        for (let i = iLow; i < iHigh; i++) {
+          tokenRelCount[i] = curRank + 1;
+        }
+        //tokenRelCount[Math.min(d.child, d.parent)] = curRank + 1;
+
+        if (rankedDepMap[curRank] === undefined) {
+          rankedDepMap[curRank] = [];
+        }
+        
+        rankedDepMap[curRank].push(d);
+      }
+    });
+
+    return rankedDepMap;
+  };
+
+  const drawBottomDependencyLine = (rankedDepMap, attentionGroup) => {
+    Object.keys(rankedDepMap).forEach((k, i) => {
+
+      attentionGroup.append('g')
+        .attr('class', 'attention-group-path')
+        .selectAll(`path.attention-path-${i}`)
+        .data(rankedDepMap[k], d => `${d.parent}-${d.child}`)
+        .join('path')
+        .attr('class', `attention-path attention-path-${i}`)
+        .attr('marker-end', 'url(#dep-attention-arrow)')
+        .style('stroke', 'hsla(0, 0%, 0%, 0.3)')
+        .style('fill', 'none')
+        .style('width', 0.5)
+        .attr('d', d => {          
+          let sourceX = d.sourceX;
+          let targetX = d.targetX;
+
+          let pathHeight = 5 * (i + 1);
+          let pathCurve = i === 0 ? 10 : 15;
+
+          if (d.gap === 1) {
+            let control1 = {
+              x: sourceX,
+              y: pathHeight + 2
+            };
+
+            let control2 = {
+              x: targetX,
+              y: pathHeight + 2
+            };
+            return `M${sourceX} ${0} C${control1.x} ${control1.y}
+              ${control2.x} ${control2.y} ${targetX} ${0}`;
+          }
+          
+          // Compute the control points and middle points
+          let control1 = {
+            x: sourceX < targetX ? sourceX + 2 : sourceX - 2,
+            y: pathHeight
+          };
+
+          let mid1 = {
+            x: sourceX < targetX ? sourceX + pathCurve : sourceX - pathCurve,
+            y: pathHeight
+          };
+
+          let mid2 = {
+            x: sourceX < targetX ? targetX - pathCurve: targetX + pathCurve,
+            y: pathHeight
+          };
+
+          let control2 = {
+            x: sourceX < targetX ? targetX - 2 : targetX + 2,
+            y: pathHeight
+          };
+
+          return `M${sourceX} ${0}
+            Q${control1.x} ${control1.y}, ${mid1.x} ${mid1.y}
+            L${mid2.x} ${mid2.y}
+            Q${control2.x} ${control2.y}, ${targetX} ${0}`;
+        });
+
+    });
   };
 
   const drawDependencyComparison = (topHeads) => {
@@ -1111,11 +1231,23 @@
       .attr('y', (d, i) => i * 80)
       .text(d => `layer ${d.id.layer} head ${d.id.head}`);
     
+    let tokens = data.words.map(d => {return {'token': d};});
+
     // Get the dependency list
-    let maxAttentionMap = getDependencyListFromAttention(topHeads[0].id.layer,
+    let maxAttentionLinks = getDependencyListFromAttention(topHeads[0].id.layer,
       topHeads[0].id.head);
     
-    console.log(maxAttentionMap);
+    let rankedDepMap = createRankedDepMap(maxAttentionLinks);
+
+    console.log(rankedDepMap);
+
+    let attentionGroup = svg.select('.token-group')
+      .append('g')
+      .attr('class', 'attention-group')
+      .attr('transform', `translate(0, ${tokenHeight + 5})`);
+
+    drawBottomDependencyLine(rankedDepMap, attentionGroup);
+
   };
   
   const padZeroLeft = (num, digit) => {
@@ -1130,7 +1262,6 @@
     let topHeads = getInterestingHeads();
 
     if (attentions == null) {
-      console.log('here!');
       initAttentionData(
         `/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`
       ).then(() => drawDependencyComparison(topHeads));
@@ -1205,10 +1336,7 @@
   };
 
   const initAttentionData = async (attentionFile) => {
-    console.log('start loading');
     attentions = await d3.json(attentionFile);
-    console.log('end loading');
-    console.log(attentions);
   };
 
   onMount(async () => {
@@ -1304,6 +1432,7 @@
     font-family: 'Roboto Mono', monospace;
     font-size: 0.8em;
     text-anchor: middle;
+    stroke-linejoin: round;
     fill: hsl(207, 48%, 44%);
   }
 
