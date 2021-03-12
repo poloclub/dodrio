@@ -227,6 +227,7 @@
       .attr('id', 'dep-attention-arrow')
       .select('path')
       .attr('stroke', 'none')
+      .attr('refX', 2)
       .attr('fill', linkAttentionColor);
 
     SVGInitialized = true;
@@ -608,9 +609,7 @@
     nodes.append('rect')
       .attr('width', (d, i) => textTokenWidths[i] + textTokenPadding.left + textTokenPadding.right)
       .attr('height', textTokenHeight + textTokenPadding.top + textTokenPadding.bottom)
-      .attr('rx', 5)
-      .style('fill', 'hsl(210, 25%, 98%)')
-      .style('stroke', 'hsl(180, 1%, 80%)');
+      .attr('rx', 5);
 
     nodes.append('text')
       .attr('class', 'text-token-arc')
@@ -1133,7 +1132,7 @@
     return rankedDepMap;
   };
 
-  const drawBottomDependencyLine = (rankedDepMap, attentionGroup) => {
+  const drawBottomDependencyLine = (rankedDepMap, attentionGroup, tokenHeight, firstRow) => {
     Object.keys(rankedDepMap).forEach((k, i) => {
 
       attentionGroup.append('g')
@@ -1149,6 +1148,7 @@
         .attr('d', d => {          
           let sourceX = d.sourceX;
           let targetX = d.targetX;
+          let baseY = firstRow ? 0 : tokenHeight;
 
           let pathHeight = 5 * (i + 1);
           let pathCurve = i === 0 ? 10 : 15;
@@ -1156,48 +1156,50 @@
           if (d.gap === 1) {
             let control1 = {
               x: sourceX,
-              y: pathHeight + 2
+              y: baseY + pathHeight + 2
             };
 
             let control2 = {
               x: targetX,
-              y: pathHeight + 2
+              y: baseY + pathHeight + 2
             };
-            return `M${sourceX} ${0} C${control1.x} ${control1.y}
-              ${control2.x} ${control2.y} ${targetX} ${0}`;
+            return `M${sourceX} ${baseY} C${control1.x} ${control1.y}
+              ${control2.x} ${control2.y} ${targetX} ${baseY}`;
           }
           
           // Compute the control points and middle points
           let control1 = {
             x: sourceX < targetX ? sourceX + 2 : sourceX - 2,
-            y: pathHeight
+            y: baseY + pathHeight
           };
 
           let mid1 = {
             x: sourceX < targetX ? sourceX + pathCurve : sourceX - pathCurve,
-            y: pathHeight
+            y: baseY + pathHeight
           };
 
           let mid2 = {
             x: sourceX < targetX ? targetX - pathCurve: targetX + pathCurve,
-            y: pathHeight
+            y: baseY + pathHeight
           };
 
           let control2 = {
             x: sourceX < targetX ? targetX - 2 : targetX + 2,
-            y: pathHeight
+            y: baseY + pathHeight
           };
 
-          return `M${sourceX} ${0}
+          return `M${sourceX} ${baseY}
             Q${control1.x} ${control1.y}, ${mid1.x} ${mid1.y}
             L${mid2.x} ${mid2.y}
-            Q${control2.x} ${control2.y}, ${targetX} ${0}`;
+            Q${control2.x} ${control2.y}, ${targetX} ${baseY}`;
         });
 
     });
   };
 
   const drawDependencyComparison = (topHeads) => {
+    const attentionRowGap = 10;
+
     let oldTranslate = svg.select('.token-group')
       .attr('transform');
     let oldTranslateX = +oldTranslate.replace(/translate\((.*),\s.*\)/, '$1');
@@ -1219,19 +1221,17 @@
     
     let headNameGroup = svg.append('g')
       .attr('class', 'head-name-group')
-      .attr('transform', `translate(${SVGPadding.left}, ${oldTranslateY + tokenHeight + 5})`);
-    
-    headNameGroup.selectAll('text.name')
-      .data(topHeads.slice(0, 5), d => `${d.id.layer}-${d.id.head}`)
-      .join('text')
-      .attr('class', 'name')
-      .style('font-size', '12px')
-      .style('dominant-baseline', 'hanging')
-      .attr('x', 0)
-      .attr('y', (d, i) => i * 80)
-      .text(d => `layer ${d.id.layer} head ${d.id.head}`);
+      .attr('transform', `translate(${SVGPadding.left}, ${oldTranslateY + tokenHeight})`);
     
     let tokens = data.words.map(d => {return {'token': d};});
+
+    let arcGroupHeight = svg.select('.arc-group')
+      .node()
+      .getBBox()
+      .height;
+
+    // Draw the first row
+    let attentionGroupID = 0;
 
     // Get the dependency list
     let maxAttentionLinks = getDependencyListFromAttention(topHeads[0].id.layer,
@@ -1239,14 +1239,86 @@
     
     let rankedDepMap = createRankedDepMap(maxAttentionLinks);
 
-    console.log(rankedDepMap);
-
     let attentionGroup = svg.select('.token-group')
       .append('g')
       .attr('class', 'attention-group')
-      .attr('transform', `translate(0, ${tokenHeight + 5})`);
+      .attr('id', `attention-group-${attentionGroupID}`)
+      .attr('transform', `translate(0, ${tokenHeight})`);
 
-    drawBottomDependencyLine(rankedDepMap, attentionGroup);
+    drawBottomDependencyLine(rankedDepMap, attentionGroup, tokenHeight, true);
+    
+    headNameGroup.append('text')
+      .attr('class', 'name')
+      .attr('x', 0)
+      .attr('y', 0)
+      .text(`layer ${topHeads[0].id.layer} head ${topHeads[0].id.head}`);
+
+    // Draw the second+ rows
+    let newTranslateY = 0;
+    attentionGroupID += 1;
+
+    while (attentionGroupID < topHeads.length) {
+
+      let preTranslateY = +svg.select(`#attention-group-${attentionGroupID-1}`)
+        .attr('transform')
+        .replace(/translate\(.*,\s(.*)\)/, '$1');
+      
+      let preHeight = svg.select(`#attention-group-${attentionGroupID-1}`)
+        .node()
+        .getBBox()
+        .height;
+      
+      console.log(preTranslateY, preHeight, tokenHeight, attentionRowGap);
+      
+      newTranslateY = preTranslateY + preHeight + tokenHeight + attentionRowGap;
+
+      attentionGroup = svg.select('.token-group')
+        .append('g')
+        .attr('class', 'attention-group')
+        .attr('id', `attention-group-${attentionGroupID}`)
+        .attr('transform', `translate(0, ${newTranslateY})`)
+        .style('opacity', '0');
+      
+      // Copy the node group
+      attentionGroup.append(
+        () => svg.select('.token-group')
+          .select('.node-group')
+          .clone(true)
+          .classed('node-group-attention', true)
+          .node()
+      );
+
+      // Draw the dependencies
+      maxAttentionLinks = getDependencyListFromAttention(
+        topHeads[attentionGroupID].id.layer,
+        topHeads[attentionGroupID].id.head
+      );
+      
+      rankedDepMap = createRankedDepMap(maxAttentionLinks);
+
+      drawBottomDependencyLine(rankedDepMap, attentionGroup, tokenHeight, false);
+
+      headNameGroup.append('text')
+        .attr('class', 'name')
+        .attr('x', 0)
+        .attr('y', preTranslateY + preHeight + tokenHeight + attentionRowGap)
+        .text(`layer ${topHeads[attentionGroupID].id.layer}
+          head ${topHeads[attentionGroupID].id.head}`);
+      
+      let curHeight = newTranslateY + arcGroupHeight + tokenHeight +
+        svg.select(`#attention-group-${attentionGroupID}`)
+          .node()
+          .getBBox()
+          .height;
+      
+      if (curHeight > SVGHeight) {
+        console.log(curHeight, attentionGroupID);
+        break;
+      } else {
+        attentionGroup.style('opacity', 1);
+        attentionGroupID += 1;
+      }
+    }
 
   };
   
@@ -1467,6 +1539,11 @@
 
   :global(.node-group) {
     stroke-linejoin: round;
+
+    :global(rect) {
+      fill: hsl(210, 25%, 98%);
+      stroke: hsl(180, 1%, 80%);
+    }
   }
 
   :global(.link-group) {
@@ -1474,6 +1551,24 @@
     stroke-opacity: 0.5;
     stroke-width: 1.5;
     stroke: #555;
+  }
+
+  :global(.node-group-attention) {
+    :global(text) {
+      opacity: 0.3;
+    }
+
+    :global(rect) {
+      opacity: 0.4;
+      fill: none;
+    }
+  }
+
+  :global(.head-name-group) {
+    :global(.name) {
+      font-size: 12px;
+      dominant-baseline: hanging;
+    }
   }
 
  .svg-container {
