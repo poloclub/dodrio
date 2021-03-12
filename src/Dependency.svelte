@@ -5,6 +5,7 @@
 
   let svg = null;
   let data = null;
+  let existingLinkSet = null;
   let saliencies = null;
   let attentions = null;
   let headOrder = null;
@@ -1141,9 +1142,8 @@
         .data(rankedDepMap[k], d => `${d.parent}-${d.child}`)
         .join('path')
         .attr('class', `attention-path attention-path-${i}`)
+        .classed('matched-attention-path', d => existingLinkSet.has(String([d.parent, d.child])))
         .attr('marker-end', 'url(#dep-attention-arrow)')
-        .style('stroke', 'hsla(0, 0%, 0%, 0.3)')
-        .style('fill', 'none')
         .style('width', 0.5)
         .attr('d', d => {          
           let sourceX = d.sourceX;
@@ -1387,7 +1387,12 @@
 
     let relationCounter = new Map();
     selectedRelations = {};
+
+    // Create a set of existing [parent, child] pairs
+    existingLinkSet = new Set();
+
     data.list.forEach(d => {
+      existingLinkSet.add(String([d.parent, d.child]));
       if (relationCounter.has(d.relation)) {
         relationCounter.set(d.relation, relationCounter.get(d.relation) + 1);
       } else {
@@ -1569,6 +1574,16 @@
       font-size: 12px;
       dominant-baseline: hanging;
     }
+  }
+
+  :global(.attention-path) {
+    stroke: hsla(0, 0%, 0%, 0.3);
+    fill: none;
+  }
+
+  :global(.matched-attention-path) {
+    stroke: $orange-reg;
+    stroke-width: 2;
   }
 
  .svg-container {
