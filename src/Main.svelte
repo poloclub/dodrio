@@ -5,31 +5,46 @@
   import Dependency from './Dependency.svelte';
   import Atlas from './Atlas.svelte';
   import TableView from './TableView.svelte';
-  import { graphViewConfigStore, embeddingViewConfigStore, instanceViewConfigStore, tableViewConfigStore } from './store';
+  import { graphViewConfigStore, embeddingViewConfigStore, instanceViewConfigStore,
+    tableViewConfigStore, mapViewConfigStore } from './store';
   import { onMount } from 'svelte';
 
-  let graphViewDIV = undefined;
+  let graphViewDIV = null;
   let graphViewConfig = {
-    compWidth: undefined,
-    compHeight: undefined
+    compWidth: null,
+    compHeight: null
   };
   
-  let embeddingViewDIV = undefined;
+  let embeddingViewDIV = null;
   let embeddingViewConfig = {
-    compWidth: undefined,
-    compHeight: undefined
+    compWidth: null,
+    compHeight: null
   };
   
-  let instanceViewDIV = undefined;
+  let instanceViewDIV = null;
   let instanceViewConfig = {
-    compWidth: undefined,
-    compHeight: undefined
+    compWidth: null,
+    compHeight: null
   };
 
-  let tableViewDIV = undefined;
+  let mapViewDIV = null;
+  let mapViewConfig = {
+    compWidth: null,
+    compHeight: null
+  };
+
+  let tableViewDIV = null;
   let tableViewConfig = {
-    compWidth: undefined,
-    compHeight: undefined
+    compWidth: null,
+    compHeight: null
+  };
+
+  const atlasOpened = () => {
+    mapViewDIV.style['right'] = '0';
+  };
+
+  const atlasClosed = () => {
+    mapViewDIV.style['right'] = `-${Math.floor(mapViewConfig.compWidth) - 60}px`;
   };
 
   onMount(() => {
@@ -37,17 +52,21 @@
     graphViewConfig.compHeight = Math.floor(graphViewDIV.clientHeight);
     graphViewConfigStore.set(graphViewConfig);
 
-    embeddingViewConfig.compWidth = Math.floor(embeddingViewDIV.clientWidth);
-    embeddingViewConfig.compHeight = Math.floor(embeddingViewDIV.clientHeight);
-    embeddingViewConfigStore.set(embeddingViewConfig);
-
     instanceViewConfig.compWidth = Math.floor(instanceViewDIV.clientWidth);
     // Need to offset the horizontal scroll bar height
     instanceViewConfig.compHeight = Math.floor(instanceViewDIV.clientHeight) - 5;
     instanceViewConfigStore.set(instanceViewConfig);
 
-    tableViewConfig.compWidth = tableViewDIV.clientWidth;
-    tableViewConfig.compHeight = tableViewDIV.clientHeight;
+    mapViewConfig.compWidth = Math.floor(mapViewDIV.clientWidth);
+    mapViewConfig.compHeight = Math.floor(mapViewDIV.clientHeight);
+    mapViewConfigStore.set(mapViewConfig);
+
+    embeddingViewConfig.compWidth = Math.floor(embeddingViewDIV.clientWidth);
+    embeddingViewConfig.compHeight = Math.floor(embeddingViewDIV.clientHeight);
+    embeddingViewConfigStore.set(embeddingViewConfig);
+
+    tableViewConfig.compWidth = Math.floor(tableViewDIV.clientWidth);
+    tableViewConfig.compHeight = Math.floor(tableViewDIV.clientHeight);
     tableViewConfigStore.set(tableViewConfig);
   });
 
@@ -79,9 +98,10 @@
     width: 100%;
     height: 100%;
     display: flex;
-    overflow:scroll;
+    overflow: hidden;
     flex-direction: column;
     box-sizing: border-box;
+    position: relative;
   }
 
   .embedding-container {
@@ -116,6 +136,16 @@
     box-sizing: border-box;
   }
 
+  .atlas-container {
+    width: 100%;
+    max-width: 100%;
+    height: 100%;
+    position: absolute;
+    right: 0;
+    // transition: max-width 2000ms ease-in-out;
+    transition: right 800ms ease-in-out;
+    overflow: hidden;
+  }
 
 </style>
 
@@ -142,12 +172,16 @@
       <!-- Instance View -->
       <div class='instance-container' bind:this={instanceViewDIV}>
         <!-- <Dependency /> -->
-        <Atlas />
       </div>
 
       <!-- Graph View -->
       <div class='graph-container' bind:this={graphViewDIV} >
         <!-- <GraphView /> -->
+      </div>
+
+      <!-- Map view -->
+      <div class='atlas-container' bind:this={mapViewDIV}>
+        <Atlas on:open={atlasOpened} on:close={atlasClosed}/>
       </div>
 
     </div>

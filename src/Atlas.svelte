@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { instanceViewConfigStore } from './store';
+  import { createEventDispatcher } from 'svelte';
   import * as d3 from 'd3';
 
   let svg = null;
@@ -16,6 +17,8 @@
   const blue = d3.hcl(274, 85, 56);
 
   let instanceID = 1562;
+  const dispatch = createEventDispatcher();
+  let isShown = true;
 
   let SVGWidth = 800;
   let SVGHeight = 800;
@@ -34,40 +37,6 @@
 
   const padZeroLeft = (num, digit) => {
     return Array(Math.max(digit - String(num).length + 1, 0)).join(0) + num;
-  };
-
-  const initSVG = () => {
-    svg = d3.select(svg)
-      .attr('width', SVGWidth)
-      .attr('height', SVGHeight);
-
-    // Add a border
-    svg.append('rect')
-      .attr('class', 'border-rect')
-      .attr('width', SVGWidth)
-      .attr('height', SVGHeight)
-      .style('stroke', 'black')
-      .style('fill', 'none');
-
-    // Add arrow markers
-    let arrowMarker = svg.append('defs');
-
-    arrowMarker.append('marker')
-      .attr('id', 'dep-arrow')
-      .attr('viewBox', [0, 0, 10, 10])
-      .attr('refX', 0)
-      .attr('refY', 5)
-      .attr('markerWidth', 10)
-      .attr('markerHeight', 7)
-      .attr('orient', 'auto')
-      .attr('stroke-width', 1)
-      .attr('markerUnits', 'userSpaceOnUse')
-      .append('path')
-      .attr('d', 'M 0 0 L 10 5 L 0 10 z')
-      .attr('stroke', 'black')
-      .attr('fill', 'black');
-
-    SVGInitialized = true;
   };
 
   const create2DColorLegend = () => {
@@ -134,7 +103,7 @@
     let availableHeight = SVGHeight - 70 - SVGPadding.top - SVGPadding.bottom;
 
     let availableLength = Math.min(availableHeight, availableWidth);
-    console.log(availableLength, availableWidth, availableHeight);
+    console.log(SVGHeight, availableLength, availableWidth, availableHeight);
     const gridGap = 5;
 
     const gridLength = Math.floor((availableLength - (layerNum - 1) * gridGap) / layerNum);
@@ -143,10 +112,6 @@
 
     let adjustedRowGap = Math.floor((availableWidth - headNum * gridLength) / (layerNum + 1));
     let adjustedColGap = Math.floor((availableHeight - layerNum * gridLength) / (layerNum + 1));
-
-    d3.select(viewContainer)
-      .select('.svg-container')
-      .style('top', `${70}px`);
 
     svg = d3.select(svg)
       .attr('width', availableWidth)
@@ -209,8 +174,7 @@
     d3.select(viewContainer)
       .select('.layer-arrow')
       .style('top', `${70}px`)
-      .style('left', `${availableWidth}px`);
-
+      .style('left', `${availableWidth + 10}px`);
   };
 
   const drawDonut = (d, i, g, scales) => {
@@ -324,6 +288,62 @@
     tokenSize = saliencies.tokens.length;
   };
 
+  const badgeClicked = () => {
+    if (isShown) {
+      dispatch('close');
+      isShown = false;
+
+      d3.select(viewContainer)
+        .select('.svg-container')
+        .transition('move')
+        .duration(700)
+        .ease(ease)
+        .style('opacity', 0);
+
+      // Change the badge style
+      d3.timer(() => {
+        let badge = d3.select(viewContainer)
+          .select('.badge')
+          .style('border-left', '1px solid hsl(0, 0%, 90.2%)')
+          .style('border-radius', '5px')
+          .style('box-shadow', '-3px 3px 3px hsla(0, 0%, 0%, 0.06)')
+          .style('margin-left', '5px');
+        
+        badge.select('.badge-title')
+          .style('visibility', 'hidden');
+
+        badge.select('.icon-wrapper > img')
+          .attr('src', '/figures/map-marked-alt-solid.svg');
+      }, 400);
+    } else {
+      dispatch('open');
+      isShown = true;
+
+      d3.select(viewContainer)
+        .select('.svg-container')
+        .transition('move')
+        .duration(700)
+        .ease(ease)
+        .style('opacity', 1);
+
+      // Change the badge style
+      d3.timer(() => {
+        let badge = d3.select(viewContainer)
+          .select('.badge')
+          .style('border-left', null)
+          .style('border-radius', '0 5px 5px 0')
+          .style('box-shadow', null)
+          .style('margin-left', null);
+        
+        badge.select('.badge-title')
+          .style('visibility', 'visible');
+
+        badge.select('.icon-wrapper > img')
+          .attr('src', '/figures/chevron-right-solid.svg');
+      }, 400);
+    }
+  };
+
   onMount(async () => {
     // Load the attention and atlas data
     if (attentions == null || atlasData == null || saliencies == null) {
@@ -367,14 +387,10 @@
 
   @import 'define';
 
-  .atlas-view {
-    position: relative;
-  }
-
   .svg-container {
     width: 100%;
     height: 100%;
-    overflow-x: scroll;
+    overflow-x: hidden;
     position: relative;
     cursor: default;
 
@@ -387,6 +403,11 @@
   .atlas-view {
     display: flex;
     flex-direction: row;
+    max-width: 100%;
+    position: relative;
+    height: 100%;
+    overflow: hidden;
+    transition: max-width 1000ms ease-in-out;
   }
 
   .legend-container {
@@ -405,6 +426,7 @@
     left: 0px;
     top: 10px;
     font-size: 1.2em;
+    z-index: 2;
 
     display: flex;
     flex-direction: row;
@@ -421,7 +443,14 @@
     cursor: pointer;
 
     .icon-wrapper {
-      margin-right: 15px;
+      margin-right: 10px;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+
+      img {
+        height: 1.2em;
+      }
     }
 
     &:hover {
@@ -449,9 +478,10 @@
 
 <div class='atlas-view' bind:this={viewContainer}>
 
-  <div class='badge'>
+  <div class='badge' on:click={badgeClicked}>
     <div class='icon-wrapper active'>
-      <i class="fas fa-chevron-right"></i>
+      <!-- <i class="fas fa-chevron-right"></i> -->
+      <img src='/figures/chevron-right-solid.svg' alt='map icon'>
     </div>
 
     <div class='badge-title'>
@@ -470,8 +500,6 @@
       <img src='/figures/size-legend.png' width='160px' alt='size legend'>
       <img src='/figures/legend.png' width='200px' alt='color legend'>
     </div>
-
-    
 
   </div>
 
