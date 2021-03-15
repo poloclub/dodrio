@@ -41,10 +41,14 @@
 
   const atlasOpened = () => {
     mapViewDIV.style['right'] = '0';
+    mapViewDIV.style['background-color'] = 'hsla(0, 100%, 100%, 1)';
+    mapViewDIV.classList.remove('closed');
   };
 
   const atlasClosed = () => {
     mapViewDIV.style['right'] = `-${Math.floor(mapViewConfig.compWidth) - 60}px`;
+    mapViewDIV.style['background-color'] = 'hsla(0, 100%, 100%, 0)';
+    mapViewDIV.classList.add('closed');
   };
 
   onMount(() => {
@@ -142,9 +146,13 @@
     height: 100%;
     position: absolute;
     right: 0;
-    // transition: max-width 2000ms ease-in-out;
-    transition: right 800ms ease-in-out;
+    background-color: hsla(0, 100%, 100%, 1);
+    transition: right 500ms ease-in-out, background-color 100ms ease-in-out;
     overflow: hidden;
+  }
+
+  :global(.atlas-container.closed) {
+    transition: right 700ms ease-in-out, background-color 100ms ease-in-out 600ms;
   }
 
 </style>
@@ -171,7 +179,7 @@
     <div class='attention-container'>
       <!-- Instance View -->
       <div class='instance-container' bind:this={instanceViewDIV}>
-        <!-- <Dependency /> -->
+        <Dependency />
       </div>
 
       <!-- Graph View -->

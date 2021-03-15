@@ -437,7 +437,7 @@
     border-top: 1px solid hsl(0, 0%, 90%);
     border-right: 1px solid hsl(0, 0%, 90%);
     border-bottom: 1px solid hsl(0, 0%, 90%);
-    background: hsla(0, 0%, 100%, 0.65);
+    background: hsla(0, 0%, 100%, 1);
     padding: 8px 15px;
 
     cursor: pointer;
@@ -454,7 +454,7 @@
     }
 
     &:hover {
-      background: hsla(0, 0%, 96%, 0.65);
+      background: hsla(0, 0%, 96%, 1);
     }
   }
 
