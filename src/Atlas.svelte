@@ -23,8 +23,7 @@
   let instanceViewConfig = undefined;
   let SVGInitialized = false;
 
-  const SVGPadding = {top: 3, left: 15, right: 15, bottom: 3};
-  const textTokenPadding = {top: 3, left: 3, right: 3, bottom: 3};
+  const SVGPadding = {top: 3, left: 10, right: 10, bottom: 3};
 
   const ease = d3.easeCubicInOut;
   const animationTime = 300;
@@ -127,78 +126,90 @@
   };
 
   const createGraph = () => {
-    initSVG();
 
+    const layerNum = attentions.length;
+    const headNum = attentions[0].length;
+
+    let availableWidth = SVGWidth - 210 - SVGPadding.left - SVGPadding.right;
+    let availableHeight = SVGHeight - 70 - SVGPadding.top - SVGPadding.bottom;
+
+    let availableLength = Math.min(availableHeight, availableWidth);
+    console.log(availableLength, availableWidth, availableHeight);
+    const gridGap = 5;
+
+    const gridLength = Math.floor((availableLength - (layerNum - 1) * gridGap) / layerNum);
+    const maxOutRadius = gridLength / 2;
     const minOutRadius = 10;
-    const maxOutRadius = 25;
 
-    // let arc = d3.arc()
-    //   .innerRadius(15)
-    //   .outerRadius(outRadius)
-    //   .startAngle(0)
-    //   .endAngle(Math.PI * 2);
-    
-    // let tokens = data.words.map(d => {return {'token': d, 'value': 1};});
+    let adjustedRowGap = Math.floor((availableWidth - headNum * gridLength) / (layerNum + 1));
+    let adjustedColGap = Math.floor((availableHeight - layerNum * gridLength) / (layerNum + 1));
 
-    // let pie = d3.pie()
-    //   .sort(null)
-    //   .value(d => d.value);
+    d3.select(viewContainer)
+      .select('.svg-container')
+      .style('top', `${70}px`);
 
-    // let arcs = pie(tokens);
+    svg = d3.select(svg)
+      .attr('width', availableWidth)
+      .attr('height', availableHeight);
 
-    // console.log(arcs);
+    // Add a border
+    svg.append('rect')
+      .attr('class', 'border-rect')
+      .attr('width', availableLength)
+      .attr('height', availableLength)
+      .style('stroke', 'black')
+      .style('fill', 'none');
 
     let donutGroup = svg.append('g')
       .attr('class', 'donut-group')
-      .attr('transform', 'translate(60, 150)');
+      .attr('transform', `translate(${SVGPadding.left + maxOutRadius}, ${maxOutRadius})`);
     
     // Create color scale
     let hueScale = d3.scaleLinear()
       .domain([-1, 0, 1])
       .range([red, purple, blue]);
-    
-    let chromaScale = d3.scaleLinear()
-      .domain([0, 1])
-      .range([0, 100]);
-
-    let alphaScale = d3.scaleLinear()
-      .domain([0, 1])
-      .range([0, 1]);
 
     let lightnessScale = d3.scaleLinear()
       .domain([0, 1])
       .range([130, 40]);
 
     // Use square root scale
-    let outRadiusScale = d3.scalePow()
-      .exponent(0.5)
+    let outRadiusScale = d3.scaleLinear()
       .domain([0, 1])
       .range([minOutRadius, maxOutRadius]);
+
+    let ringRadiusScale = d3.scaleLinear()
+      .domain([0, 1])
+      .range([4, 7]);
 
     let scales = {
       hueScale: hueScale,
       lightnessScale: lightnessScale,
-      outRadiusScale: outRadiusScale
+      outRadiusScale: outRadiusScale,
+      ringRadiusScale: ringRadiusScale
     };
-
-    // atlasData = atlasData.slice(2, 4);
 
     let donuts = donutGroup.selectAll('g.donut')
       .data(atlasData)
       .join('g')
       .attr('class', 'donut')
-      .attr('transform', d => `translate(${d.head * (maxOutRadius * 2 + 5)},
-        ${d.layer * (maxOutRadius * 2 + 5)})`);
+      .attr('transform', d => `translate(${d.head * (maxOutRadius * 2 + adjustedRowGap)},
+        ${d.layer * (maxOutRadius * 2 + adjustedColGap)})`);
 
     // Draw the donuts
-    let start = new Date();
     donuts.each((d, i, g) => drawDonut(d, i, g, scales));
-    console.log('rendering', new Date() - start);
 
     console.log(atlasData);
-        
-    // Draw the legend
-    // create2DColorLegend();
+
+    d3.select(viewContainer)
+      .select('.head-arrow')
+      .style('top', `${70 - 40}px`)
+      .style('left', `${availableWidth - 170}px`);
+
+    d3.select(viewContainer)
+      .select('.layer-arrow')
+      .style('top', `${70}px`)
+      .style('left', `${availableWidth}px`);
 
   };
 
@@ -206,7 +217,7 @@
     let donut = d3.select(g[i]);
 
     let outRadius = scales.outRadiusScale(d.confidence);
-    const ringRadius = 7;
+    let ringRadius = scales.ringRadiusScale(d.confidence);
     let inRadius = Math.max(0, outRadius - ringRadius);
 
     // Draw the rings
@@ -237,14 +248,6 @@
         id: i
       });
     }
-
-    // donut.selectAll('circle.dot')
-    //   .data(tokenPos)
-    //   .join('circle')
-    //   .attr('class', 'dot')
-    //   .attr('cx', d => d.x)
-    //   .attr('cy', d => d.y)
-    //   .attr('r', 1);
 
     // Create the links
     let links = [];
@@ -364,12 +367,21 @@
 
   @import 'define';
 
+  .atlas-view {
+    position: relative;
+  }
+
   .svg-container {
     width: 100%;
     height: 100%;
     overflow-x: scroll;
     position: relative;
     cursor: default;
+
+    display: flex;
+    flex-direction: row;
+    justify-content: space-around;
+    align-items: flex-end;
   }
 
   .atlas-view {
@@ -377,41 +389,93 @@
     flex-direction: row;
   }
 
-  .legend-canvas-container {
-    position: absolute;
-  }
-
   .legend-container {
-    position: absolute;
-    right: 10px;
-    bottom: 20px;
+    padding-bottom: 25px;
     display: flex;
     flex-direction: column;
+    pointer-events: none;
 
     :first-child {
-      margin-bottom: 25px;
+      margin-bottom: 35px;
     }
   }
 
- .svg-container {
+  .badge {
+    position: absolute;
+    left: 0px;
+    top: 10px;
+    font-size: 1.2em;
+
+    display: flex;
+    flex-direction: row;
+    align-items: center;;
+    justify-content: flex-start;
+
+    border-radius: 0 5px 5px 0;
+    border-top: 1px solid hsl(0, 0%, 90%);
+    border-right: 1px solid hsl(0, 0%, 90%);
+    border-bottom: 1px solid hsl(0, 0%, 90%);
+    background: hsla(0, 0%, 100%, 0.65);
+    padding: 8px 15px;
+
+    cursor: pointer;
+
+    .icon-wrapper {
+      margin-right: 15px;
+    }
+
+    &:hover {
+      background: hsla(0, 0%, 96%, 0.65);
+    }
+  }
+
+  .atlas-svg-container {
     position: relative;
   }
 
+  .head-arrow {
+    position: absolute;
+    width: 160px;
+    pointer-events: none;
+  }
+
+  .layer-arrow {
+    position: absolute;
+    height: 160px;
+    pointer-events: none;
+  }
 
 </style>
 
 <div class='atlas-view' bind:this={viewContainer}>
 
-  <div class='svg-container'>
-    <div class='legend-canvas-container'></div>
+  <div class='badge'>
+    <div class='icon-wrapper active'>
+      <i class="fas fa-chevron-right"></i>
+    </div>
 
-    <svg class='atlas-svg' bind:this={svg}></svg>
+    <div class='badge-title'>
+      Attention Head Map
+    </div>
+    
+  </div>
+
+  <div class='svg-container'>
+
+    <div class='atlas-svg-container'>
+      <svg class='atlas-svg' bind:this={svg}></svg>
+    </div>
 
     <div class='legend-container'>
       <img src='/figures/size-legend.png' width='160px' alt='size legend'>
       <img src='/figures/legend.png' width='200px' alt='color legend'>
-
     </div>
+
+    
+
   </div>
+
+  <img class='head-arrow' width=160 src='/figures/head-arrow.png' alt='head arrow'>
+  <img class='layer-arrow' height=160 src='/figures/layer-arrow.png' alt='layer arrow'>
   
 </div>
