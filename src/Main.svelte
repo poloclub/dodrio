@@ -3,6 +3,7 @@
   import GraphView from './GraphView.svelte';
   import EmbeddingView from './EmbeddingView.svelte';
   import Dependency from './Dependency.svelte';
+  import Atlas from './Atlas.svelte';
   import TableView from './TableView.svelte';
   import { graphViewConfigStore, embeddingViewConfigStore, instanceViewConfigStore, tableViewConfigStore } from './store';
   import { onMount } from 'svelte';
@@ -140,7 +141,8 @@
     <div class='attention-container'>
       <!-- Instance View -->
       <div class='instance-container' bind:this={instanceViewDIV}>
-        <Dependency />
+        <!-- <Dependency /> -->
+        <Atlas />
       </div>
 
       <!-- Graph View -->
