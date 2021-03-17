@@ -30,7 +30,7 @@
   let instanceViewConfig = undefined;
   let SVGInitialized = false;
 
-  const SVGPadding = {top: 10, left: 15, right: 15, bottom: 3};
+  const SVGPadding = {top: 10, left: 15, right: 15, bottom: 10};
   const textTokenPadding = {top: 3, left: 3, right: 3, bottom: 3};
 
   // Global stores
@@ -670,10 +670,15 @@
     background: inherit;
     border-color: hsla(0, 0%, 0%, 0);
     padding: 0 1.6em 0 0.4em;
+    height: 1.8em;
   }
 
   .select select:not([multiple]) {
     padding-right: 1.6em;
+  }
+
+  .select:not(.is-multiple) {
+    height: 1.8em;
   }
 
   .select:not(.is-multiple):not(.is-loading)::after{
@@ -689,8 +694,12 @@
     justify-content: flex-end;
 
     border-radius: 5px;
-    border: 1px solid hsl(0, 0%, 93.3%);
+    border: 1px solid hsla(24.3, 28.2%, 52%, 20%);
     margin-right: 5px;
+
+    &:hover {
+      background: hsla(0, 0%, 0%, 0.05);
+    }
   }
 
   .relation-container {
@@ -699,7 +708,7 @@
 
   .relation {
     padding: 0 2em 0 0.4em;
-    height: 2.5em;
+    height: 1.8em;
     font-size: 1em;
     display: flex;
     align-items: center;

@@ -261,16 +261,20 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
     .getBBox()
     .height;
 
-  let headNameGroup = svg.append('g')
-    .attr('class', 'head-name-group')
-    .attr('transform', `translate(${SVGPadding.left}, ${oldTranslateY + tokenHeight})`);
-
-  let tokens = data.words.map(d => { return { 'token': d }; });
+  let oldNodeGroupHeight = svg.select('.node-group')
+    .node()
+    .getBBox()
+    .height;
 
   let arcGroupHeight = svg.select('.arc-group')
     .node()
     .getBBox()
     .height;
+
+  let headNameGroup = svg.append('g')
+    .attr('class', 'head-name-group')
+    .attr('transform', `translate(${SVGPadding.left},
+      ${SVGPadding.top + textTokenPadding.top + 4})`);
 
   // Draw the first row
   let attentionGroupID = 0;
@@ -282,43 +286,34 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
   let rankedDepMap = createRankedDepMap(maxAttentionLinks, tokenXs,
     textTokenPadding, textTokenWidths);
 
-  let attentionGroup = svg.select('.token-group')
-    .append('g')
-    .attr('class', 'attention-group')
-    .attr('id', `attention-group-${attentionGroupID}`)
-    .attr('transform', `translate(0, ${tokenHeight})`);
-
-  drawBottomDependencyLine(rankedDepMap, attentionGroup, tokenHeight, true, existingLinkSet);
-
-  headNameGroup.append('text')
-    .attr('class', 'name')
-    .attr('x', 0)
-    .attr('y', 0)
-    .text(`layer ${topHeads[0].id.layer} head ${topHeads[0].id.head}`);
-
   // Draw the second+ rows
   let newTranslateY = 0;
-  attentionGroupID += 1;
+  let attentionGroup = null;
+  // attentionGroupID += 1;
 
   while (attentionGroupID < topHeads.length) {
+    let preTranslateY = 0;
+    let preHeight = 0;
 
-    let preTranslateY = +svg.select(`#attention-group-${attentionGroupID - 1}`)
-      .attr('transform')
-      .replace(/translate\(.*,\s(.*)\)/, '$1');
+    if (attentionGroupID === 0){
+      newTranslateY = arcGroupHeight + oldNodeGroupHeight + 60;
+    } else {
+      preTranslateY = +svg.select(`#attention-group-${attentionGroupID - 1}`)
+        .attr('transform')
+        .replace(/translate\(.*,\s(.*)\)/, '$1');
 
-    let preHeight = svg.select(`#attention-group-${attentionGroupID - 1}`)
-      .node()
-      .getBBox()
-      .height;
+      preHeight = svg.select(`#attention-group-${attentionGroupID - 1}`)
+        .node().getBBox().height;
 
-    newTranslateY = preTranslateY + preHeight + tokenHeight + attentionRowGap;
+      newTranslateY = preTranslateY + preHeight + tokenHeight + attentionRowGap;
+    }
 
     attentionGroup = svg.select('.token-group')
       .append('g')
       .attr('class', 'attention-group')
       .attr('id', `attention-group-${attentionGroupID}`)
       .attr('transform', `translate(0, ${newTranslateY})`)
-      .style('opacity', '0');
+      .style('visibility', 'hidden');
 
     // Copy the node group
     attentionGroup.append(
@@ -340,24 +335,23 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
 
     drawBottomDependencyLine(rankedDepMap, attentionGroup, tokenHeight, false, existingLinkSet);
 
-    headNameGroup.append('text')
+    let newText = headNameGroup.append('text')
       .attr('class', 'name')
       .attr('x', 0)
-      .attr('y', preTranslateY + preHeight + tokenHeight + attentionRowGap)
+      .attr('y', newTranslateY)
       .text(`layer ${topHeads[attentionGroupID].id.layer}
-          head ${topHeads[attentionGroupID].id.head}`);
+          head ${topHeads[attentionGroupID].id.head}`)
+      .style('visibility', 'hidden');
 
-    let curHeight = newTranslateY + arcGroupHeight + tokenHeight +
-      svg.select(`#attention-group-${attentionGroupID}`)
-        .node()
-        .getBBox()
-        .height;
+    let curHeight = newTranslateY + svg.select(`#attention-group-${attentionGroupID}`)
+      .node().getBBox().height;
 
-    if (curHeight > SVGHeight) {
+    if (curHeight + SVGPadding.bottom > SVGHeight) {
       console.log(curHeight, attentionGroupID);
       break;
     } else {
-      attentionGroup.style('opacity', 1);
+      attentionGroup.style('visibility', 'visible');
+      newText.style('visibility', 'visible');
       attentionGroupID += 1;
     }
   }
