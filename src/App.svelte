@@ -5,7 +5,6 @@
   import CircleView from './CircleView.svelte';
   import GridView from './GridView.svelte';
   import RadialView from './RadialView.svelte';
-  import DependencyView from './Dependency.svelte';
 </script>
 
 <style>

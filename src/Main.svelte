@@ -2,7 +2,7 @@
   import Header from './Header.svelte';
   import GraphView from './GraphView.svelte';
   import EmbeddingView from './EmbeddingView.svelte';
-  import Dependency from './Dependency.svelte';
+  import Dependency from './dependency-view/Dependency.svelte';
   import Atlas from './Atlas.svelte';
   import TableView from './TableView.svelte';
   import { graphViewConfigStore, embeddingViewConfigStore, instanceViewConfigStore,
@@ -61,17 +61,17 @@
     instanceViewConfig.compHeight = Math.floor(instanceViewDIV.clientHeight) - 5;
     instanceViewConfigStore.set(instanceViewConfig);
 
-    mapViewConfig.compWidth = Math.floor(mapViewDIV.clientWidth);
-    mapViewConfig.compHeight = Math.floor(mapViewDIV.clientHeight);
-    mapViewConfigStore.set(mapViewConfig);
+    // mapViewConfig.compWidth = Math.floor(mapViewDIV.clientWidth);
+    // mapViewConfig.compHeight = Math.floor(mapViewDIV.clientHeight);
+    // mapViewConfigStore.set(mapViewConfig);
 
-    embeddingViewConfig.compWidth = Math.floor(embeddingViewDIV.clientWidth);
-    embeddingViewConfig.compHeight = Math.floor(embeddingViewDIV.clientHeight);
-    embeddingViewConfigStore.set(embeddingViewConfig);
+    // embeddingViewConfig.compWidth = Math.floor(embeddingViewDIV.clientWidth);
+    // embeddingViewConfig.compHeight = Math.floor(embeddingViewDIV.clientHeight);
+    // embeddingViewConfigStore.set(embeddingViewConfig);
 
-    tableViewConfig.compWidth = Math.floor(tableViewDIV.clientWidth);
-    tableViewConfig.compHeight = Math.floor(tableViewDIV.clientHeight);
-    tableViewConfigStore.set(tableViewConfig);
+    // tableViewConfig.compWidth = Math.floor(tableViewDIV.clientWidth);
+    // tableViewConfig.compHeight = Math.floor(tableViewDIV.clientHeight);
+    // tableViewConfigStore.set(tableViewConfig);
   });
 
 </script>
@@ -89,7 +89,7 @@
 
   .select-container {
     border-right: solid 1px $gray-border;
-    width: min(700px, 80%);
+    // width: min(700px, 80%);
     height: 100%;
     display: flex;
     overflow:scroll;
@@ -167,14 +167,14 @@
     <div class='select-container'>
 
       <!-- Embedding view -->
-      <div class='embedding-container' bind:this={embeddingViewDIV}>
+      <!-- <div class='embedding-container' bind:this={embeddingViewDIV}>
         <EmbeddingView />
-      </div>
+      </div> -->
 
       <!-- Table view -->
-      <div class='table-container' bind:this={tableViewDIV}>
+      <!-- <div class='table-container' bind:this={tableViewDIV}>
         <TableView />
-      </div>
+      </div> -->
 
     </div>
 
@@ -190,9 +190,9 @@
       </div>
 
       <!-- Map view -->
-      <div class='atlas-container' bind:this={mapViewDIV}>
+      <!-- <div class='atlas-container' bind:this={mapViewDIV}>
         <Atlas on:open={atlasOpened} on:close={atlasClosed}/>
-      </div>
+      </div> -->
 
     </div>
 
