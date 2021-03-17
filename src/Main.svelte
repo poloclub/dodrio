@@ -128,6 +128,7 @@
     border-bottom: solid 1px $gray-border;
     width: 100%;
     height: 100%;
+    // height: 50%;
     overflow: hidden;
     box-sizing: border-box;
   }
@@ -149,6 +150,7 @@
     background-color: hsla(0, 100%, 100%, 1);
     transition: right 500ms ease-in-out, background-color 100ms ease-in-out;
     overflow: hidden;
+    z-index: 10;
   }
 
   :global(.atlas-container.closed) {

@@ -102,7 +102,7 @@
     showHiddenLink: false,
     showHiddenNode: false,
     autoAttention: true,
-    defaultLayout: layoutOptions.force
+    defaultLayout: layoutOptions.radial
   };
 
   let forceStrength = {

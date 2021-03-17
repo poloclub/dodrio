@@ -381,14 +381,14 @@
     let containerWidthFactor = 4 / 5;
     let containerWidth = SVGWidth * containerWidthFactor;
 
-    const tokenGap = 10;
+    const tokenGap = 5;
     const rowGap = textTokenHeight + textTokenPadding.top + textTokenPadding.bottom + 10;
 
     // Add tokens
     let tokenGroup = svg.append('g')
       .attr('class', 'token-group-saliency')
       .attr('transform', `translate(${SVGPadding.left + SVGWidth * (1 - containerWidthFactor) / 2},
-        ${SVGPadding.top + 50})`);
+        ${SVGPadding.top + 70})`);
     
     let nodes = tokenGroup.append('g')
       .attr('class', 'node-group')
@@ -586,7 +586,7 @@
     let tokenGroup = svg.append('g')
       .attr('class', 'token-group')
       .attr('transform', `translate(${SVGPadding.left},
-        ${Math.min(250, SVGHeight * 2 / 3 + SVGPadding.top)})`);
+        ${Math.min(250, SVGHeight * 2 / 3 + SVGPadding.top + 50)})`);
     
     let nodes = tokenGroup.append('g')
       .attr('class', 'node-group')
@@ -707,39 +707,17 @@
           let targetX = d.targetX;
 
           let pathHeight = 20 * (i + 1);
-          let pathCurve = i === 0 ? 20 : 15;
-
           // Special case for tokens that are next to each other
-          if (d.gap === 1) {
-            let curve = d3.line()
-              .x(d => d.x)
-              .y(d => d.y)
-              .curve(d3.curveMonotoneX);
-
-            let source = {x: sourceX, y: 0};
-            let target = {x: targetX, y: -5};
-            let alpha = 6;
-
-            let mid1 = {
-              x: sourceX < targetX ?
-                sourceX + (targetX - sourceX) / alpha :
-                sourceX - (sourceX - targetX) / alpha,
-              y: -pathHeight
-            };
-
-            let mid2 = {
-              x: sourceX < targetX ?
-                sourceX + (targetX - sourceX) / alpha * (alpha - 1) :
-                sourceX - (sourceX - targetX) / alpha * (alpha - 1),
-              y: -pathHeight
-            };
-
-            return curve([source, mid1, mid2, target]);
-          }
+          let pathCurve = i === 0 ? 10 : 15;
           
           // Compute the control points and middle points
+          let vertical1 = {
+            x: sourceX,
+            y: pathCurve - pathHeight
+          };
+
           let control1 = {
-            x: sourceX < targetX ? sourceX + 2 : sourceX - 2,
+            x: sourceX < targetX ? sourceX + 0 : sourceX - 0,
             y: -pathHeight
           };
 
@@ -754,14 +732,21 @@
           };
 
           let control2 = {
-            x: sourceX < targetX ? targetX - 2 : targetX + 2,
+            x: sourceX < targetX ? targetX - 0 : targetX + 0,
             y: -pathHeight
           };
 
+          let vertical2 = {
+            x: targetX,
+            y: pathCurve - pathHeight
+          };
+
           return `M${sourceX} ${0}
+            L${vertical1.x} ${vertical1.y}
             Q${control1.x} ${control1.y}, ${mid1.x} ${mid1.y}
             L${mid2.x} ${mid2.y}
-            Q${control2.x} ${control2.y}, ${targetX} ${-5}`;
+            Q${control2.x} ${control2.y}, ${vertical2.x} ${vertical2.y}
+            L${targetX} ${-5}`;
         });
 
       arcGroup.append('g')
@@ -1151,25 +1136,30 @@
           let baseY = firstRow ? 0 : tokenHeight;
 
           let pathHeight = 5 * (i + 1);
-          let pathCurve = i === 0 ? 10 : 15;
+          let pathCurve = i === 0 ? 4 : 7;
 
-          if (d.gap === 1) {
-            let control1 = {
-              x: sourceX,
-              y: baseY + pathHeight + 2
-            };
+          // if (d.gap === 1) {
+          //   let control1 = {
+          //     x: sourceX,
+          //     y: baseY + pathHeight + 2
+          //   };
 
-            let control2 = {
-              x: targetX,
-              y: baseY + pathHeight + 2
-            };
-            return `M${sourceX} ${baseY} C${control1.x} ${control1.y}
-              ${control2.x} ${control2.y} ${targetX} ${baseY}`;
-          }
-          
+          //   let control2 = {
+          //     x: targetX,
+          //     y: baseY + pathHeight + 2
+          //   };
+          //   return `M${sourceX} ${baseY} C${control1.x} ${control1.y}
+          //     ${control2.x} ${control2.y} ${targetX} ${baseY}`;
+          // }
+
           // Compute the control points and middle points
+          let vertical1 = {
+            x: sourceX,
+            y: baseY + pathHeight - pathCurve
+          };
+
           let control1 = {
-            x: sourceX < targetX ? sourceX + 2 : sourceX - 2,
+            x: sourceX < targetX ? sourceX + 0 : sourceX - 0,
             y: baseY + pathHeight
           };
 
@@ -1184,14 +1174,47 @@
           };
 
           let control2 = {
-            x: sourceX < targetX ? targetX - 2 : targetX + 2,
+            x: sourceX < targetX ? targetX - 0 : targetX + 0,
             y: baseY + pathHeight
           };
 
+          let vertical2 = {
+            x: targetX,
+            y: baseY + pathHeight - pathCurve
+          };
+
           return `M${sourceX} ${baseY}
+            L${vertical1.x} ${vertical1.y}
             Q${control1.x} ${control1.y}, ${mid1.x} ${mid1.y}
             L${mid2.x} ${mid2.y}
-            Q${control2.x} ${control2.y}, ${targetX} ${baseY}`;
+            Q${control2.x} ${control2.y}, ${vertical2.x} ${vertical2.y}
+            L${targetX} ${baseY}`;
+          
+          // // Compute the control points and middle points
+          // let control1 = {
+          //   x: sourceX < targetX ? sourceX + 2 : sourceX - 2,
+          //   y: baseY + pathHeight
+          // };
+
+          // let mid1 = {
+          //   x: sourceX < targetX ? sourceX + pathCurve : sourceX - pathCurve,
+          //   y: baseY + pathHeight
+          // };
+
+          // let mid2 = {
+          //   x: sourceX < targetX ? targetX - pathCurve: targetX + pathCurve,
+          //   y: baseY + pathHeight
+          // };
+
+          // let control2 = {
+          //   x: sourceX < targetX ? targetX - 2 : targetX + 2,
+          //   y: baseY + pathHeight
+          // };
+
+          // return `M${sourceX} ${baseY}
+          //   Q${control1.x} ${control1.y}, ${mid1.x} ${mid1.y}
+          //   L${mid2.x} ${mid2.y}
+          //   Q${control2.x} ${control2.y}, ${targetX} ${baseY}`;
         });
 
     });
@@ -1565,7 +1588,8 @@
 
     :global(rect) {
       opacity: 0.4;
-      fill: none;
+      // fill: none;
+      stroke: none;
     }
   }
 

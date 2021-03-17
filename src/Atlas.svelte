@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { instanceViewConfigStore } from './store';
+  import { mapViewConfigStore, attentionHeadColorStore } from './store';
   import { createEventDispatcher } from 'svelte';
   import * as d3 from 'd3';
 
@@ -355,7 +355,7 @@
     }
   });
 
-  instanceViewConfigStore.subscribe(async value => {
+  mapViewConfigStore.subscribe(async value => {
     if (value.compHeight !== undefined && value.compWidth !== undefined){
       if (instanceViewConfig === undefined ||
         (instanceViewConfig.compHeight !== value.compHeight &&
