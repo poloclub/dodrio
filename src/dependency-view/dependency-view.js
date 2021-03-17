@@ -70,8 +70,7 @@ export const drawGraph = (data, saliencies, wordToSubwordMap, svg, tokenXs,
   // Add tokens
   let tokenGroup = svg.append('g')
     .attr('class', 'token-group')
-    .attr('transform', `translate(${SVGPadding.left},
-        ${Math.min(250, SVGHeight * 2 / 3 + SVGPadding.top + 50)})`);
+    .attr('transform', `translate(${SVGPadding.left}, ${SVGPadding.top})`);
 
   let nodes = tokenGroup.append('g')
     .attr('class', 'node-group')

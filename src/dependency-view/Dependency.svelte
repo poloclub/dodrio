@@ -30,7 +30,7 @@
   let instanceViewConfig = undefined;
   let SVGInitialized = false;
 
-  const SVGPadding = {top: 3, left: 15, right: 15, bottom: 3};
+  const SVGPadding = {top: 10, left: 15, right: 15, bottom: 3};
   const textTokenPadding = {top: 3, left: 3, right: 3, bottom: 3};
 
   // Global stores
@@ -418,7 +418,7 @@
         instanceViewConfig = value;
         
         SVGWidth = instanceViewConfig.compWidth;
-        SVGHeight = instanceViewConfig.compHeight;
+        SVGHeight = instanceViewConfig.compHeight - 41;
 
         const createGraph = () => {
           let results = null;
@@ -498,9 +498,9 @@
 
   .svg-container {
     width: 100%;
-    height: 100%;
     overflow-x: scroll;
-    position: relative;
+    position: absolute;
+    top: 41px;
     cursor: default;
   }
 
@@ -592,43 +592,44 @@
     stroke-width: 2;
   }
 
- .svg-container {
-    position: relative;
-  }
-
   .panel-container {
     position: absolute;
     display: flex;
     flex-direction: row;
   }
 
+  .dependency-label {
+    color: hsl(0, 0%, 50%);
+    font-size: 1.3rem;
+    margin: 0 20px 0 20px;
+  }
+
   .svg-control-panel {
     position: sticky;
     top: 0;
     left: 0;
+    z-index: 5;
     cursor: default;
-    width: 165px;
+
+    padding-top: 5px;
     max-height: 76px;
     overflow: visible;
 
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     align-items: center;;
     justify-content: flex-start;
 
     font-size: 0.9rem;
-    border-radius: 5px;
-    border: 1px solid hsl(0, 0%, 93.3%);
-    box-shadow: 0 3px 5px hsla(0, 0%, 0%, 0.05);
     background: hsla(0, 0%, 100%, 0.9);
     user-select: none;
   }
 
   .relation-checkboxes {
     position: absolute;
-    top: 0;
-    left: 162px;
-    width: 600px;
+    top: 5px;
+    left: 520px;
+    width: 800px;
     padding: 5px 10px;
     cursor: default;
     
@@ -647,6 +648,10 @@
 
   .check-box-wrapper {
     padding: 0 5px;
+
+    input[type='checkbox'] {
+      filter: hue-rotate(195deg) saturate(30%);
+    }
   }
 
   .sep-line-horizontal {
@@ -673,7 +678,7 @@
 
   .select:not(.is-multiple):not(.is-loading)::after{
     right: 0.8em;
-    border-color: $blue-icon;
+    border-color: $brown-icon;
   }
 
   .select-row {
@@ -682,7 +687,10 @@
     flex-direction: row;
     align-items: center;
     justify-content: flex-end;
-    width: 100%;
+
+    border-radius: 5px;
+    border: 1px solid hsl(0, 0%, 93.3%);
+    margin-right: 5px;
   }
 
   .relation-container {
@@ -714,7 +722,7 @@
       transform-origin: center;
       width: .625em;
 
-      border-color: $blue-icon;
+      border-color: $brown-icon;
       right: 0.9em;
     }
   }
@@ -732,52 +740,54 @@
 
 <div class='graph-view'>
 
-  <div class='svg-container'>
-    <div class='panel-container'>
+  <div class='panel-container'>
 
-      <!-- Control panel on top of the SVG -->
-      <div class='svg-control-panel'>
+    <!-- Control panel on top of the SVG -->
+    <div class='svg-control-panel'>
 
-        <div class='select-row'>
-          <div class='relation-container' on:click={() => {showRelationCheckboxes = !showRelationCheckboxes;}}>
-            <div class='relation'>
-              Syntactic Relations
-            </div>
+      <div class='dependency-label'>
+        Current Sentence
+      </div>
+
+      <div class='select-row'>
+        <div class='select'>
+          <select name='instance-layout' id='instance-select'>
+            {#each Object.values(layoutOptions) as opt}
+              <option value={opt.value}>{opt.name}</option>
+            {/each}
+          </select>
+        </div>
+      </div>
+
+      <div class='select-row'>
+        <div class='relation-container' on:click={() => {showRelationCheckboxes = !showRelationCheckboxes;}}>
+          <div class='relation'>
+            Syntactic Relations
           </div>
         </div>
+      </div>
 
-        <div class='sep-line-horizontal'></div>
+      <!-- Control panel after syntactic relation item is selected -->
+      <div class='relation-checkboxes' class:hide={!showRelationCheckboxes}>
+        {#each relations as entry}
 
-        <div class='select-row'>
-          <div class='select'>
-            <select name='instance-layout' id='instance-select'>
-              {#each Object.values(layoutOptions) as opt}
-                <option value={opt.value}>{opt.name}</option>
-              {/each}
-            </select>
-          </div>
-        </div>
-
-        <!-- Control panel after syntactic relation item is selected -->
-        <div class='relation-checkboxes' class:hide={!showRelationCheckboxes}>
-          {#each relations as entry}
-
-            <label class="checkbox check-box-wrapper">
-              <input type="checkbox" on:change={checkboxChanged}
-                bind:checked={selectedRelations[entry[0]]}
-                data-rel={entry[0]}
-              >
-              {entry[0]}
-              <span class='light-gray'>({entry[1]})</span>
-            </label>
-              
-          {/each}
-        </div>
-
+          <label class="checkbox check-box-wrapper">
+            <input type="checkbox" on:change={checkboxChanged}
+              bind:checked={selectedRelations[entry[0]]}
+              data-rel={entry[0]}
+            >
+            {entry[0]}
+            <span class='light-gray'>({entry[1]})</span>
+          </label>
+            
+        {/each}
       </div>
 
     </div>
 
+  </div>
+
+  <div class='svg-container'>
     <svg class='dependency-svg' bind:this={svg}></svg>
   </div>
   
