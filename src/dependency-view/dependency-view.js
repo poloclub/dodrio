@@ -52,24 +52,13 @@ export const drawGraph = (data, saliencies, wordToSubwordMap, svg, tokenXs,
 
   console.log(textTokenWidths, textTokenHeight);
 
-  const minTokenGap = 10;
-  const letterWidth = 9;
-
-  // Compute the gap between different tokens to fit the relationship text
-  let tokenGaps = Array(tokens.length).fill(minTokenGap);
-
-  depList.forEach(d => {
-    if (Math.abs(d.child - d.parent) === 1) {
-      tokenGaps[Math.min(d.child, d.parent)] = d.relation.length * letterWidth + 14;
-    }
-  });
+  const minTokenGap = 5;
 
   // Compute the x positions for all tokens
   tokenXs = {};
   let curX = 0;
   tokens.forEach((d, i) => {
     tokenXs[i] = curX;
-    // curX += textTokenWidths[i] + tokenGaps[i] + textTokenPadding.left + textTokenPadding.right;
     curX += textTokenWidths[i] + minTokenGap + textTokenPadding.left + textTokenPadding.right;
   });
 
@@ -173,7 +162,8 @@ export const drawGraph = (data, saliencies, wordToSubwordMap, svg, tokenXs,
   });
 
   let arcGroup = tokenGroup.append('g')
-    .attr('class', 'arc-group');
+    .attr('class', 'arc-group')
+    .attr('transform', `translate(0, ${textTokenHeight + textTokenPadding.top + textTokenPadding.bottom})`);
 
   Object.keys(rankedDepMap).forEach((k, i) => {
 
@@ -202,39 +192,39 @@ export const drawGraph = (data, saliencies, wordToSubwordMap, svg, tokenXs,
         let sourceX = d.sourceX;
         let targetX = d.targetX;
 
-        let pathHeight = 20 * (i + 1);
+        let pathHeight = 15 * (i + 1);
         // Special case for tokens that are next to each other
-        let pathCurve = i === 0 ? 10 : 15;
+        let pathCurve = i === 0 ? 5 : 15;
 
         // Compute the control points and middle points
         let vertical1 = {
           x: sourceX,
-          y: pathCurve - pathHeight
+          y: pathHeight - pathCurve
         };
 
         let control1 = {
           x: sourceX < targetX ? sourceX + 0 : sourceX - 0,
-          y: -pathHeight
+          y: pathHeight
         };
 
         let mid1 = {
           x: sourceX < targetX ? sourceX + pathCurve : sourceX - pathCurve,
-          y: -pathHeight
+          y: pathHeight
         };
 
         let mid2 = {
           x: sourceX < targetX ? targetX - pathCurve : targetX + pathCurve,
-          y: -pathHeight
+          y: pathHeight
         };
 
         let control2 = {
           x: sourceX < targetX ? targetX - 0 : targetX + 0,
-          y: -pathHeight
+          y: pathHeight
         };
 
         let vertical2 = {
           x: targetX,
-          y: pathCurve - pathHeight
+          y: pathHeight - pathCurve
         };
 
         return `M${sourceX} ${0}
@@ -242,7 +232,7 @@ export const drawGraph = (data, saliencies, wordToSubwordMap, svg, tokenXs,
             Q${control1.x} ${control1.y}, ${mid1.x} ${mid1.y}
             L${mid2.x} ${mid2.y}
             Q${control2.x} ${control2.y}, ${vertical2.x} ${vertical2.y}
-            L${targetX} ${-5}`;
+            L${targetX} ${3}`;
       });
 
     arcGroup.append('g')
@@ -265,12 +255,12 @@ export const drawGraph = (data, saliencies, wordToSubwordMap, svg, tokenXs,
         return cls;
       })
       .attr('x', d => d.middleX)
-      .attr('y', -20 * (i + 1))
+      .attr('y', 15 * (i + 1) - 1)
       .text(d => d.relation === 'root' ? '' : d.relation)
       .clone(true)
       .lower()
       .attr('class', `arc-text arc-path-text-${i} shadow`)
-      .attr('stroke-width', 7)
+      .attr('stroke-width', 5)
       .attr('stroke', 'white');
 
     arcGroup.selectAll('.arc-group-path').lower();

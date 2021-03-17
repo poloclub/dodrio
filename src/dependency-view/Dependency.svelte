@@ -56,6 +56,7 @@
   let treeViewInitialized = false;
 
   let currentLayout = layoutOptions.dependency;
+  let linkColor = 'hsl(0, 0%, 80%)';
   let linkHoverColor = 'hsl(358, 94%, 73%)';
   let linkAttentionColor = 'hsla(0, 0%, 0%, 0.5)';
   let showRelationCheckboxes = false;
@@ -199,14 +200,14 @@
       .attr('refX', 0)
       .attr('refY', 5)
       .attr('markerWidth', 10)
-      .attr('markerHeight', 7)
+      .attr('markerHeight', 5)
       .attr('orient', 'auto')
       .attr('stroke-width', 1)
       .attr('markerUnits', 'userSpaceOnUse')
       .append('path')
       .attr('d', 'M 0 0 L 10 5 L 0 10 z')
-      .attr('stroke', 'black')
-      .attr('fill', 'black');
+      .attr('stroke', linkColor)
+      .attr('fill', linkColor);
     
     arrowMarker.clone(true)
       .select('marker')
@@ -518,7 +519,7 @@
   }
 
   :global(.arc-path) {
-    stroke: black;
+    stroke: hsl(0, 0%, 80%);
     stroke-width: 1.5;
     fill: none;
   }
