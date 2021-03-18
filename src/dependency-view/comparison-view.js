@@ -260,6 +260,10 @@ export const removeDependencyComparison = (svg) => {
   svg.select('.head-name-group').remove();
   svg.selectAll('.attention-group').remove();
 
+  // Hide the text label
+  d3.select('.comparison-panel-container')
+    .classed('hide', true);
+
 
 };
 
@@ -308,6 +312,16 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
     .getBBox()
     .height;
 
+  // Make the control panel for comparison view visible
+  let controlPanelY = +d3.select('.graph-view .svg-container')
+    .style('top')
+    .replace(/(.*)px/, '$1');
+  controlPanelY += arcGroupHeight + oldNodeGroupHeight + SVGPadding.top;
+
+  d3.select('.comparison-panel-container')
+    .style('top', `${controlPanelY}px`)
+    .classed('hide', false);
+
   // Draw the first row
   let attentionGroupID = 0;
 
@@ -321,7 +335,6 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
   // Draw the second+ rows
   let newTranslateY = 0;
   let attentionGroup = null;
-  // attentionGroupID += 1;
 
   while (attentionGroupID < topHeads.length) {
     let preTranslateY = 0;

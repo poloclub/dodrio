@@ -52,6 +52,22 @@
       name: 'Dependency Tree'
     } 
   };
+
+  const headListOptions = {
+    syntactic: {
+      value: 'syntactic',
+      name: 'syntactic correlations'
+    },
+    semantic: {
+      value: 'semantic',
+      name: 'semantic correlations '
+    },
+    importance: {
+      value: 'importance',
+      name: 'importance scores'
+    } 
+  };
+
   let dependencyViewInitialized = false;
   let saliencyViewInitialized = false;
   let treeViewInitialized = false;
@@ -325,9 +341,7 @@
           textTokenWidths);
       }
     }
-
-
-  }
+  };
 
   const checkboxChanged = (e) => {
     // Need to change the selectedRelations again because there is a race between
@@ -637,47 +651,6 @@
     user-select: none;
   }
 
-  .relation-checkboxes {
-    position: absolute;
-    top: -40px;
-    left: 655px;
-    width: 700px;
-    padding: 5px 10px;
-    cursor: default;
-    
-    display: flex;
-    flex-direction: row;
-    align-items: center;;
-    justify-content: flex-start;
-    flex-wrap: wrap;
-
-    font-size: 0.9rem;
-    border-radius: 5px;
-    border: 1px solid hsl(0, 0%, 93.3%);
-    box-shadow: 0 3px 3px hsla(0, 0%, 0%, 0.05);
-    background: hsla(0, 0%, 100%, 0.95);
-  }
-
-  .check-box-wrapper {
-    padding: 0 5px;
-
-    input[type='checkbox'] {
-      filter: hue-rotate(195deg) saturate(30%);
-    }
-  }
-
-  .sep-line-horizontal {
-    height: 0;
-    width: 95%;
-    border: 1px solid $gray-sep;
-  }
-
-  .sep-line-vertical {
-    height: 20px;
-    width: 0;
-    border: 1px solid $gray-sep;
-  }
-
   select {
     background: inherit;
     border-color: hsla(0, 0%, 0%, 0);
@@ -698,6 +671,78 @@
     border-color: $brown-icon;
   }
 
+  .comparison-panel-container {
+    @extend .panel-container;
+    top: 200px;
+  }
+
+  .comparison-control-panel {
+    @extend .svg-control-panel;
+  }
+
+  .comparison-label {
+    @extend .dependency-label;
+    margin: 0 4px 0 20px;
+  }
+
+  .comparison-select {
+    font-size: 1.2em;
+    height: 2em;
+    border-bottom: 1px solid change-color($brown-dark, $alpha: 0.2);
+
+    &:hover {
+      background: change-color($brown-dark, $alpha: 0.05);
+    }
+
+    select {
+      margin: 0;
+      padding: 0 1em 0 0;
+
+      &::after {
+        margin-top: -5px
+      }
+    }
+
+    select:not([multiple]) {
+      padding-right: 1em;
+    }
+
+   &:not(.is-multiple):not(.is-loading)::after{
+    right: 0.3em;
+    border-color: $brown-icon;
+    margin-top: -0.3em;
+  }
+  }
+
+  .relation-checkboxes {
+    position: absolute;
+    top: -40px;
+    left: 655px;
+    width: 700px;
+    padding: 5px 10px;
+    cursor: default;
+    
+    display: flex;
+    flex-direction: row;
+    align-items: center;;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+
+    font-size: 0.9rem;
+    border-radius: 5px;
+    border: 1px solid hsl(0, 0%, 93.3%);
+    box-shadow: 0 3px 3px hsla(0, 0%, 0%, 0.05);    
+    background: hsla(0, 0%, 100%, 0.95);
+  }
+
+  .check-box-wrapper {
+    padding: 0 5px;
+
+    input[type='checkbox'] {
+      filter: hue-rotate(195deg) saturate(30%);
+    }
+  }
+
   .select-row {
     position: relative;
     display: flex;
@@ -711,6 +756,15 @@
 
     &:hover {
       background: change-color($brown-dark, $alpha: 0.05);
+    }
+
+    &--highlight {
+      border: 1px solid change-color($brown-dark, $alpha: 0.4);
+      background: change-color($brown-dark, $alpha: 0.1);
+
+      &:hover {
+        background: change-color($brown-dark, $alpha: 0.1);
+      }
     }
   }
 
@@ -746,10 +800,6 @@
       border-color: $brown-icon;
       right: 0.9em;
     }
-
-    &--highlight {
-      background: change-color($brown-dark, $alpha: 0.1);
-    }
   }
 
   .comparison-button {
@@ -759,10 +809,6 @@
     display: flex;
     align-items: center;
     cursor: pointer;
-
-    &--highlight {
-      background: change-color($brown-dark, $alpha: 0.1);
-    }
   }
 
 
@@ -798,18 +844,18 @@
         </div>
       </div>
 
-      <div class='select-row'>
+      <div class='select-row' class:select-row--highlight={inComparisonView}>
         <div class='relation-container' on:click={comparisonButtonClicked}>
-          <div class='comparison-button' class:comparison-button--highlight={inComparisonView}>
+          <div class='comparison-button'>
             Show Comparison
           </div>
         </div>
       </div>
 
-      <div class='select-row'>
+      <div class='select-row' class:select-row--highlight={showRelationCheckboxes}>
         <div class='relation-container'
           on:click={() => {showRelationCheckboxes = !showRelationCheckboxes;}}>
-          <div class='relation' class:relation--highlight={showRelationCheckboxes}>
+          <div class='relation'>
             Syntactic Relations
           </div>
         </div>
@@ -833,6 +879,28 @@
 
     </div>
 
+  </div>
+
+  <div class='comparison-panel-container hide'>
+    <div class='comparison-control-panel'>
+      <!-- <div class='comparison-name'>
+        Dependency predicted by 5 attentions heads having the highest score.
+      </div> -->
+
+      <div class='comparison-label'>
+        Dependencies predicted by attention heads with top 
+      </div>
+
+      <div class='select comparison-select'>
+        <select name='head-list' id='head-select'>
+          {#each Object.values(headListOptions) as opt}
+            <option value={opt.value}>{opt.name}</option>
+          {/each}
+        </select>
+      </div>
+
+
+    </div>
   </div>
 
   <div class='svg-container'>
