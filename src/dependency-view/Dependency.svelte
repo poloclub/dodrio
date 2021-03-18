@@ -5,7 +5,7 @@
   import { isSpecialToken, padZeroLeft } from './utils';
   import { drawParagraph } from './saliency-view';
   import { drawGraph } from './dependency-view';
-  import { drawDependencyComparison } from './comparison-view';
+  import { drawDependencyComparison, removeDependencyComparison } from './comparison-view';
   import { drawTree } from './tree-view';
   import * as d3 from 'd3';
 
@@ -29,6 +29,7 @@
 
   let instanceViewConfig = undefined;
   let SVGInitialized = false;
+  let inComparisonView = false;
 
   const SVGPadding = {top: 10, left: 15, right: 15, bottom: 10};
   const textTokenPadding = {top: 3, left: 3, right: 3, bottom: 3};
@@ -304,24 +305,35 @@
     return wordToSubwordMap;
   };
 
+  const comparisonButtonClicked = (e) => {
+    let topHeads = getInterestingHeads();
+
+    if (inComparisonView) {
+      inComparisonView = false;
+      removeDependencyComparison(svg);
+    } else {
+      inComparisonView = true;
+      if (attentions == null) {
+        initAttentionData(
+          `/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`
+        ).then(() => drawDependencyComparison(topHeads, svg, SVGPadding, data,
+          attentions, saliencies, SVGHeight, existingLinkSet, tokenXs,
+          textTokenPadding, textTokenWidths));
+      } else {
+        drawDependencyComparison(topHeads, svg, SVGPadding, data, attentions,
+          saliencies, SVGHeight, existingLinkSet, tokenXs, textTokenPadding,
+          textTokenWidths);
+      }
+    }
+
+
+  }
+
   const checkboxChanged = (e) => {
     // Need to change the selectedRelations again because there is a race between
     // svelte's bind:checked call back and this function (on:change)
     let curRel = e.target.dataset.rel;
     selectedRelations[curRel] = e.target.checked;
-    let topHeads = getInterestingHeads();
-
-    if (attentions == null) {
-      initAttentionData(
-        `/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`
-      ).then(() => drawDependencyComparison(topHeads, svg, SVGPadding, data,
-        attentions, saliencies, SVGHeight, existingLinkSet, tokenXs,
-        textTokenPadding, textTokenWidths));
-    } else {
-      drawDependencyComparison(topHeads, svg, SVGPadding, data, attentions,
-        saliencies, SVGHeight, existingLinkSet, tokenXs, textTokenPadding,
-        textTokenWidths);
-    }
   };
 
   /**
@@ -627,9 +639,9 @@
 
   .relation-checkboxes {
     position: absolute;
-    top: 5px;
-    left: 520px;
-    width: 800px;
+    top: -40px;
+    left: 655px;
+    width: 700px;
     padding: 5px 10px;
     cursor: default;
     
@@ -694,11 +706,11 @@
     justify-content: flex-end;
 
     border-radius: 5px;
-    border: 1px solid hsla(24.3, 28.2%, 52%, 20%);
+    border: 1px solid change-color($brown-dark, $alpha: 0.2);
     margin-right: 5px;
 
     &:hover {
-      background: hsla(0, 0%, 0%, 0.05);
+      background: change-color($brown-dark, $alpha: 0.05);
     }
   }
 
@@ -715,7 +727,7 @@
     cursor: pointer;
 
     &::after {
-      z-index: 4;
+      z-index: 0;
       border: 3px solid transparent;
       border-radius: 2px;
       border-right: 0;
@@ -734,7 +746,25 @@
       border-color: $brown-icon;
       right: 0.9em;
     }
+
+    &--highlight {
+      background: change-color($brown-dark, $alpha: 0.1);
+    }
   }
+
+  .comparison-button {
+    padding: 0 0.4em;
+    height: 1.8em;
+    font-size: 1em;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+
+    &--highlight {
+      background: change-color($brown-dark, $alpha: 0.1);
+    }
+  }
+
 
   .hide {
     display: none;
@@ -769,8 +799,17 @@
       </div>
 
       <div class='select-row'>
-        <div class='relation-container' on:click={() => {showRelationCheckboxes = !showRelationCheckboxes;}}>
-          <div class='relation'>
+        <div class='relation-container' on:click={comparisonButtonClicked}>
+          <div class='comparison-button' class:comparison-button--highlight={inComparisonView}>
+            Show Comparison
+          </div>
+        </div>
+      </div>
+
+      <div class='select-row'>
+        <div class='relation-container'
+          on:click={() => {showRelationCheckboxes = !showRelationCheckboxes;}}>
+          <div class='relation' class:relation--highlight={showRelationCheckboxes}>
             Syntactic Relations
           </div>
         </div>

@@ -102,7 +102,8 @@
     width: 100%;
     height: 100%;
     display: flex;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: visible;
     flex-direction: column;
     box-sizing: border-box;
     position: relative;

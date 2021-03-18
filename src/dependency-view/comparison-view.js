@@ -1,3 +1,4 @@
+import * as d3 from 'd3';
 import { isSpecialToken, updateSVGWidth, round } from './utils.js';
 
 /**
@@ -238,6 +239,30 @@ const drawBottomDependencyLine = (rankedDepMap, attentionGroup, tokenHeight,
   });
 };
 
+export const removeDependencyComparison = (svg) => {
+
+  let oldTranslate = svg.select('.token-group')
+    .attr('transform');
+  let oldTranslateX = +oldTranslate.replace(/translate\((.*),\s.*\)/, '$1');
+  let oldTranslateY = +oldTranslate.replace(/translate\(.*,\s(.*)\)/, '$1');
+
+  // Update the svg width before moving
+  let moveX = 100;
+  updateSVGWidth(svg, +svg.attr('width') - moveX);
+
+  let tokenGroup = svg.select('.token-group')
+    .transition('move-x')
+    .duration(500)
+    .ease(d3.easeCubicInOut)
+    .attr('transform', `translate(${oldTranslateX - moveX}, ${oldTranslateY})`);
+
+  // Remove the added elements
+  svg.select('.head-name-group').remove();
+  svg.selectAll('.attention-group').remove();
+
+
+};
+
 export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attentions,
   saliencies, SVGHeight, existingLinkSet, tokenXs, textTokenPadding, textTokenWidths) => {
   const attentionRowGap = 10;
@@ -251,9 +276,21 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
   let moveX = 100;
   updateSVGWidth(svg, +svg.attr('width') + moveX);
 
+  let headNameGroup = svg.append('g')
+    .attr('class', 'head-name-group')
+    .attr('transform', `translate(${SVGPadding.left},
+      ${SVGPadding.top + textTokenPadding.top + 4})`)
+    .style('opacity', 0);
+  
+  headNameGroup.transition('')
+    .duration(500)
+    .ease(d3.easeCubicInOut)
+    .style('opacity', 1);
+
   let tokenGroup = svg.select('.token-group')
     .transition('move-x')
     .duration(500)
+    .ease(d3.easeCubicInOut)
     .attr('transform', `translate(${oldTranslateX + moveX}, ${oldTranslateY})`);
 
   let tokenHeight = tokenGroup.select('.node')
@@ -270,11 +307,6 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
     .node()
     .getBBox()
     .height;
-
-  let headNameGroup = svg.append('g')
-    .attr('class', 'head-name-group')
-    .attr('transform', `translate(${SVGPadding.left},
-      ${SVGPadding.top + textTokenPadding.top + 4})`);
 
   // Draw the first row
   let attentionGroupID = 0;
