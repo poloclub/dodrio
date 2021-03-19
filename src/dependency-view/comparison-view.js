@@ -239,6 +239,218 @@ const drawBottomDependencyLine = (rankedDepMap, attentionGroup, tokenHeight,
   });
 };
 
+
+const getWordAttention = (layer, head, attentions, data, saliencies,
+  threshold = 0.02) => {
+  let curAttention = attentions[layer][head];
+
+  // Create a mapping between original words and sub-words
+  let wordToSubwordIndexes = new Map();
+  let attentionIndexToWord = new Map();
+  let tokens = data.words.map(d => { return { 'token': d }; });
+
+  let j = 0;
+  while (isSpecialToken(saliencies.tokens[j].token)) {
+    j += 1;
+  }
+
+  for (let i = 0; i < tokens.length; i++) {
+    let curWord = tokens[i].token;
+
+    let curToken = saliencies.tokens[j].token;
+
+    if (curWord !== curToken) {
+      let curIndexes = [];
+      let nextWord = i + 1 < tokens.length ? tokens[i + 1].token : null;
+
+      while (saliencies.tokens[j].token !== nextWord) {
+        curIndexes.push(j);
+        attentionIndexToWord.set(j, i);
+        j += 1;
+      }
+      wordToSubwordIndexes.set(curIndexes[0], curIndexes);
+    } else {
+      attentionIndexToWord.set(j, i);
+      j += 1;
+    }
+  }
+
+  // Track the attentions
+  let attentionMap = [];
+
+  // Iterate through the attention matrix row
+  for (let i = 0; i < saliencies.tokens.length; i++) {
+
+    // Skip the special token
+    if (isSpecialToken(saliencies.tokens[i].token)) continue;
+
+    // Iterate through the columns in this row
+    let curRow = curAttention[i];
+
+    // Check if the current row is a sub-word; if so we need to take mean of
+    // all associated sub-words
+    if (wordToSubwordIndexes.has(i)) {
+      let subWordIndexes = wordToSubwordIndexes.get(i);
+      for (let w = 0; w < curRow.length; w++) {
+        let curSum = 0;
+        for (let ws = 0; ws < subWordIndexes.length; ws++) {
+          curSum += curAttention[ws][w];
+        }
+        curRow[w] = curSum / subWordIndexes.length;
+      }
+
+      // Skip the following sub-words for the iteration on i
+      i = subWordIndexes[subWordIndexes.length - 1];
+    }
+
+    for (let j = 0; j < saliencies.tokens.length; j++) {
+      // Skip the special token
+      if (isSpecialToken(saliencies.tokens[j].token)) continue;
+
+      let curWordAttention = 0;
+
+      // Check if the current column is a sub-word
+      if (wordToSubwordIndexes.has(j)) {
+        // Take sum of all sub-words
+        wordToSubwordIndexes.get(j).forEach(s => {
+          j = s;
+          curWordAttention += curRow[j];
+        });
+      } else {
+        curWordAttention = curRow[j];
+      }
+
+      if (curWordAttention > threshold) {
+        let curWord = attentionIndexToWord.get(j);
+        attentionMap.push({
+          parent: attentionIndexToWord.get(i),
+          child: curWord,
+          attention: curWordAttention
+        });
+      }
+    }
+  }
+
+  return attentionMap;
+};
+
+
+const createAttentionArcs = (attentionArcs, tokenXs, textTokenPadding, textTokenWidths) => {
+
+  let arcs = [];
+
+  attentionArcs.forEach(d => {
+    let gap = Math.abs(d.child - d.parent);
+
+    let sourceX = tokenXs[d.parent] + textTokenPadding.left + textTokenWidths[d.parent] / 2;
+    let targetX = tokenXs[d.child] + textTokenPadding.left + textTokenWidths[d.child] / 2;
+
+    d.sourceX = round(sourceX, 3);
+    d.targetX = round(targetX, 3);
+    d.gap = gap;
+
+    arcs.push(d);
+  });
+
+  return arcs;
+};
+
+const drawAttentionArc = (attentionArcs, attentionGroup, attentionGroupID,
+  minHeight=5, maxHeight=70) => {
+  let arcYScale = d3.scaleLinear()
+    .domain(d3.extent(attentionArcs.map(d => Math.abs(d.parent - d.child))))
+    .range([minHeight, maxHeight]);
+
+  let arcOpacityScale = d3.scaleLinear()
+    .domain(d3.extent(attentionArcs.map(d => d.attention)))
+    .range([0.1, 0.6]);
+
+  // Draw the arc diagram on top of the tokens
+  attentionGroup.append('g')
+    .attr('class', `attention-group-arc attention-arc-${attentionGroupID}`)
+    .style('opacity', 0)
+    .style('display', 'none')
+    .style('pointer-events', 'none')
+    .selectAll(`path.attention-arc-${attentionGroupID}`)
+    .data(attentionArcs, d => `${d.parent}-${d.child}`)
+    .join('path')
+    .attr('class', `attention-arc attention-arc-${attentionGroupID}`)
+    .attr('marker-end', 'url(#dep-attention-arc-arrow)')
+    .style('width', 0.5)
+    .style('opacity', d => arcOpacityScale(d.attention))
+    .attr('d', d => {
+      let sourceX = d.sourceX;
+      let targetX = d.targetX;
+      let xr = Math.abs((targetX - sourceX) / 2);
+      let yr = arcYScale(Math.abs(d.parent - d.child));
+      yr = Math.min(yr, xr);
+
+      if (d.parent == d.child) {
+        let curve = 5;
+        let height = 10;
+        // Draw the self-loop curve
+        // Hack: add a super short line segment to force the slope of end-marker
+        return `M ${sourceX} ${0}
+            C ${sourceX} ${0}, ${sourceX - curve} ${-height}, ${sourceX} ${-height}
+            C ${sourceX + curve} ${-height}, ${sourceX} ${0}, ${sourceX} ${-1}
+            L ${sourceX} ${0}`;
+      } else {
+        return `M ${sourceX} ${0}
+            A ${xr} ${yr}, 0, 0, ${sourceX < targetX ? 1 : 0} ${targetX}, ${0}`;
+      }
+    });
+};
+
+const addButtons = (nameGroup) => {
+  let rectX = 5;
+  let rectY = 19;
+
+  let radialSymbol = nameGroup.append('g')
+    .attr('transform', `translate(${rectX}, ${rectY})`);
+
+  const symbolMouseover = (e) => {
+    d3.select(e.target)
+      .style('fill', 'hsla(0, 0%, 0%, 0.1)')
+      .style('stroke', 'hsl(28, 7%, 30%)');
+  };
+
+  const symbolMouseleave = (e) => {
+    d3.select(e.target)
+      .style('fill', 'white')
+      .style('stroke', 'hsl(28, 7%, 60%)');
+  };
+
+  radialSymbol.append('rect')
+    .attr('class', 'comparison-svg-button')
+    .attr('width', 20)
+    .attr('height', 20)
+    .attr('rx', 3)
+    .style('fill', 'white')
+    .style('stroke', 'hsl(28, 7%, 60%)')
+    .style('stroke-width', 1)
+    .style('cursor', 'pointer')
+    .on('mouseover', symbolMouseover)
+    .on('mouseleave', symbolMouseleave);
+
+  radialSymbol.append('image')
+    .attr('href', '/figures/radial-symbol.svg')
+    .attr('x', 2)
+    .attr('y', 2)
+    .attr('height', 16)
+    .attr('width', 16)
+    .style('pointer-events', 'none');
+
+  let arcSymbol = radialSymbol.clone(true)
+    .attr('transform', `translate(${rectX + 30}, ${rectY})`);
+
+  arcSymbol.select('image')
+    .attr('href', '/figures/arc-symbol.svg');
+
+  arcSymbol.select('rect')
+    .on('mouseover', symbolMouseover)
+    .on('mouseleave', symbolMouseleave);
+};
+
 export const removeDependencyComparison = (svg) => {
 
   let oldTranslate = svg.select('.token-group')
@@ -263,8 +475,6 @@ export const removeDependencyComparison = (svg) => {
   // Hide the text label
   d3.select('.comparison-panel-container')
     .classed('hide', true);
-
-
 };
 
 export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attentions,
@@ -329,9 +539,6 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
   let maxAttentionLinks = getDependencyListFromAttention(topHeads[0].id.layer,
     topHeads[0].id.head, attentions, data, saliencies);
 
-  let rankedDepMap = createRankedDepMap(maxAttentionLinks, tokenXs,
-    textTokenPadding, textTokenWidths);
-
   // Draw the second+ rows
   let newTranslateY = 0;
   let attentionGroup = null;
@@ -341,7 +548,9 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
     let preHeight = 0;
 
     if (attentionGroupID === 0){
-      newTranslateY = arcGroupHeight + oldNodeGroupHeight + 60;
+      // TODO remove here
+      newTranslateY = arcGroupHeight + oldNodeGroupHeight + 50;
+      // newTranslateY = arcGroupHeight + oldNodeGroupHeight + 200;
     } else {
       preTranslateY = +svg.select(`#attention-group-${attentionGroupID - 1}`)
         .attr('transform')
@@ -376,28 +585,42 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
       attentions, data, saliencies
     );
 
-    rankedDepMap = createRankedDepMap(maxAttentionLinks, tokenXs, textTokenPadding, textTokenWidths);
+    let rankedDepMap = createRankedDepMap(maxAttentionLinks, tokenXs, textTokenPadding, textTokenWidths);
 
     drawBottomDependencyLine(rankedDepMap, attentionGroup, tokenHeight, false, existingLinkSet);
 
-    let newText = headNameGroup.append('text')
-      .attr('class', 'name')
-      .attr('x', 0)
-      .attr('y', newTranslateY)
-      .text(`layer ${topHeads[attentionGroupID].id.layer}
-          head ${topHeads[attentionGroupID].id.head}`)
+    let nameGroup = headNameGroup.append('g')
+      .attr('class', `name-group name-group-${attentionGroupID}`)
+      .attr('transform', `translate(${0}, ${newTranslateY})`)
       .style('visibility', 'hidden');
+
+    nameGroup.append('text')
+      .attr('class', 'name')
+      .text(`layer ${topHeads[attentionGroupID].id.layer}
+          head ${topHeads[attentionGroupID].id.head}`);
+    
+    addButtons(nameGroup);
 
     let curHeight = newTranslateY + svg.select(`#attention-group-${attentionGroupID}`)
       .node().getBBox().height;
+
+    // Generate arcs based on attention scores
+    let HighAttention = getWordAttention(topHeads[0].id.layer,
+      topHeads[0].id.head, attentions, data, saliencies);
+    let attentionArcs = createAttentionArcs(HighAttention, tokenXs,
+      textTokenPadding, textTokenWidths);
+
+    drawAttentionArc(attentionArcs, attentionGroup, attentionGroupID);
 
     if (curHeight + SVGPadding.bottom > SVGHeight) {
       console.log(curHeight, attentionGroupID);
       break;
     } else {
       attentionGroup.style('visibility', 'visible');
-      newText.style('visibility', 'visible');
+      nameGroup.style('visibility', 'visible');
       attentionGroupID += 1;
+      // TODO remove here
+      // break;
     }
   }
 

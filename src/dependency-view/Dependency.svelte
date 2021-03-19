@@ -235,11 +235,19 @@
 
     arrowMarker.clone(true)
       .select('marker')
+      .attr('id', 'dep-attention-arc-arrow')
+      .select('path')
+      .attr('stroke', 'none')
+      .attr('refX', 2)
+      .attr('fill', 'hsl(0, 0%, 10%)');
+
+    arrowMarker.clone(true)
+      .select('marker')
       .attr('id', 'dep-attention-arrow')
       .select('path')
       .attr('stroke', 'none')
       .attr('refX', 2)
-      .attr('fill', linkAttentionColor);
+      .attr('fill', 'hsl(0, 0%, 80%)');
 
     SVGInitialized = true;
   };
@@ -610,6 +618,11 @@
 
   :global(.attention-path) {
     stroke: hsla(0, 0%, 0%, 0.3);
+    fill: none;
+  }
+
+  :global(.attention-arc) {
+    stroke: hsla(0, 0%, 10%);
     fill: none;
   }
 
