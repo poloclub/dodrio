@@ -1,6 +1,8 @@
 import * as d3 from 'd3';
 import { isSpecialToken, updateSVGWidth, round } from './utils.js';
 
+let isMoved = {};
+
 /**
  * Create a dependency graph list using the attention data. For each token,
  * we uses the token it most attends to as the dependency target. Since some
@@ -367,7 +369,7 @@ const drawAttentionArc = (attentionArcs, attentionGroup, attentionGroupID,
 
   // Draw the arc diagram on top of the tokens
   attentionGroup.append('g')
-    .attr('class', `attention-group-arc attention-arc-${attentionGroupID}`)
+    .attr('class', `attention-group-arc attention-group-arc-${attentionGroupID}`)
     .style('opacity', 0)
     .style('display', 'none')
     .style('pointer-events', 'none')
@@ -399,6 +401,124 @@ const drawAttentionArc = (attentionArcs, attentionGroup, attentionGroupID,
             A ${xr} ${yr}, 0, 0, ${sourceX < targetX ? 1 : 0} ${targetX}, ${0}`;
       }
     });
+};
+
+const arcButtonClicked = (e) => {
+  let nameGroup = d3.select(e.target.parentNode.parentNode);
+  
+  let rowNum = d3.selectAll('.attention-group').size();
+  let curID = +nameGroup.attr('class').replace(/.*name-group-(\d*).*/, '$1');
+
+  const moveY = (d, i, g, distance) => {
+    let curItem = d3.select(g[i]);
+    let oldTranslateX = +curItem.attr('transform')
+      .replace(/translate\((.*),\s.*\)/, '$1');
+    let oldTranslateY = +curItem.attr('transform')
+      .replace(/translate\(.*,\s(.*)\)/, '$1');
+    return `translate(${oldTranslateX}, ${oldTranslateY + distance})`;
+  };
+
+  d3.select('.blocker').raise();
+  d3.select('.original-node-group').raise();
+  d3.select('.arc-group').raise();
+
+  if (isMoved[curID] == null) {
+    // Move the groups below if it is in the first half
+    if (curID < Math.floor(rowNum / 2)) {
+      d3.selectAll('.attention-group')
+        .filter(d => d >= curID)
+        .transition('moveY')
+        .duration(500)
+        .ease(d3.easeCubicInOut)
+        .attr('transform', (d, i, g) => moveY(d, i, g, 70));
+
+      d3.selectAll('.name-group')
+        .filter(d => d >= curID)
+        .transition('moveY')
+        .duration(500)
+        .ease(d3.easeCubicInOut)
+        .attr('transform', (d, i, g) => moveY(d, i, g, 70));
+
+      isMoved[curID] = 'down';
+    } else {
+      // Move the groups above if it is in the second half
+      d3.selectAll('.attention-group')
+        .filter(d => d < curID)
+        .transition('moveY')
+        .duration(500)
+        .ease(d3.easeCubicInOut)
+        .attr('transform', (d, i, g) => moveY(d, i, g, -70));
+
+      d3.selectAll('.name-group')
+        .filter(d => d < curID)
+        .transition('moveY')
+        .duration(500)
+        .ease(d3.easeCubicInOut)
+        .attr('transform', (d, i, g) => moveY(d, i, g, -70));
+
+      isMoved[curID] = 'up';
+    }
+
+    // Show the arc diagram
+    d3.select(`.attention-group-arc-${curID}`)
+      .style('display', null)
+      .transition('opacity')
+      .delay(200)
+      .duration(300)
+      .ease(d3.easeCubicInOut)
+      .style('opacity', 1);
+
+  } else {
+
+    // Hide the arc diagram
+    d3.select(`.attention-group-arc-${curID}`)
+      .transition('opacity')
+      .duration(500)
+      .ease(d3.easeCubicInOut)
+      .style('opacity', 0)
+      .on('end', (d, i, g) => {
+        d3.select(g[i]).style('display', 'none');
+      });
+
+    // Restore the movement
+    if (isMoved[curID] === 'down') {
+      d3.selectAll('.attention-group')
+        .filter(d => d >= curID)
+        .transition('moveY')
+        .duration(500)
+        .ease(d3.easeCubicInOut)
+        .attr('transform', (d, i, g) => moveY(d, i, g, -70));
+
+      d3.selectAll('.name-group')
+        .filter(d => d >= curID)
+        .transition('moveY')
+        .duration(500)
+        .ease(d3.easeCubicInOut)
+        .attr('transform', (d, i, g) => moveY(d, i, g, -70));
+      
+      isMoved[curID] = null;
+
+    } else if (isMoved[curID] === 'up') {
+      d3.selectAll('.attention-group')
+        .filter(d => d < curID)
+        .transition('moveY')
+        .duration(500)
+        .ease(d3.easeCubicInOut)
+        .attr('transform', (d, i, g) => moveY(d, i, g, 70));
+
+      d3.selectAll('.name-group')
+        .filter(d => d < curID)
+        .transition('moveY')
+        .duration(500)
+        .ease(d3.easeCubicInOut)
+        .attr('transform', (d, i, g) => moveY(d, i, g, 70));
+
+      isMoved[curID] = null;
+    } else {
+      console.error('Unknown case!');
+    }
+  }
+
 };
 
 const addButtons = (nameGroup) => {
@@ -448,7 +568,8 @@ const addButtons = (nameGroup) => {
 
   arcSymbol.select('rect')
     .on('mouseover', symbolMouseover)
-    .on('mouseleave', symbolMouseleave);
+    .on('mouseleave', symbolMouseleave)
+    .on('click', arcButtonClicked);
 };
 
 export const removeDependencyComparison = (svg) => {
@@ -461,6 +582,8 @@ export const removeDependencyComparison = (svg) => {
   // Update the svg width before moving
   let moveX = 100;
   updateSVGWidth(svg, +svg.attr('width') - moveX);
+
+  svg.selectAll('.blocker').remove();
 
   let tokenGroup = svg.select('.token-group')
     .transition('move-x')
@@ -505,7 +628,50 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
     .transition('move-x')
     .duration(500)
     .ease(d3.easeCubicInOut)
-    .attr('transform', `translate(${oldTranslateX + moveX}, ${oldTranslateY})`);
+    .attr('transform', `translate(${oldTranslateX + moveX}, ${oldTranslateY})`)
+    .on('end', () => {
+      // Draw top gradient overlay
+      tokenGroup = svg.select('.token-group');
+
+      tokenGroup.append('rect')
+        .attr('class', 'blocker')
+        .attr('id', 'top-blocker')
+        .attr('x', 0)
+        .attr('y', 0)
+        .attr('width', +svg.attr('width'))
+        .attr('height', controlPanelY + 5)
+        .style('fill', 'url(#top-opacity-gradient)');
+
+      svg.append('rect')
+        .attr('class', 'blocker')
+        .attr('id', 'top-left-blocker')
+        .attr('x', 0)
+        .attr('y', 0)
+        .attr('width', moveX)
+        .attr('height', controlPanelY + 5)
+        .style('fill', 'url(#top-opacity-gradient)');
+
+      tokenGroup.append('rect')
+        .attr('class', 'blocker')
+        .attr('id', 'bottom-blocker')
+        .attr('x', 0)
+        .attr('y', SVGHeight - 10)
+        .attr('width', +svg.attr('width'))
+        .attr('height', 10)
+        .style('fill', 'url(#bottom-opacity-gradient)');
+
+      svg.append('rect')
+        .attr('class', 'blocker')
+        .attr('id', 'bottom-left-blocker')
+        .attr('x', 0)
+        .attr('y', SVGHeight - 10)
+        .attr('width', moveX)
+        .attr('height', 10)
+        .style('fill', 'url(#bottom-opacity-gradient)');
+
+      tokenGroup.select('.node-group').raise();
+      tokenGroup.select('.arc-group').raise();
+    });
 
   let tokenHeight = tokenGroup.select('.node')
     .node()
@@ -564,16 +730,21 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
 
     attentionGroup = svg.select('.token-group')
       .append('g')
+      .datum(attentionGroupID)
       .attr('class', 'attention-group')
       .attr('id', `attention-group-${attentionGroupID}`)
       .attr('transform', `translate(0, ${newTranslateY})`)
       .style('visibility', 'hidden');
+    
+    isMoved[attentionGroupID] = null;
 
     // Copy the node group
     attentionGroup.append(
       () => svg.select('.token-group')
         .select('.node-group')
+        .classed('original-node-group', true)
         .clone(true)
+        .classed('original-node-group', false)
         .classed('node-group-attention', true)
         .node()
     );
@@ -590,6 +761,7 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
     drawBottomDependencyLine(rankedDepMap, attentionGroup, tokenHeight, false, existingLinkSet);
 
     let nameGroup = headNameGroup.append('g')
+      .datum(attentionGroupID)
       .attr('class', `name-group name-group-${attentionGroupID}`)
       .attr('transform', `translate(${0}, ${newTranslateY})`)
       .style('visibility', 'hidden');
@@ -613,6 +785,8 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
     drawAttentionArc(attentionArcs, attentionGroup, attentionGroupID);
 
     if (curHeight + SVGPadding.bottom > SVGHeight) {
+      attentionGroup.remove();
+      nameGroup.remove();
       console.log(curHeight, attentionGroupID);
       break;
     } else {

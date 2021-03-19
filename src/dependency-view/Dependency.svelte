@@ -249,6 +249,49 @@
       .attr('refX', 2)
       .attr('fill', 'hsl(0, 0%, 80%)');
 
+    // Create opacity gradient
+    let gradient = svg.append('defs')
+      .append('linearGradient')
+      .attr('x2', '0%')
+      .attr('y2', '100%')
+      .attr('id', 'top-opacity-gradient');
+
+    gradient.append('stop')
+      .style('stop-opacity', 1)
+      .style('stop-color', 'white')
+      .attr('offset', '0');
+
+    gradient.append('stop')
+      .style('stop-opacity', 1)
+      .style('stop-color', 'white')
+      .attr('offset', '0.9');
+
+    gradient.append('stop')
+      .style('stop-opacity', 0)
+      .style('stop-color', 'white')
+      .attr('offset', '1');
+
+    gradient = svg.append('defs')
+      .append('linearGradient')
+      .attr('x2', '0%')
+      .attr('y2', '100%')
+      .attr('id', 'bottom-opacity-gradient');
+
+    gradient.append('stop')
+      .style('stop-opacity', 0)
+      .style('stop-color', 'white')
+      .attr('offset', '0');
+
+    gradient.append('stop')
+      .style('stop-opacity', 1)
+      .style('stop-color', 'white')
+      .attr('offset', '0.5');
+
+    gradient.append('stop')
+      .style('stop-opacity', 1)
+      .style('stop-color', 'white')
+      .attr('offset', '1');
+
     SVGInitialized = true;
   };
 
