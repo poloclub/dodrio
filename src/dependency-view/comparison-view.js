@@ -404,8 +404,7 @@ const drawAttentionArc = (attentionArcs, attentionGroup, attentionGroupID,
 };
 
 const arcButtonClicked = (e) => {
-  let nameGroup = d3.select(e.target.parentNode.parentNode);
-  
+  let nameGroup = d3.select(e.target.parentNode.parentNode.parentNode);
   let rowNum = d3.selectAll('.attention-group').size();
   let curID = +nameGroup.attr('class').replace(/.*name-group-(\d*).*/, '$1');
 
@@ -421,6 +420,8 @@ const arcButtonClicked = (e) => {
   d3.select('.blocker').raise();
   d3.select('.original-node-group').raise();
   d3.select('.arc-group').raise();
+
+  d3.select(e.target).classed('symbol-highlight', isMoved[curID] == null);
 
   if (isMoved[curID] == null) {
     // Move the groups below if it is in the first half
@@ -522,23 +523,35 @@ const arcButtonClicked = (e) => {
 };
 
 const addButtons = (nameGroup) => {
-  let rectX = 5;
-  let rectY = 19;
-
-  let radialSymbol = nameGroup.append('g')
-    .attr('transform', `translate(${rectX}, ${rectY})`);
+  const rectX = 16;
+  const rectY = 19;
 
   const symbolMouseover = (e) => {
     d3.select(e.target)
-      .style('fill', 'hsla(0, 0%, 0%, 0.1)')
-      .style('stroke', 'hsl(28, 7%, 30%)');
+      .style('fill', 'hsla(0, 0%, 0%, 0.2)')
+      .style('stroke', 'hsl(28, 7%, 20%)');
   };
 
   const symbolMouseleave = (e) => {
-    d3.select(e.target)
-      .style('fill', 'white')
-      .style('stroke', 'hsl(28, 7%, 60%)');
+    let button = d3.select(e.target);
+
+    if (!button.classed('symbol-highlight')) {
+      d3.select(e.target)
+        .style('fill', 'white')
+        .style('stroke', 'hsl(28, 7%, 60%)');
+    }
   };
+
+  let symbolGroup = nameGroup.append('g')
+    .attr('class', 'symbol-group')
+    .attr('transform', `translate(${rectX}, ${rectY})`);
+
+  let radialSymbol = symbolGroup.append('g')
+    .attr('class', 'symbol')
+    .attr('transform', `translate(${0}, ${0})`)
+    .on('mouseover', symbolMouseover)
+    .on('mouseleave', symbolMouseleave);
+
 
   radialSymbol.append('rect')
     .attr('class', 'comparison-svg-button')
@@ -548,9 +561,7 @@ const addButtons = (nameGroup) => {
     .style('fill', 'white')
     .style('stroke', 'hsl(28, 7%, 60%)')
     .style('stroke-width', 1)
-    .style('cursor', 'pointer')
-    .on('mouseover', symbolMouseover)
-    .on('mouseleave', symbolMouseleave);
+    .style('cursor', 'pointer');
 
   radialSymbol.append('image')
     .attr('href', '/figures/radial-symbol.svg')
@@ -561,15 +572,14 @@ const addButtons = (nameGroup) => {
     .style('pointer-events', 'none');
 
   let arcSymbol = radialSymbol.clone(true)
-    .attr('transform', `translate(${rectX + 30}, ${rectY})`);
+    .attr('transform', `translate(${30}, ${0})`)
+    .on('mouseover', symbolMouseover)
+    .on('mouseleave', symbolMouseleave)
+    .on('click', arcButtonClicked);
 
   arcSymbol.select('image')
     .attr('href', '/figures/arc-symbol.svg');
 
-  arcSymbol.select('rect')
-    .on('mouseover', symbolMouseover)
-    .on('mouseleave', symbolMouseleave)
-    .on('click', arcButtonClicked);
 };
 
 export const removeDependencyComparison = (svg) => {
