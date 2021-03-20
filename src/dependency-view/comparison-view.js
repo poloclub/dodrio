@@ -189,7 +189,9 @@ const drawBottomDependencyLine = (rankedDepMap, attentionGroup, tokenHeight,
       .join('path')
       .attr('class', `attention-path attention-path-${i}`)
       .classed('matched-attention-path', d => existingLinkSet.has(String([d.parent, d.child])))
-      .attr('marker-end', 'url(#dep-attention-arrow)')
+      .classed('attention-path--lr', d => d.parent < d.child)
+      .classed('attention-path--rl', d => d.parent > d.child)
+      // .attr('marker-end', 'url(#dep-attention-arrow)')
       .style('width', 0.5)
       .attr('d', d => {
         let sourceX = d.sourceX;
@@ -548,10 +550,7 @@ const addButtons = (nameGroup) => {
 
   let radialSymbol = symbolGroup.append('g')
     .attr('class', 'symbol')
-    .attr('transform', `translate(${0}, ${0})`)
-    .on('mouseover', symbolMouseover)
-    .on('mouseleave', symbolMouseleave);
-
+    .attr('transform', `translate(${0}, ${0})`);
 
   radialSymbol.append('rect')
     .attr('class', 'comparison-svg-button')
@@ -561,7 +560,9 @@ const addButtons = (nameGroup) => {
     .style('fill', 'white')
     .style('stroke', 'hsl(28, 7%, 60%)')
     .style('stroke-width', 1)
-    .style('cursor', 'pointer');
+    .style('cursor', 'pointer')
+    .on('mouseover', symbolMouseover)
+    .on('mouseleave', symbolMouseleave);
 
   radialSymbol.append('image')
     .attr('href', '/figures/radial-symbol.svg')
@@ -572,7 +573,9 @@ const addButtons = (nameGroup) => {
     .style('pointer-events', 'none');
 
   let arcSymbol = radialSymbol.clone(true)
-    .attr('transform', `translate(${30}, ${0})`)
+    .attr('transform', `translate(${30}, ${0})`);
+
+  arcSymbol.select('rect')
     .on('mouseover', symbolMouseover)
     .on('mouseleave', symbolMouseleave)
     .on('click', arcButtonClicked);

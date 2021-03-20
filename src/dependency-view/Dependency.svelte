@@ -252,9 +252,9 @@
     // Create opacity gradient
     let gradient = svg.append('defs')
       .append('linearGradient')
+      .attr('id', 'top-opacity-gradient')
       .attr('x2', '0%')
-      .attr('y2', '100%')
-      .attr('id', 'top-opacity-gradient');
+      .attr('y2', '100%');
 
     gradient.append('stop')
       .style('stop-opacity', 1)
@@ -273,9 +273,9 @@
 
     gradient = svg.append('defs')
       .append('linearGradient')
+      .attr('id', 'bottom-opacity-gradient')
       .attr('x2', '0%')
-      .attr('y2', '100%')
-      .attr('id', 'bottom-opacity-gradient');
+      .attr('y2', '100%');
 
     gradient.append('stop')
       .style('stop-opacity', 0)
@@ -290,6 +290,86 @@
     gradient.append('stop')
       .style('stop-opacity', 1)
       .style('stop-color', 'white')
+      .attr('offset', '1');
+
+    // Line gradient right to left
+    gradient = svg.append('defs')
+      .append('linearGradient')
+      .attr('id', 'link-opacity-gradient-rl');
+
+    gradient.append('stop')
+      .style('stop-opacity', 1)
+      .style('stop-color', 'hsl(0, 0%, 20%)')
+      .attr('offset', '0');
+
+    gradient.append('stop')
+      .style('stop-opacity', 1)
+      .style('stop-color', 'hsl(0, 0%, 70%)')
+      .attr('offset', '0.3');
+
+    gradient.append('stop')
+      .style('stop-opacity', 1)
+      .style('stop-color', 'hsl(0, 0%, 90%)')
+      .attr('offset', '1');
+
+    // Line gradient left to right
+    gradient = svg.append('defs')
+      .append('linearGradient')
+      .attr('id', 'link-opacity-gradient-lr');
+
+    gradient.append('stop')
+      .style('stop-opacity', 1)
+      .style('stop-color', 'hsl(0, 0%, 90%)')
+      .attr('offset', '0');
+
+    gradient.append('stop')
+      .style('stop-opacity', 1)
+      .style('stop-color', 'hsl(0, 0%, 70%)')
+      .attr('offset', '0.7');
+
+    gradient.append('stop')
+      .style('stop-opacity', 1)
+      .style('stop-color', 'hsl(0, 0%, 20%)')
+      .attr('offset', '1');
+    
+    // Matched line gradient right to left
+    gradient = svg.append('defs')
+      .append('linearGradient')
+      .attr('id', 'matched-link-opacity-gradient-rl');
+
+    gradient.append('stop')
+      .style('stop-opacity', 1)
+      .style('stop-color', 'hsl(205, 100%, 35%)')
+      .attr('offset', '0');
+
+    gradient.append('stop')
+      .style('stop-opacity', 1)
+      .style('stop-color', 'hsl(205, 100%, 70%)')
+      .attr('offset', '0.3');
+
+    gradient.append('stop')
+      .style('stop-opacity', 1)
+      .style('stop-color', 'hsl(205, 100%, 90%)')
+      .attr('offset', '1');
+
+    // Matched line gradient left to right
+    gradient = svg.append('defs')
+      .append('linearGradient')
+      .attr('id', 'matched-link-opacity-gradient-lr');
+
+    gradient.append('stop')
+      .style('stop-opacity', 1)
+      .style('stop-color', 'hsl(205, 100%, 90%)')
+      .attr('offset', '0');
+
+    gradient.append('stop')
+      .style('stop-opacity', 1)
+      .style('stop-color', 'hsl(205, 100%, 70%)')
+      .attr('offset', '0.7');
+
+    gradient.append('stop')
+      .style('stop-opacity', 1)
+      .style('stop-color', 'hsl(205, 100%, 35%)')
       .attr('offset', '1');
 
     SVGInitialized = true;
@@ -664,6 +744,14 @@
     fill: none;
   }
 
+  :global(.attention-path--lr) {
+    stroke: url(#link-opacity-gradient-lr);
+  }
+
+  :global(.attention-path--rl) {
+    stroke: url(#link-opacity-gradient-rl);
+  }
+
   :global(.attention-arc) {
     stroke: hsla(0, 0%, 10%);
     fill: none;
@@ -672,6 +760,14 @@
   :global(.matched-attention-path) {
     stroke: $orange-reg;
     stroke-width: 2;
+  }
+
+  :global(.matched-attention-path.attention-path--lr) {
+    stroke: url(#matched-link-opacity-gradient-lr);
+  }
+
+  :global(.matched-attention-path.attention-path--rl) {
+    stroke: url(#matched-link-opacity-gradient-rl);
   }
 
   .panel-container {
