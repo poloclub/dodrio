@@ -5,6 +5,17 @@ export const embeddingViewConfigStore = writable({});
 export const tableViewConfigStore = writable({});
 export const instanceViewConfigStore = writable({});
 export const mapViewConfigStore = writable({});
+export const lowerMapViewConfigStore = writable({});
+
+export const tooltipConfigStore = writable({
+  show: false,
+  html: '1.23',
+  left: 0,
+  top: 0,
+  width: 80,
+  maxWidth: 80,
+  fontSize: '1em'
+});
 
 export const svgStore = writable(undefined);
 export const currInstanceStore = writable(23);

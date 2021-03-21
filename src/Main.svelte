@@ -4,10 +4,29 @@
   import EmbeddingView from './EmbeddingView.svelte';
   import Dependency from './dependency-view/Dependency.svelte';
   import Atlas from './Atlas.svelte';
+  import Tooltip from './TooltipGlobal.svelte';
+  import LowerAtlas from './LowerAtlas.svelte';
   import TableView from './TableView.svelte';
   import { graphViewConfigStore, embeddingViewConfigStore, instanceViewConfigStore,
-    tableViewConfigStore, mapViewConfigStore } from './store';
+    tableViewConfigStore, mapViewConfigStore, lowerMapViewConfigStore,
+    tooltipConfigStore } from './store';
   import { onMount } from 'svelte';
+
+
+  // Set up the tooltip
+  let tooltip = null;
+
+  let tooltipConfig = {
+    show: false,
+    html: '1.23',
+    left: 0,
+    top: 0,
+    width: 80,
+    maxWidth: 80,
+    fontSize: '1em'
+  };
+
+  tooltipConfigStore.subscribe(value => {tooltipConfig = value;});
 
   let graphViewDIV = null;
   let graphViewConfig = {
@@ -29,6 +48,12 @@
 
   let mapViewDIV = null;
   let mapViewConfig = {
+    compWidth: null,
+    compHeight: null
+  };
+
+  let lowerMapViewDIV = null;
+  let lowerMapViewConfig = {
     compWidth: null,
     compHeight: null
   };
@@ -61,6 +86,9 @@
     instanceViewConfig.compHeight = Math.floor(instanceViewDIV.clientHeight) - 5;
     instanceViewConfigStore.set(instanceViewConfig);
 
+    lowerMapViewConfig.compWidth = Math.floor(lowerMapViewDIV.clientWidth);
+    lowerMapViewConfig.compHeight = Math.floor(lowerMapViewDIV.clientHeight);
+    lowerMapViewConfigStore.set(lowerMapViewConfig);
     // mapViewConfig.compWidth = Math.floor(mapViewDIV.clientWidth);
     // mapViewConfig.compHeight = Math.floor(mapViewDIV.clientHeight);
     // mapViewConfigStore.set(mapViewConfig);
@@ -179,6 +207,8 @@
 <div class='main'>
 
   <Header />
+
+  <Tooltip bind:this={tooltip}/>
  
   <div class='main-content'>
     <div class='select-container'>
@@ -205,11 +235,11 @@
       <div class='lower-container'>
         <!-- Graph View -->
         <div class='graph-container' bind:this={graphViewDIV} >
-          <GraphView />
+          <!-- <GraphView /> -->
         </div>
 
-        <div class='lower-atlas-container '>
-
+        <div class='lower-atlas-container' bind:this={lowerMapViewDIV}>
+          <LowerAtlas />
         </div>
       </div>
 

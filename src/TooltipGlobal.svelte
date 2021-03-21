@@ -1,36 +1,37 @@
 <script>
   import * as d3 from 'd3';
+  import { tooltipConfigStore } from './store';
 
-  export let tooltipShow = false;
-  export let tooltipHtml = "1.23";
-  export let left = 0;
-  export let top = 0;
-  export let width = 80;
-  export let maxWidth = 80;
-  export let fontSize = '1em';
+  let tooltipConfig = {
+    show: false,
+    html: '1.23',
+    left: 0,
+    top: 0,
+    width: 80,
+    maxWidth: 80,
+    fontSize: '1em'
+  };
 
   let tooltip = null;
 
-  $: style = `left: ${left}px; top: ${top}px; width: ${width}px; max-width: 
-              ${maxWidth}px; font-size: ${fontSize}`;
-  $: tooltipShow, function() {
-    console.log('haha');
-    if (tooltip === null) return;
+  $: style = `left: ${tooltipConfig.left}px; top: ${tooltipConfig.top}px;
+    width: ${tooltipConfig.width}px; max-width: ${tooltipConfig.maxWidth}px;
+    font-size: ${tooltipConfig.fontSize}`;
+
+  tooltipConfigStore.subscribe(value => {
+
     let selection = d3.select(tooltip);
-
-    console.log(tooltipShow);
-
-    if (tooltipShow) {
+    if (value.show) {
       selection.style('visibility', 'visible');
-
       d3.select(tooltip)
         .transition()
-        .duration(200)
+        .duration(100)
         .ease(d3.easeQuadInOut)
         .style('opacity', 1);
     } else {
       d3.select(tooltip)
         .transition()
+        .delay(100)
         .duration(200)
         .ease(d3.easeQuadInOut)
         .style('opacity', 0)
@@ -39,7 +40,9 @@
             .style('visibility', 'hidden');
         });
     }
-  }();
+
+    tooltipConfig = value;
+  });
 
 </script>
 
@@ -61,5 +64,5 @@
 </style>
 
 <div class="tooltip" style={style} bind:this={tooltip}>
-  {@html tooltipHtml}
+  {@html tooltipConfig.html}
 </div>
