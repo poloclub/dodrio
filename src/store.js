@@ -13,3 +13,10 @@ export const hoverTokenStore = writable();
 export const wordToSubwordMapStore = writable({});
 
 export const attentionHeadColorStore = writable({});
+
+export const modalStore = writable({
+  show: false,
+  attention: null,
+  layer: null,
+  head: null
+});

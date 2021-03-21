@@ -1,6 +1,6 @@
 import * as d3 from 'd3';
 
-export const getTokenWidth = (tokens, svg) => {
+export const getTokenWidth = (tokens, svg, fontSize='1em') => {
   let textTokenWidths = {};
   let textTokenHeight = null;
 
@@ -12,6 +12,7 @@ export const getTokenWidth = (tokens, svg) => {
     .data(tokens)
     .join('text')
     .attr('class', 'text-token')
+    .style('font-size', fontSize)
     .text(d => d);
 
   // After the text elements are created, we need to query again to get the

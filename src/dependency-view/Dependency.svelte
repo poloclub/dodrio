@@ -5,6 +5,7 @@
   import { isSpecialToken, padZeroLeft } from './utils';
   import { drawParagraph } from './saliency-view';
   import { drawGraph } from './dependency-view';
+  import RadialModal from './RadialModal.svelte';
   import { drawDependencyComparison, removeDependencyComparison } from './comparison-view';
   import { drawTree } from './tree-view';
   import * as d3 from 'd3';
@@ -770,6 +771,14 @@
     stroke: url(#matched-link-opacity-gradient-rl);
   }
 
+  :global(.comparison-svg-button) {
+    cursor: pointer;
+  }
+
+  :global(.disabled) {
+    cursor: not-allowed;
+  }
+
   .panel-container {
     position: absolute;
     display: flex;
@@ -1060,3 +1069,5 @@
   </div>
   
 </div>
+
+<RadialModal on:xClicked={console.log('x crossed')}/>

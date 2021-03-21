@@ -1,7 +1,11 @@
 import * as d3 from 'd3';
 import { isSpecialToken, updateSVGWidth, round } from './utils.js';
+import { modalStore } from '../store';
 
 let isMoved = {};
+let modalInfo = {};
+
+modalStore.subscribe(value => { modalInfo = value; });
 
 /**
  * Create a dependency graph list using the attention data. For each token,
@@ -405,6 +409,35 @@ const drawAttentionArc = (attentionArcs, attentionGroup, attentionGroupID,
     });
 };
 
+const radialButtonClicked = (e, attentions, tokens, layer, head) => {
+
+  if (!modalInfo.show) {
+    modalInfo.show = true;
+    modalInfo.attention = attentions[layer][head];
+    modalInfo.tokens = tokens;
+    modalInfo.layer = layer;
+    modalInfo.head = head;
+    modalStore.set(modalInfo);
+
+    d3.selectAll('.radial-symbol')
+      .select('rect')
+      .classed('disabled', true);
+
+    d3.select(e.target)
+      .classed('disabled', false)
+      .classed('symbol-highlight', true);
+  }
+};
+
+export const resetRadialButtons = () => {
+  d3.selectAll('.radial-symbol')
+    .select('rect')
+    .classed('disabled', false)
+    .classed('symbol-highlight', false)
+    .style('fill', 'white')
+    .style('stroke', 'hsl(28, 7%, 60%)');
+};
+
 const arcButtonClicked = (e) => {
   let nameGroup = d3.select(e.target.parentNode.parentNode.parentNode);
   let rowNum = d3.selectAll('.attention-group').size();
@@ -524,14 +557,18 @@ const arcButtonClicked = (e) => {
 
 };
 
-const addButtons = (nameGroup) => {
+const addButtons = (nameGroup, attentions, tokens, layer, head) => {
   const rectX = 16;
   const rectY = 19;
 
   const symbolMouseover = (e) => {
-    d3.select(e.target)
-      .style('fill', 'hsla(0, 0%, 0%, 0.2)')
-      .style('stroke', 'hsl(28, 7%, 20%)');
+    let button = d3.select(e.target);
+
+    if (!button.classed('disabled')) {
+      d3.select(e.target)
+        .style('fill', 'hsla(0, 0%, 0%, 0.2)')
+        .style('stroke', 'hsl(28, 7%, 20%)');
+    }
   };
 
   const symbolMouseleave = (e) => {
@@ -549,7 +586,7 @@ const addButtons = (nameGroup) => {
     .attr('transform', `translate(${rectX}, ${rectY})`);
 
   let radialSymbol = symbolGroup.append('g')
-    .attr('class', 'symbol')
+    .attr('class', 'radial-symbol')
     .attr('transform', `translate(${0}, ${0})`);
 
   radialSymbol.append('rect')
@@ -560,9 +597,9 @@ const addButtons = (nameGroup) => {
     .style('fill', 'white')
     .style('stroke', 'hsl(28, 7%, 60%)')
     .style('stroke-width', 1)
-    .style('cursor', 'pointer')
     .on('mouseover', symbolMouseover)
-    .on('mouseleave', symbolMouseleave);
+    .on('mouseleave', symbolMouseleave)
+    .on('click', e => radialButtonClicked(e, attentions, tokens, layer, head));
 
   radialSymbol.append('image')
     .attr('href', '/figures/radial-symbol.svg')
@@ -573,6 +610,7 @@ const addButtons = (nameGroup) => {
     .style('pointer-events', 'none');
 
   let arcSymbol = radialSymbol.clone(true)
+    .attr('class', 'arc-symbol')
     .attr('transform', `translate(${30}, ${0})`);
 
   arcSymbol.select('rect')
@@ -616,6 +654,7 @@ export const removeDependencyComparison = (svg) => {
 export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attentions,
   saliencies, SVGHeight, existingLinkSet, tokenXs, textTokenPadding, textTokenWidths) => {
   const attentionRowGap = 10;
+  let tokens = saliencies.tokens.map(d => { return { 'token': d.token }; });
 
   let oldTranslate = svg.select('.token-group')
     .attr('transform');
@@ -784,7 +823,8 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
       .text(`layer ${topHeads[attentionGroupID].id.layer}
           head ${topHeads[attentionGroupID].id.head}`);
     
-    addButtons(nameGroup);
+    addButtons(nameGroup, attentions, tokens, topHeads[attentionGroupID].id.layer,
+      topHeads[attentionGroupID].id.head);
 
     let curHeight = newTranslateY + svg.select(`#attention-group-${attentionGroupID}`)
       .node().getBBox().height;
