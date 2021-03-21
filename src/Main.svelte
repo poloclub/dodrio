@@ -127,18 +127,35 @@
   .instance-container {
     border-bottom: solid 1px $gray-border;
     width: 100%;
-    height: 100%;
-    // height: 50%;
+    // height: 100%;
+    height: 50%;
     overflow: hidden;
     box-sizing: border-box;
+  }
+
+  .lower-container {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: row;
   }
 
   .graph-container {
     //border: solid 1px $gray-border;
     width: 100%;
-    // height: 100%;
+    height: 100%;
     overflow: hidden;
     box-sizing: border-box;
+  }
+
+  .lower-atlas-container {
+    width: 60%;
+    height: 100%;
+    overflow: hidden;
+    box-sizing: border-box;
+    border-left: solid 1px $gray-border;
   }
 
   .atlas-container {
@@ -184,10 +201,18 @@
         <Dependency />
       </div>
 
-      <!-- Graph View -->
-      <div class='graph-container' bind:this={graphViewDIV} >
-        <!-- <GraphView /> -->
+      
+      <div class='lower-container'>
+        <!-- Graph View -->
+        <div class='graph-container' bind:this={graphViewDIV} >
+          <GraphView />
+        </div>
+
+        <div class='lower-atlas-container '>
+
+        </div>
       </div>
+
 
       <!-- Map view -->
       <!-- <div class='atlas-container' bind:this={mapViewDIV}>

@@ -1,9 +1,7 @@
 <script>
   import { graphViewConfigStore, hoverTokenStore, wordToSubwordMapStore } from './store';
-  import GraphMatrix from './GraphMatrix.svelte';
   import * as d3 from 'd3';
   import { onMount } from 'svelte';
-  import { Circle } from 'svelte-loading-spinners';
   
   // Shared states
   let graphViewCompConfig = undefined;
@@ -22,8 +20,6 @@
   let curHoverToken = null;
   
   // View configs
-  const rightListWidth = 150;
-
   const SVGPadding = {top: 3, left: 3, right: 3, bottom: 3};
 
   const minNodeRadius = 19;
@@ -58,26 +54,12 @@
   let linkColor = 'hsl(0, 0%, 76%)';
   let linkHoverColor = 'hsl(358, 94%, 73%)';
 
-  // Head panel variables
-  let curHeadMode = 'gradient';
-  let relevantAttentions = [];
-  const listKIncreasement = 10;
-  const initListK = 20;
-  let listK = initListK;
-
   // Control panel variables
   let settingIconActive = false;
 
   // Data
   let mounted = false;
   let attentionData = null;
-  let gradSortedIndexes = undefined;
-  let semanticSortedIndexes = undefined;
-  let syntacticSortedIndexes = undefined;
-
-  // Spinner options
-  let showSpinner = false;
-  let lastScrollBotTime = 0;
 
   const ease = d3.easeCubicInOut;
   const animationTime = 300;
@@ -129,10 +111,6 @@
 
   const padZeroLeft = (num, digit) => {
     return Array(Math.max(digit - String(num).length + 1, 0)).join(0) + num;
-  };
-
-  const padZeroRight = (num, digit) => {
-    return num + Array(Math.max(digit - String(num).length + 1, 0)).join(0);
   };
 
   const drag = () => {
@@ -187,63 +165,6 @@
     } else {
       return {top: d.y, left: d.x};
     }
-  };
-
-  const bindCheckBox = (simulation, links) => {
-    // Border checkbox
-    let borderCheckBox = d3.select('#checkbox-border')
-      .property('checked', config.borderConstraint);
-
-    borderCheckBox.on('change', (event) => {
-      config.borderConstraint = event.target.checked;
-      simulation.alpha(0.2).restart();
-    });
-
-    // Hidden links
-    let hiddenLinkCheckBox = d3.select('#checkbox-hidden-link')
-      .property('checked', config.showHiddenLink);
-    
-    hiddenLinkCheckBox.on('change', (event) => {
-      config.showHiddenLink = event.target.checked;
-      d3.select(graphSVG)
-        .select('g.text-link-group')
-        .style('visibility', config.showHiddenLink ? 'visible' : 'hidden');
-
-      d3.select(graphSVG)
-        .select('g.text-hidden-link-group')
-        .style('visibility', config.showHiddenLink ? 'visible' : 'hidden');
-    });
-
-    // Hidden nodes
-    let hiddenNodeCheckBox = d3.select('#checkbox-hidden-node')
-      .property('checked', config.showHiddenNode);
-    
-    hiddenNodeCheckBox.on('change', (event) => {
-      config.showHiddenNode = event.target.checked;
-      d3.select(graphSVG)
-        .select('g.hidden-node-group')
-        .style('visibility', config.showHiddenNode ? 'visible' : 'hidden');
-      simulation.alpha(0.05).restart();
-    });
-
-    // Automatic attention link strength checkbox
-    let autoCheckBox = d3.select('#checkbox-auto-attention')
-      .property('checked', config.autoAttention);
-    
-    autoCheckBox.on('change', (event) => {
-      config.autoAttention = event.target.checked;
-
-      if (config.autoAttention) {
-        simulation.force('attentionLink', d3.forceLink(links)
-          .id(d => d.id));
-        simulation.alpha(0.3).restart();
-      } else {
-        simulation.force('attentionLink')
-          .strength(forceStrength.attention);
-        simulation.alpha(0.3).restart();
-      }
-    });
-
   };
 
   const bindSlider = (name, min, max, defaultValue, nodeRadiusScale=null) => {
@@ -1156,71 +1077,6 @@
     return curAttentionData;
   };
 
-  /**
-   * Load attention matrices from files.
-   */
-  const loadAttentionMatrix = () => {
-    // Compute the current indexes based on the current mode
-    let indexes = [];
-    switch (curHeadMode) {
-    case 'gradient':
-      for (let i = 0; i < Math.min(listK, gradSortedIndexes.length); i++) {
-        indexes.push(gradSortedIndexes[i][1]);
-      }
-      break;
-    case 'semantic':
-      break;
-    case 'syntactic':
-      break;
-    }
-
-    // Collect attention matrices based on the sorted index
-    let relevantAttentions = [];
-    indexes.forEach(d => {
-      let curLayer = d[0];
-      let curHead = d[1];
-      relevantAttentions.push({
-        attention: attentionData[curLayer][curHead].slice(0, tokenSize).map(
-          d => d.slice(0, tokenSize)
-        ),
-        layer: curLayer,
-        head: curHead
-      });
-    });
-
-    return relevantAttentions;
-  };
-
-  const listItemClicked = (layer, head) => {
-    curLayer = layer;
-    curHead = head;
-    console.log(curLayer, curHead);
-  };
-
-  const listScrolled = (e) => {
-    let listElem = e.target;
-
-    // Check if users have reached the bottom of the list
-    // Check the time of last scrolling to bottom to avoid double counting
-    if (listElem.scrollTop + listElem.offsetHeight === listElem.scrollHeight){
-      
-      let curTime = new Date().getTime();
-      if (curTime - lastScrollBotTime > 800) {
-        lastScrollBotTime = curTime;
-        
-        if (listK < gradSortedIndexes.length) {
-          // Load more heads to the list
-          listK += listKIncreasement;
-          showSpinner = true;
-          d3.timeout(() => {
-            relevantAttentions = loadAttentionMatrix();
-            showSpinner = false;
-          }, 500);
-        }
-      }
-    }
-  };
-
   const settingIconClicked = () => {
     if (settingIconActive) {
       settingIconActive = false;
@@ -1292,9 +1148,9 @@
       tokenSize = saliencyData[instanceID].tokens.length;
     }
 
-    gradSortedIndexes = await d3.json('/data/sst2-sorted-grad-heads.json');
-    gradSortedIndexes = gradSortedIndexes[instanceID];
-    relevantAttentions = loadAttentionMatrix();
+    // gradSortedIndexes = await d3.json('/data/sst2-sorted-grad-heads.json');
+    // gradSortedIndexes = gradSortedIndexes[instanceID];
+    // relevantAttentions = loadAttentionMatrix();
     // console.log(relevantAttentions, saliencyData);
     // console.log(tokenSize);
 
@@ -1310,7 +1166,7 @@
         // Update the height and width
         graphViewCompConfig = value;
         SVGHeight = graphViewCompConfig.compHeight;
-        SVGWidth = graphViewCompConfig.compWidth - rightListWidth;
+        SVGWidth = graphViewCompConfig.compWidth;
         renderGraph();
       }
     }
@@ -1320,12 +1176,6 @@
     wordToSubwordMap = value;
   });
 
-  const headModeClicked = (e) => {
-    let newMode = e.target.dataset.mode;
-    if (newMode !== curHeadMode) {
-      curHeadMode = newMode;
-    }
-  };
 
 </script>
 
@@ -1346,16 +1196,6 @@
     margin-right: 50px;
   }
 
-  .checkbox {
-    display: flex;
-    flex-direction: row;
-    align-items: baseline;
-    margin-bottom: 5px;
-
-    input {
-      margin-right: 7px;
-    }
-  }
 
   :global(.node-circle) {
     stroke: #fff;
@@ -1377,47 +1217,6 @@
     display: none;
   }
 
-  .list {
-    background: hsl(0, 0%, 98%);
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding: 0 0 0 0;
-    overflow-y: hidden;
-    overflow-x: hidden;
-    border-left: 1px solid $gray-border;
-  }
-
-  .list-title {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 10px 5px 10px 5px;
-    position: sticky;
-    top: 0px;
-    width: 100%;
-    background: hsl(0, 0%, 98%);
-    border-bottom: 1px solid $gray-border;
-    font-size: 0.93rem;
-    cursor: default;
-  }
-
-  .list-title-text {
-    font-size: 1.1rem;
-    margin-bottom: 5px;
-  }
-
-  .list-title-icons {
-    display: flex;
-    flex-direction: row;
-
-    :not(:last-child) {
-      margin-right: 10px;
-    }
-  }
-
   .icon-wrapper {
     width: 20px;
     height: 20px;
@@ -1431,8 +1230,8 @@
     color: hsl(0, 0%, 60%, 80%);
 
     &.active {
-      color: $blue-icon;
-      border: 2px solid $blue-icon;
+      color: $brown-icon;
+      border: 2px solid $brown-icon;
     }
 
     :global(svg) {
@@ -1440,48 +1239,11 @@
     }
   }
 
-  .list-items {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    overflow-y: scroll;
-    overflow-x: hidden;
-    padding-bottom: 10px;
-  }
-
-  .list-item {
-    padding: 14px 0 6px 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-start;
-    align-items: center;
-    width: 100%;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: background 80ms ease-in-out;
-
-    &:hover {
-      background: hsla(0, 0%, 0%, 0.05);
-    }
-
-    &.selected {
-      background: hsla(0, 0%, 0%, 0.1);
-    }
-  }
-
-  .spinner-container {
-    padding: 10px 0 10px 0;
-    position: relative;
-  }
-
-  .paused {
-    visibility: hidden;
-    
-    :global(.circle) {
-      animation-play-state: paused;
-    }
+  .graph-label {
+    position: absolute;
+    color: hsl(0, 0%, 50%);
+    font-size: 1.3rem;
+    margin: 5px 20px 0 20px;
   }
   
   .svg-container {
@@ -1490,8 +1252,9 @@
 
   .svg-control-panel {
     position: absolute;
-    top: 0;
+    top: 40px;
     left: 0;
+    width: 200px;
     cursor: default;
 
     display: flex;
@@ -1499,21 +1262,20 @@
     align-items: center;;
     justify-content: flex-start;
 
-    font-size: 0.9rem;
+    font-size: 0.9em;
     border-radius: 5px;
-    border: 1px solid hsl(0, 0%, 93.3%);
-    box-shadow: 0 3px 3px hsla(0, 0%, 0%, 0.05);
+    border: 1px solid change-color($brown-dark, $lightness: 90%);
+    box-shadow: 0 3px 3px change-color($brown-dark, $alpha: 0.05);
     background: hsla(0, 0%, 100%, 0.65);
 
     .name {
-      font-size: 1rem;
-      padding: 5px 10px;
+      font-size: 1em;
+      width: 94%;
+      padding: 5px 0px;
+      display: flex;
+      flex-direction: row;
+      justify-content: space-around;
     }
-
-    // .drop-down {
-    //   font-size: 0.9rem;
-    //   padding: 5px 10px;
-    // }
   }
 
   .sep-line-horizontal {
@@ -1529,6 +1291,7 @@
   }
 
   select {
+    height: 1.8em;
     background: inherit;
     border-color: hsla(0, 0%, 0%, 0);
     padding: 0 1em 0 0.4em;
@@ -1536,7 +1299,7 @@
     &.select-num {
       padding: 0 8px 0 0;
       height: auto;
-      border-bottom: 3px solid change-color($blue-icon, $alpha: 0.2);
+      border-bottom: 3px solid change-color($brown-icon, $alpha: 0.2);
     }
   }
 
@@ -1544,9 +1307,13 @@
     top: 50%;
   }
 
+  .select:not(.is-multiple) {
+    height: 1.8em;
+  }
+
   .select:not(.is-multiple):not(.is-loading)::after {
     right: 0.2em;
-    border-color: $blue-icon;
+    border-color: $brown-icon;
   }
 
   .select:not(.is-multiple).select-num-div {
@@ -1567,27 +1334,28 @@
     align-items: center;
     justify-content: space-around;
     width: 94%;
+    padding: 3px 0;
   }
 
   .setting-icon {
     padding: 0.1em 0.4em;
     margin: 0 0.2em;
     font-size: 1.1em;
-    color: $blue-icon;
+    color: $brown-icon;
     cursor: pointer;
     border-radius: 3px;
 
     transition: background 100ms ease-in-out;
 
     &:hover {
-      background: change-color($blue-icon, $alpha: 0.1);
+      background: change-color($brown-icon, $alpha: 0.1);
     }
 
     &.active {
-      background: change-color($blue-icon, $alpha: 0.2);
+      background: change-color($brown-icon, $alpha: 0.2);
 
       &:hover {
-        background: change-color($blue-icon, $alpha: 0.2);
+        background: change-color($brown-icon, $alpha: 0.2);
       }
     }
   }
@@ -1646,8 +1414,8 @@
   .slider-value {
     border-radius: 3px;
     padding: 0 3px;
-    background: change-color($blue-icon, $alpha: 0.2);
-    color: change-color($blue-icon, $lightness: 40%);
+    background: change-color($brown-icon, $alpha: 0.2);
+    color: change-color($brown-icon, $lightness: 40%);
   }
 
 </style>
@@ -1656,25 +1424,36 @@
 <div class='graph-view'>
 
   <div class='svg-container'>
+
+    <div class='graph-label'>
+      Attention Weights
+    </div>
+
     <!-- Control panel on top of the SVG -->
     <div class='svg-control-panel'>
       <div class='name'>
-        Layer 
-        <div class='select select-num-div' style='margin-right: 0.5em;'>
-          <select name='layer' class='select-num' id='select-layer'>
-            {#each [...Array(12).keys()] as num}
-              <option value={num}>{num}</option>
-            {/each}
-          </select>
+        <div>
+          Layer 
+          <div class='select select-num-div'>
+            <select name='layer' class='select-num' id='select-layer'>
+              {#each [...Array(12).keys()] as num}
+                <option value={num}>{num}</option>
+              {/each}
+            </select>
+          </div>
         </div>
-        Head
-        <div class='select select-num-div'>
-          <select name='layer' class='select-num' id='select-head'>
-            {#each [...Array(12).keys()] as num}
-              <option value={num}>{num}</option>
-            {/each}
-          </select>
+
+        <div>
+          Head
+          <div class='select select-num-div'>
+            <select name='layer' class='select-num' id='select-head'>
+              {#each [...Array(12).keys()] as num}
+                <option value={num}>{num}</option>
+              {/each}
+            </select>
+          </div>
         </div>
+
       </div>
 
       <div class='sep-line-horizontal'></div>
@@ -1776,64 +1555,9 @@
         
       </div>
 
-
     </div>
-
 
     <svg class='graph-svg' bind:this={graphSVG}></svg>
-  </div>
-
-  <div class='list' style='width: {rightListWidth + 'px'};'>
-
-    <div class='list-title'>
-      <div class='list-title-text'>
-        Relevant Heads
-      </div>
-
-      <div class='list-title-icons'>
-        <div class='icon-wrapper active' title='Sorted by semantics'
-          data-mode='semantic'
-          on:click={headModeClicked}
-        >
-          <i class="fas fa-lightbulb"></i> 
-        </div>
-
-        <div class='icon-wrapper' title='Sorted by syntactic'
-          data-mode='syntactic'
-          on:click={headModeClicked}
-        >
-          <i class="fas fa-font"></i> 
-        </div>
-
-        <div class='icon-wrapper' title='Sorted by gradients'
-          on:click={headModeClicked}
-          data-mode='gradient'
-        >
-          <i class="fas fa-adjust"></i> 
-        </div>
-      </div>
-
-    </div>
-
-    <div class='list-items' on:scroll={listScrolled}>
-
-      {#each relevantAttentions as item}
-        <div class='list-item'
-          class:selected={item.layer === curLayer && item.head === curHead}
-          on:click={() => listItemClicked(item.layer, item.head)}
-        >
-          <GraphMatrix curAttention={item.attention}/>
-          <div class='list-item-text'>
-            Layer {item.layer} Head {item.head}
-          </div>
-        </div>
-      {/each}
-
-      <div class='spinner-container' class:paused={!showSpinner}>
-        <Circle size="25" color="hsl(205, 87%, 61%)" unit="px" duration="1s" />
-      </div>
-
-    </div>
   </div>
 
 </div>

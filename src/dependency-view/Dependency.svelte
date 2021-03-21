@@ -912,7 +912,7 @@
     justify-content: flex-end;
 
     border-radius: 5px;
-    border: 1px solid change-color($brown-dark, $alpha: 0.2);
+    border: 1px solid change-color($brown-dark, $lightness: 90%);
     margin-right: 5px;
 
     &:hover {
@@ -920,7 +920,7 @@
     }
 
     &--highlight {
-      border: 1px solid change-color($brown-dark, $alpha: 0.4);
+      border: 1px solid change-color($brown-dark, $lightness: 70%);
       background: change-color($brown-dark, $alpha: 0.1);
 
       &:hover {
