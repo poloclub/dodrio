@@ -1070,4 +1070,4 @@
   
 </div>
 
-<RadialModal on:xClicked={console.log('x crossed')}/>
+<RadialModal />

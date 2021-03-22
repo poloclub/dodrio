@@ -108,30 +108,32 @@
       .data(atlasData)
       .join('g')
       .attr('class', 'donut')
+      .style('cursor', 'pointer')
       .attr('transform', d => `translate(${d.head * (maxOutRadius * 2 + adjustedRowGap)},
         ${(layerNum - d.layer - 1) * (maxOutRadius * 2 + adjustedColGap)})`);
 
     // Draw the donuts
     donuts.each((d, i, g) => drawDonut(d, i, g, scales));
 
-    donuts.on('mouseover', (e, d) => {
-      // Show the tooltip
-      let node = e.currentTarget;
-      let position = node.getBoundingClientRect();
-      let curWidth = position.right - position.left;
+    donuts.on('mouseover',
+      (e, d) => {
+        // Show the tooltip
+        let node = e.currentTarget;
+        let position = node.getBoundingClientRect();
+        let curWidth = position.right - position.left;
 
-      let tooltipCenterX = position.x + curWidth / 2;
-      let tooltipCenterY = position.y - 40;
+        let tooltipCenterX = position.x + curWidth / 2;
+        let tooltipCenterY = position.y - 40;
 
-      tooltipConfig.html = `Layer ${d.layer + 1} Head ${d.head + 1}`;
-      tooltipConfig.width = 130;
-      tooltipConfig.maxWidth = 130;
-      tooltipConfig.left = tooltipCenterX - tooltipConfig.width / 2;
-      tooltipConfig.top = tooltipCenterY;
-      tooltipConfig.fontSize = '0.8em';
-      tooltipConfig.show = true;
-      tooltipConfigStore.set(tooltipConfig);
-    })
+        tooltipConfig.html = `Layer ${d.layer + 1} Head ${d.head + 1}`;
+        tooltipConfig.width = 130;
+        tooltipConfig.maxWidth = 130;
+        tooltipConfig.left = tooltipCenterX - tooltipConfig.width / 2;
+        tooltipConfig.top = tooltipCenterY;
+        tooltipConfig.fontSize = '0.8em';
+        tooltipConfig.show = true;
+        tooltipConfigStore.set(tooltipConfig);
+      })
       .on('mouseleave', () => {
         tooltipConfig.show = false;
         tooltipConfigStore.set(tooltipConfig);
@@ -361,20 +363,86 @@
     position: relative;
   }
 
-  .lower-atlas-label {
+  .control-row {
     position: absolute;
+    top: 0;
+    left: 0;
+    cursor: default;
+    padding-top: 5px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    user-select: none;
+    font-size: 0.9rem;
+    z-index: 5;
+  }
+
+  .lower-atlas-label {
     color: hsl(0, 0%, 50%);
     font-size: 1.3rem;
-    margin: 5px 20px 0 20px;
+    margin: 0 20px 0 20px;
+  }
+
+  .expand-button {
+    padding: 0 0.4em;
+    height: 1.8em;
+    font-size: 1em;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  .select-row {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+
+    border-radius: 5px;
+    border: 1px solid change-color($brown-dark, $lightness: 90%);
+    margin-right: 5px;
+
+    &:hover {
+      background: change-color($brown-dark, $alpha: 0.05);
+    }
+  }
+
+  .icon-wrapper {
+    margin-right: 5px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    opacity: 0.5;
+
+    img {
+      height: 1.2em;
+    }
   }
 
 </style>
 
 <div class='atlas-view' bind:this={viewContainer}>
 
-  <div class='lower-atlas-label'>
-    Attention Head Overview
+  <div class='control-row'>
+
+    <div class='lower-atlas-label'>
+      Attention Head Overview
+    </div>
+
+    <div class='select-row'>
+      <div class='relation-container' on:click={console.log('clicked')}>
+        <div class='expand-button'>
+          <div class='icon-wrapper'>
+            <img src='/figures/expand-outline.svg' alt='expanding icon'>
+          </div>
+          Show Detail
+        </div>
+      </div>
+    </div>
+
   </div>
+
 
   <div class='svg-container'>
 

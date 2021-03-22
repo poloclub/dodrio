@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { mapViewConfigStore, attentionHeadColorStore } from './store';
+  import { mapViewConfigStore, sideStore, attentionHeadColorStore } from './store';
   import { createEventDispatcher } from 'svelte';
   import * as d3 from 'd3';
 
@@ -9,6 +9,8 @@
   let attentions = null;
   let saliencies = null;
   let tokenSize = null;
+
+  let sideInfo = null;
 
   let viewContainer = null;
 
@@ -24,12 +26,10 @@
   let SVGHeight = 800;
 
   let instanceViewConfig = undefined;
-  let SVGInitialized = false;
 
-  const SVGPadding = {top: 3, left: 10, right: 10, bottom: 3};
+  const SVGPadding = {top: 40, left: 10, right: 10, bottom: 3};
 
   const ease = d3.easeCubicInOut;
-  const animationTime = 300;
 
   const round = (num, decimal) => {
     return Math.round((num + Number.EPSILON) * (10 ** decimal)) / (10 ** decimal);
@@ -39,82 +39,30 @@
     return Array(Math.max(digit - String(num).length + 1, 0)).join(0) + num;
   };
 
-  const create2DColorLegend = () => {
-
-    let canvasX = 750;
-    let canvasY = 100;
-    let canvasWidth = 50;
-    let canvasHeight = 50;
-  
-    let canvas = d3.select(viewContainer)
-      .select('.legend-canvas-container')
-      .style('top', `${canvasY}px`)
-      .style('left', `${canvasX}px`)
-      .append('canvas')
-      .attr('class', 'legend-canvas')
-      .attr('width', canvasWidth)
-      .attr('height', canvasHeight);
-    
-    let context = canvas.node().getContext('2d');
-    let image = context.createImageData(canvasWidth, canvasHeight);
-
-    // Create the color scale
-    // Row: red <== purple ==> Blue
-    // Column: high luminance <==> low luminance
-    let hueScale = d3.scaleLinear()
-      .domain([0, 0.5, 1])
-      .range([red, purple, blue]);
-
-    let luminanceScale = d3.scaleLinear()
-      .domain([0, 1])
-      .range([40, 130]);
-
-    let alphaScale = d3.scaleLinear()
-      .domain([0, 1])
-      .range([1, 0.05]);
-
-    for (let i = 0; i < canvasWidth * canvasHeight * 4; i+=4) {
-      let pixelIndex = Math.floor(i / 4);
-      let row = Math.floor(pixelIndex / canvasHeight);
-      let column = pixelIndex % canvasWidth;
-
-      // console.log(row, column);
-
-      let color = d3.hcl(hueScale(column / (canvasWidth - 1)));
-      color.opacity = alphaScale(row / (canvasHeight - 1));
-
-      color = d3.rgb(color);
-      
-      image.data[i] = color.r;
-      image.data[i + 1] = color.g;
-      image.data[i + 2] = color.b;
-      image.data[i + 3] = color.opacity * 255;
-    }
-
-    context.putImageData(image, 0, 0);    
-  };
-
   const createGraph = () => {
 
     const layerNum = attentions.length;
     const headNum = attentions[0].length;
+    const layerNameWidth = 47;
 
-    let availableWidth = SVGWidth - 210 - SVGPadding.left - SVGPadding.right;
-    let availableHeight = SVGHeight - 70 - SVGPadding.top - SVGPadding.bottom;
+    console.log(SVGWidth, SVGHeight);
+
+    let availableWidth = SVGWidth - 210 - layerNameWidth - SVGPadding.left - SVGPadding.right;
+    let availableHeight = SVGHeight - SVGPadding.top - SVGPadding.bottom;
 
     let availableLength = Math.min(availableHeight, availableWidth);
     console.log(SVGHeight, availableLength, availableWidth, availableHeight);
-    const gridGap = 5;
+    const gridGap = 8;
 
-    const gridLength = Math.floor((availableLength - (layerNum - 1) * gridGap) / layerNum);
+    const gridLength = Math.floor((availableHeight - (layerNum - 1) * gridGap) / layerNum);
     const maxOutRadius = gridLength / 2;
     const minOutRadius = 10;
 
-    let adjustedRowGap = Math.floor((availableWidth - headNum * gridLength) / (layerNum + 1));
-    let adjustedColGap = Math.floor((availableHeight - layerNum * gridLength) / (layerNum + 1));
+    let adjustedRowGap = Math.floor((availableWidth - maxOutRadius - headNum * gridLength) / (layerNum - 1));
+    let adjustedColGap = Math.floor((availableHeight - layerNum * gridLength) / (layerNum - 1));
 
     svg = d3.select(svg)
-      .attr('width', availableWidth)
+      .attr('width', availableWidth + layerNameWidth)
       .attr('height', availableHeight);
 
     // Add a border
@@ -127,7 +75,7 @@
 
     let donutGroup = svg.append('g')
       .attr('class', 'donut-group')
-      .attr('transform', `translate(${SVGPadding.left + maxOutRadius}, ${maxOutRadius})`);
+      .attr('transform', `translate(${SVGPadding.left + maxOutRadius + layerNameWidth}, ${maxOutRadius})`);
     
     // Create color scale
     let hueScale = d3.scaleLinear()
@@ -159,10 +107,48 @@
       .join('g')
       .attr('class', 'donut')
       .attr('transform', d => `translate(${d.head * (maxOutRadius * 2 + adjustedRowGap)},
-        ${d.layer * (maxOutRadius * 2 + adjustedColGap)})`);
+        ${(layerNum - d.layer - 1) * (maxOutRadius * 2 + adjustedColGap)})`)
+      .style('pointer-events', 'fill')
+      .style('cursor', 'pointer')
+      .on('click', (e, d) => {
+        sideInfo.show = true;
+        sideInfo.attention = attentions[d.layer][d.head];
+        sideInfo.tokens = saliencies.tokens.map(d => { return { 'token': d.token }; });
+        sideInfo.layer = d.layer;
+        sideInfo.head = d.head;
+        sideStore.set(sideInfo);
+      });
 
     // Draw the donuts
     donuts.each((d, i, g) => drawDonut(d, i, g, scales));
+
+    // Draw horizontal lines between rows
+    donutGroup.selectAll('g.row-line-group')
+      .data(Array(layerNum - 1).fill(0).map( (_, i) => i))
+      .join('g')
+      .attr('class', 'row-line-group')
+      .append('path')
+      .attr('d', d => {
+        return `M${-maxOutRadius}
+        ${(layerNum - d - 1 - 1/2) * (maxOutRadius * 2 + adjustedColGap)}
+        L${headNum * (maxOutRadius * 2 + adjustedRowGap) - maxOutRadius}
+        ${(layerNum - d - 1 - 1/2) * (maxOutRadius * 2 + adjustedColGap)}`;
+      })
+      .style('stroke', 'hsla(0, 0%, 0%, 0.1)');
+
+    // Draw the label names
+    let nameGroup = svg.append('g')
+      .attr('class', 'name-group')
+      .attr('transform', `translate(${SVGPadding.left}, ${maxOutRadius})`);
+    
+    nameGroup.selectAll('g.layer-name-group')
+      .data(Array(layerNum).fill(0).map( (_, i) => i))
+      .join('g')
+      .attr('class', 'layer-name-group')
+      .attr('transform', d => `translate(${layerNameWidth - 10},
+        ${(layerNum - d - 1) * (maxOutRadius * 2 + adjustedColGap)})`)
+      .append('text')
+      .text(d => d > 2 ? d + 1 : `Layer ${d + 1}`);
 
     console.log(atlasData);
 
@@ -183,6 +169,14 @@
     let outRadius = scales.outRadiusScale(d.confidence);
     let ringRadius = scales.ringRadiusScale(d.confidence);
     let inRadius = Math.max(0, outRadius - ringRadius);
+
+    // Draw an invisible circle for interaction
+    donut.append('circle')
+      .attr('cx', 0)
+      .attr('cy', 0)
+      .attr('r', outRadius)
+      .style('fill', 'white')
+      .style('opacity', 0);
 
     // Draw the rings
     // Arc's center is at (0, 0) on the local coordinate
@@ -215,7 +209,7 @@
 
     // Create the links
     let links = [];
-    let threshold = 0;
+    let threshold = 0.2;
 
     for (let i = 0; i < tokenSize; i++) {
       for (let j = 0; j < tokenSize; j++) {
@@ -231,7 +225,7 @@
       }
     }
 
-    links = links.sort((a, b) => b.attention - a.attention).slice(0, 150);
+    // links = links.sort((a, b) => b.attention - a.attention).slice(0, 150);
 
     // Define link width scale
     let linkWidthScale = d3.scaleLinear()
@@ -355,6 +349,8 @@
     }
   });
 
+  sideStore.subscribe(value => {sideInfo = value;});
+
   mapViewConfigStore.subscribe(async value => {
     if (value.compHeight !== undefined && value.compWidth !== undefined){
       if (instanceViewConfig === undefined ||
@@ -408,12 +404,30 @@
     height: 100%;
     overflow: hidden;
     transition: max-width 1000ms ease-in-out;
+
+    border-radius: 10px 0 0 10px;
+    border-bottom: 1px solid hsla(0, 0%, 0%, 0.1);
+    box-shadow: -3px -3px 3px hsla(0, 0%, 0%, 0.1);
+    background: change-color($color: $brown-icon, $lightness: 99%);
+
+    .triangle {
+      content: "";
+      position: absolute;
+      top: 500px;
+      left: 0;
+      border-top: 20px solid transparent;
+      border-bottom: 20px solid transparent;
+      border-left: 20px solid hsl(0, 0%, 95%);
+    }
   }
 
   .legend-container {
     padding-bottom: 25px;
+    padding-top: 50px;
+    height: 100%;
     display: flex;
     flex-direction: column;
+    justify-content: space-between;
     pointer-events: none;
 
     :first-child {
@@ -421,45 +435,21 @@
     }
   }
 
-  .badge {
-    position: absolute;
-    left: 0px;
-    top: 10px;
-    font-size: 1.2em;
-    z-index: 2;
-
+  .bottom-images {
     display: flex;
-    flex-direction: row;
-    align-items: center;;
-    justify-content: flex-start;
+    flex-direction: column;
 
-    border-radius: 0 5px 5px 0;
-    border-top: 1px solid hsl(0, 0%, 90%);
-    border-right: 1px solid hsl(0, 0%, 90%);
-    border-bottom: 1px solid hsl(0, 0%, 90%);
-    background: hsla(0, 0%, 100%, 1);
-    padding: 8px 15px;
-
-    cursor: pointer;
-
-    .icon-wrapper {
-      margin-right: 10px;
-      display: flex;
-      flex-direction: row;
-      align-items: center;
-
-      img {
-        height: 1.2em;
-      }
-    }
-
-    &:hover {
-      background: hsla(0, 0%, 96%, 1);
+    :first-child {
+      margin-bottom: 35px;
     }
   }
 
   .atlas-svg-container {
     position: relative;
+
+    svg {
+      border-right: 1px solid hsl(0, 0%, 90%);
+    }
   }
 
   .head-arrow {
@@ -474,20 +464,90 @@
     pointer-events: none;
   }
 
+  .control-row {
+    position: absolute;
+    top: 0;
+    left: 0;
+    cursor: default;
+    padding-top: 5px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    user-select: none;
+    font-size: 0.9rem;
+    z-index: 5;
+  }
+
+  .lower-atlas-label {
+    color: hsl(0, 0%, 50%);
+    font-size: 1.3rem;
+    margin: 0 20px 0 10px;
+    display: flex;
+    flex-direction: row;
+  }
+
+  .expand-button {
+    padding: 3px 5px;
+    font-size: 1em;
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+  }
+
+  .select-row {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+
+    border-radius: 5px;
+    border: 1px solid change-color($brown-dark, $lightness: 90%);
+    margin-right: 10px;
+
+    &:hover {
+      background: change-color($brown-dark, $alpha: 0.05);
+    }
+  }
+
+  .icon-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    opacity: 0.5;
+    transform: rotate(45deg);
+
+    img {
+      height: 1.2em;
+    }
+  }
+
+  .hidden {
+    visibility: hidden;
+  }
+
 </style>
 
 <div class='atlas-view' bind:this={viewContainer}>
 
-  <div class='badge' on:click={badgeClicked}>
-    <div class='icon-wrapper active'>
-      <!-- <i class="fas fa-chevron-right"></i> -->
-      <img src='/figures/chevron-right-solid.svg' alt='map icon'>
+  <div class='triangle' class:hidden={!sideInfo.show}></div>
+
+  <div class='control-row'>
+
+    <div class='lower-atlas-label'>
+      <div class='select-row'>
+        <div class='relation-container' on:click={console.log('clicked')}>
+          <div class='expand-button'>
+            <div class='icon-wrapper'>
+              <img src='/figures/arrow-forward-outline.svg' alt='expanding icon'>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      Attention Head Overview
     </div>
 
-    <div class='badge-title'>
-      Attention Head Map
-    </div>
-    
   </div>
 
   <div class='svg-container'>
@@ -497,13 +557,15 @@
     </div>
 
     <div class='legend-container'>
-      <img src='/figures/size-legend.png' width='160px' alt='size legend'>
-      <img src='/figures/legend.png' width='200px' alt='color legend'>
+      <div>
+        <img src='/figures/click.png' width='180px' alt='click guide'>
+      </div>
+      <div class='bottom-images'>
+        <img src='/figures/size-legend.png' width='160px' alt='size legend'>
+        <img src='/figures/legend.png' width='200px' alt='color legend'>
+      </div>
     </div>
 
   </div>
-
-  <img class='head-arrow' width=160 src='/figures/head-arrow.png' alt='head arrow'>
-  <img class='layer-arrow' height=160 src='/figures/layer-arrow.png' alt='layer arrow'>
   
 </div>

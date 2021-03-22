@@ -1,10 +1,11 @@
 <script>
   import * as d3 from 'd3';
+  import { onMount } from 'svelte';
   import { tooltipConfigStore } from './store';
 
   let tooltipConfig = {
     show: false,
-    html: '1.23',
+    html: 'null',
     left: 0,
     top: 0,
     width: 80,
@@ -42,6 +43,11 @@
     }
 
     tooltipConfig = value;
+  });
+
+  onMount(() => {
+    d3.select(tooltip).style('visibility', 'hidden');
+    tooltipConfigStore.set(tooltipConfig);
   });
 
 </script>

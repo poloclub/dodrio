@@ -4,12 +4,13 @@
   import EmbeddingView from './EmbeddingView.svelte';
   import Dependency from './dependency-view/Dependency.svelte';
   import Atlas from './Atlas.svelte';
+  import AtlasSide from './AtlasSide.svelte';
   import Tooltip from './TooltipGlobal.svelte';
   import LowerAtlas from './LowerAtlas.svelte';
   import TableView from './TableView.svelte';
   import { graphViewConfigStore, embeddingViewConfigStore, instanceViewConfigStore,
     tableViewConfigStore, mapViewConfigStore, lowerMapViewConfigStore,
-    tooltipConfigStore } from './store';
+    tooltipConfigStore, sideStore } from './store';
   import { onMount } from 'svelte';
 
 
@@ -27,6 +28,9 @@
   };
 
   tooltipConfigStore.subscribe(value => {tooltipConfig = value;});
+
+  let sideInfo = {};
+  sideStore.subscribe(value => {sideInfo = value;});
 
   let graphViewDIV = null;
   let graphViewConfig = {
@@ -89,9 +93,11 @@
     lowerMapViewConfig.compWidth = Math.floor(lowerMapViewDIV.clientWidth);
     lowerMapViewConfig.compHeight = Math.floor(lowerMapViewDIV.clientHeight);
     lowerMapViewConfigStore.set(lowerMapViewConfig);
-    // mapViewConfig.compWidth = Math.floor(mapViewDIV.clientWidth);
-    // mapViewConfig.compHeight = Math.floor(mapViewDIV.clientHeight);
-    // mapViewConfigStore.set(mapViewConfig);
+
+    // Need to offset the padding
+    mapViewConfig.compWidth = Math.floor(mapViewDIV.clientWidth - 10);
+    mapViewConfig.compHeight = Math.floor(mapViewDIV.clientHeight - 10);
+    mapViewConfigStore.set(mapViewConfig);
 
     // embeddingViewConfig.compWidth = Math.floor(embeddingViewDIV.clientWidth);
     // embeddingViewConfig.compHeight = Math.floor(embeddingViewDIV.clientHeight);
@@ -187,15 +193,30 @@
   }
 
   .atlas-container {
-    width: 100%;
+    width: 1000px;
     max-width: 100%;
     height: 100%;
     position: absolute;
     right: 0;
-    background-color: hsla(0, 100%, 100%, 1);
     transition: right 500ms ease-in-out, background-color 100ms ease-in-out;
     overflow: hidden;
     z-index: 10;
+    padding: 10px 0 0 10px;
+  }
+
+  .atlas-sidebar {
+    justify-self: flex-end;
+    background: hsl(0, 0%, 98%);
+    box-shadow: -3px 0 5px hsla(0, 0%, 0%, 0.1);
+    position: absolute;
+    right: 989px;
+    top: 300px;
+    width: 400px;
+    height: 450px;
+  }
+
+  .hidden {
+    visibility: hidden;
   }
 
   :global(.atlas-container.closed) {
@@ -245,9 +266,13 @@
 
 
       <!-- Map view -->
-      <!-- <div class='atlas-container' bind:this={mapViewDIV}>
+      <div class='atlas-container' bind:this={mapViewDIV}>
         <Atlas on:open={atlasOpened} on:close={atlasClosed}/>
-      </div> -->
+      </div>
+
+      <div class='atlas-sidebar' class:hidden={!sideInfo.show}>
+        <AtlasSide />
+      </div>
 
     </div>
 
