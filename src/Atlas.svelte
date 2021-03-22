@@ -62,6 +62,7 @@
     let adjustedColGap = Math.floor((availableHeight - layerNum * gridLength) / (layerNum - 1));
 
     svg = d3.select(svg)
+      .attr('viewbox', `0 0 ${availableWidth + layerNameWidth} ${availableHeight}`)
       .attr('width', availableWidth + layerNameWidth)
       .attr('height', availableHeight);
 
@@ -280,6 +281,12 @@
     saliencies = await d3.json(saliencyFile);
     saliencies = saliencies[instanceID];
     tokenSize = saliencies.tokens.length;
+  };
+
+  const closeClicked = () => {
+    sideInfo.show = false;
+    sideStore.set(sideInfo);
+    dispatch('close');
   };
 
   const badgeClicked = () => {
@@ -536,7 +543,7 @@
 
     <div class='lower-atlas-label'>
       <div class='select-row'>
-        <div class='relation-container' on:click={console.log('clicked')}>
+        <div class='relation-container' on:click={closeClicked}>
           <div class='expand-button'>
             <div class='icon-wrapper'>
               <img src='/figures/arrow-forward-outline.svg' alt='expanding icon'>

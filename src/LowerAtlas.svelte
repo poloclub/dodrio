@@ -431,7 +431,7 @@
     </div>
 
     <div class='select-row'>
-      <div class='relation-container' on:click={console.log('clicked')}>
+      <div class='relation-container' on:click={() => dispatch('open')}>
         <div class='expand-button'>
           <div class='icon-wrapper'>
             <img src='/figures/expand-outline.svg' alt='expanding icon'>

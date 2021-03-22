@@ -12,10 +12,13 @@
     tableViewConfigStore, mapViewConfigStore, lowerMapViewConfigStore,
     tooltipConfigStore, sideStore } from './store';
   import { onMount } from 'svelte';
+  import * as d3 from 'd3';
 
 
   // Set up the tooltip
   let tooltip = null;
+  let atlasSVGWidth = null;
+  let atlasSVGHeight = null;
 
   let tooltipConfig = {
     show: false,
@@ -69,15 +72,69 @@
   };
 
   const atlasOpened = () => {
-    mapViewDIV.style['right'] = '0';
-    mapViewDIV.style['background-color'] = 'hsla(0, 100%, 100%, 1)';
-    mapViewDIV.classList.remove('closed');
+
+    mapViewDIV.style['display'] = '';
+    mapViewDIV.style['opacity'] = '1';
+
+    // d3.select(mapViewDIV)
+    //   .transition()
+    //   .duration(200)
+    //   .ease(d3.easeCubicInOut)
+    //   .style('opacity', 1);
+
   };
 
   const atlasClosed = () => {
-    mapViewDIV.style['right'] = `-${Math.floor(mapViewConfig.compWidth) - 60}px`;
-    mapViewDIV.style['background-color'] = 'hsla(0, 100%, 100%, 0)';
-    mapViewDIV.classList.add('closed');
+
+    d3.select(mapViewDIV)
+      .select('.legend-container')
+      .style('display', 'none');
+
+    let svg =  d3.select(mapViewDIV)
+      .select('.atlas-svg-container')
+      .style('width', '100%')
+      .style('height', '100%')
+      .select('.atlas-svg');
+
+    atlasSVGWidth = svg.attr('width');
+    atlasSVGHeight = svg.attr('height');
+
+    svg.attr('width', null)
+      .attr('height', null)
+      .style('padding-top', '36px')
+      .style('padding-left', '8px')
+      .style('width', '100%')
+      .style('height', '100%');
+    
+    mapViewDIV.style['width'] = `${lowerMapViewConfig.compWidth}px`;
+    mapViewDIV.style['height'] = `${lowerMapViewConfig.compHeight}px`;
+    mapViewDIV.style['opacity'] = 0;
+
+    const transitionEnd = () => {
+      mapViewDIV.style['display'] = 'none';
+      mapViewDIV.style['width'] = '1000px';
+      mapViewDIV.style['height'] = '100%';
+
+      d3.select(mapViewDIV)
+        .select('.legend-container')
+        .style('display', null);
+
+      d3.select(mapViewDIV)
+        .select('.atlas-svg-container')
+        .style('width', null)
+        .style('height', null)
+        .select('.atlas-svg')
+        .style('padding-top', null)
+        .style('padding-left', null)
+        .style('width', null)
+        .style('height', null)
+        .attr('width', atlasSVGWidth)
+        .attr('height', atlasSVGHeight);
+
+      mapViewDIV.removeEventListener('transitionend', transitionEnd);
+    };
+
+    mapViewDIV.addEventListener('transitionend', transitionEnd);
   };
 
   onMount(() => {
@@ -198,10 +255,13 @@
     height: 100%;
     position: absolute;
     right: 0;
+    bottom: 0;
     transition: right 500ms ease-in-out, background-color 100ms ease-in-out;
     overflow: hidden;
     z-index: 10;
     padding: 10px 0 0 10px;
+
+    transition: width 1000ms ease-in-out, height 1000ms ease-in-out, opacity 1000ms ease-in-out;
   }
 
   .atlas-sidebar {
@@ -260,14 +320,14 @@
         </div>
 
         <div class='lower-atlas-container' bind:this={lowerMapViewDIV}>
-          <LowerAtlas />
+          <LowerAtlas on:open={atlasOpened}/>
         </div>
       </div>
 
 
       <!-- Map view -->
       <div class='atlas-container' bind:this={mapViewDIV}>
-        <Atlas on:open={atlasOpened} on:close={atlasClosed}/>
+        <Atlas on:close={atlasClosed}/>
       </div>
 
       <div class='atlas-sidebar' class:hidden={!sideInfo.show}>
