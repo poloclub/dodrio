@@ -60,7 +60,7 @@
     padding: 5px 5px;
     border-radius: 5px;
     opacity: 1;
-    z-index: 10;
+    z-index: 20;
     visibility: visible;
     transition: opacity 150ms, visibility 150ms;
     display: flex;

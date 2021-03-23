@@ -1,5 +1,6 @@
 <script>
-  import { graphViewConfigStore, hoverTokenStore, wordToSubwordMapStore, instanceIDStore } from './store';
+  import { graphViewConfigStore, hoverTokenStore, wordToSubwordMapStore,
+    instanceIDStore, mapHeadStore } from './store';
   import * as d3 from 'd3';
   import { onMount } from 'svelte';
   
@@ -9,6 +10,7 @@
   instanceIDStore.subscribe(value => {instanceID = value;});
   let curLayer = 9;
   let curHead = 8;
+  let mapHead = {layer: 9, head: 8};
 
   let graphSVG = null;
   let graphData = null;
@@ -280,6 +282,10 @@
         console.log(newLayerValue);
         curLayer = newLayerValue;
         updateLayerHead();
+
+        mapHead.layer = +curLayer;
+        mapHead.head = +curHead;
+        mapHeadStore.set(mapHead);
       }
     });
 
@@ -291,9 +297,33 @@
         console.log(newHeadValue);
         curHead = newHeadValue;
         updateLayerHead();
+
+        mapHead.layer = +curLayer;
+        mapHead.head = +curHead;
+        mapHeadStore.set(mapHead);
       }
     });
   };
+
+  mapHeadStore.subscribe(value => {
+    mapHead = value;
+
+    if (mapHead.layer !== curLayer || mapHead.head !== curHead) {
+      console.log('change');
+      d3.select('#select-layer')
+        .property('value', mapHead.layer);
+
+      d3.select('#select-head')
+        .property('value', mapHead.head);
+
+      curLayer = mapHead.layer;
+      curHead = mapHead.head;
+
+      updateLayerHead();
+    }
+
+  });
+  
 
   const updateNodeRadius = (nodeRadiusScale) => {
     d3.select(graphSVG)
@@ -1063,6 +1093,10 @@
     d3.select(graphSVG)
       .select('g.attention-link-group')
       .remove();
+    
+    d3.select(graphSVG)
+      .select('g.legend-group')
+      .remove();
 
     // Update the graph data
     graphData = createGraphData(curLayer, curHead);
@@ -1509,7 +1543,7 @@
           <div class='select select-num-div'>
             <select name='layer' class='select-num' id='select-layer'>
               {#each [...Array(12).keys()] as num}
-                <option value={num}>{num}</option>
+                <option value={num}>{num + 1}</option>
               {/each}
             </select>
           </div>
@@ -1520,7 +1554,7 @@
           <div class='select select-num-div'>
             <select name='layer' class='select-num' id='select-head'>
               {#each [...Array(12).keys()] as num}
-                <option value={num}>{num}</option>
+                <option value={num}>{num + 1}</option>
               {/each}
             </select>
           </div>

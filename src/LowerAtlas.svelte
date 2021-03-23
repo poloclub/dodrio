@@ -1,8 +1,7 @@
 <script>
   import { onMount } from 'svelte';
-  import Tooltip from './TooltipGlobal.svelte';
   import { lowerMapViewConfigStore, attentionHeadColorStore,
-    tooltipConfigStore } from './store';
+    tooltipConfigStore, mapHeadStore } from './store';
   import { createEventDispatcher } from 'svelte';
   import * as d3 from 'd3';
 
@@ -17,6 +16,9 @@
   tooltipConfigStore.subscribe(value => {tooltipConfig = value;});
 
   let viewContainer = null;
+  let mapHead = {layer: 9, head: 8};
+  let curLayer = 9;
+  let curHead = 8;
 
   const red = d3.hcl(23, 85, 56);
   const purple = d3.hcl(328, 85, 56);
@@ -123,9 +125,17 @@
         let curWidth = position.right - position.left;
 
         let tooltipCenterX = position.x + curWidth / 2;
-        let tooltipCenterY = position.y - 40;
+        let tooltipCenterY = position.y - 90;
 
-        tooltipConfig.html = `Layer ${d.layer + 1} Head ${d.head + 1}`;
+        tooltipConfig.html = `
+        <div class='tooltip-tb' style='display: flex; flex-direction: column;
+          justify-content: center;'>
+          <div> Layer ${d.layer + 1} Head ${d.head + 1} </div>
+          <div style='font-size: 12px; opacity: 0.6;'> Semantic: ${round(d.semantic, 2)} </div>
+          <div style='font-size: 12px; opacity: 0.6;'> Syntactic ${round(d.syntactic, 2)} </div>
+          <div style='font-size: 12px; opacity: 0.6;'> Importance: ${round(d.confidence, 2)} </div>
+        </div>
+        `;
         tooltipConfig.width = 130;
         tooltipConfig.maxWidth = 130;
         tooltipConfig.left = tooltipCenterX - tooltipConfig.width / 2;
@@ -133,10 +143,58 @@
         tooltipConfig.fontSize = '0.8em';
         tooltipConfig.show = true;
         tooltipConfigStore.set(tooltipConfig);
+
+        // Show the background rect
+        let curDonut = d3.select(e.currentTarget);
+
+        if (!curDonut.classed('selected')){
+          curDonut.select('.donut-rect')
+            .style('opacity', 1);
+        }
       })
-      .on('mouseleave', () => {
+      .on('mouseleave', (e) => {
         tooltipConfig.show = false;
         tooltipConfigStore.set(tooltipConfig);
+
+        // Hide the background rect
+        let curDonut = d3.select(e.currentTarget);
+        if (!curDonut.classed('selected')){
+          curDonut.select('.donut-rect')
+            .style('opacity', 0);
+        }
+
+      })
+      .on('click', (e) => {
+        let curDonut = d3.select(e.currentTarget);
+        if (curDonut.classed('selected')) {
+          // pass
+        } else {
+          // Restore the currently selected rect
+          let preDonut = d3.select(
+            donutGroup.select(`#donut-rect-${curLayer}-${curHead}`)
+              .node().parentNode
+          );
+
+          preDonut.select('.donut-rect')
+            .style('fill', 'hsl(0, 0%, 80%)')
+            .style('opacity', 0);
+          
+          preDonut.classed('selected', false);
+
+          // Style the new rect
+          curDonut.select('.donut-rect')
+            .style('fill', 'hsl(27, 47%, 13%)')
+            .style('opacity', 1);
+          
+          curDonut.classed('selected', true);
+
+          curLayer = +curDonut.data()[0].layer;
+          curHead = +curDonut.data()[0].head;
+
+          mapHead.layer = curLayer;
+          mapHead.head = curHead;
+          mapHeadStore.set(mapHead);
+        }
       });
 
     // Draw horizontal lines between rows
@@ -178,7 +236,58 @@
       .select('.layer-arrow')
       .style('top', `${70}px`)
       .style('left', `${availableWidth + 10}px`);
+
+    // Highlight the initial selection
+    let curDonut = d3.select(
+      donutGroup.select(`#donut-rect-${curLayer}-${curHead}`)
+        .node().parentNode
+    );
+    console.log(curDonut);
+
+    // Style the new rect
+    curDonut.select('.donut-rect')
+      .style('fill', 'hsl(27, 47%, 13%)')
+      .style('opacity', 1);
+    
+    curDonut.classed('selected', true);
   };
+
+  mapHeadStore.subscribe(value => {
+    mapHead = value;
+    console.log(mapHead, curLayer, curHead);
+
+    if (mapHead.layer !== curLayer || mapHead.head !== curHead) {
+
+      let donutGroup = svg.select('g.donut-group');
+
+      // Restore the currently selected rect
+      let preDonut = d3.select(
+        donutGroup.select(`#donut-rect-${curLayer}-${curHead}`)
+          .node().parentNode
+      );
+      
+      preDonut.select('.donut-rect')
+        .style('fill', 'hsl(0, 0%, 80%)')
+        .style('opacity', 0);
+
+      preDonut.classed('selected', false);
+
+      curLayer = mapHead.layer;
+      curHead = mapHead.head;
+
+      let curDonut = d3.select(
+        donutGroup.select(`#donut-rect-${curLayer}-${curHead}`)
+          .node().parentNode
+      );
+
+      // Style the new rect
+      curDonut.select('.donut-rect')
+        .style('fill', 'hsl(27, 47%, 13%)')
+        .style('opacity', 1);
+      
+      curDonut.classed('selected', true);
+    }
+  });
 
   const drawDonut = (d, i, g, scales) => {
     let donut = d3.select(g[i]);
@@ -186,6 +295,19 @@
     let outRadius = scales.outRadiusScale(d.confidence);
     let ringRadius = scales.ringRadiusScale(d.confidence);
     let inRadius = Math.max(0, outRadius - ringRadius);
+
+    // Draw the background rect
+    let maxLength = 2 * scales.outRadiusScale.range()[1];
+    donut.append('rect')
+      .attr('class', 'donut-rect')
+      .attr('id', `donut-rect-${d.layer}-${d.head}`)
+      .attr('x', - maxLength / 2)
+      .attr('y', - maxLength / 2)
+      .attr('rx', 5)
+      .attr('width', maxLength)
+      .attr('height', maxLength)
+      .style('fill', 'hsl(0, 0%, 80%)')
+      .style('opacity', 0);
 
     // Draw the rings
     // Arc's center is at (0, 0) on the local coordinate
@@ -230,62 +352,6 @@
     tokenSize = saliencies.tokens.length;
   };
 
-  const badgeClicked = () => {
-    if (isShown) {
-      dispatch('close');
-      isShown = false;
-
-      d3.select(viewContainer)
-        .select('.svg-container')
-        .transition('move')
-        .duration(700)
-        .ease(ease)
-        .style('opacity', 0);
-
-      // Change the badge style
-      d3.timer(() => {
-        let badge = d3.select(viewContainer)
-          .select('.badge')
-          .style('border-left', '1px solid hsl(0, 0%, 90.2%)')
-          .style('border-radius', '5px')
-          .style('box-shadow', '-3px 3px 3px hsla(0, 0%, 0%, 0.06)')
-          .style('margin-left', '5px');
-        
-        badge.select('.badge-title')
-          .style('visibility', 'hidden');
-
-        badge.select('.icon-wrapper > img')
-          .attr('src', '/figures/map-marked-alt-solid.svg');
-      }, 400);
-    } else {
-      dispatch('open');
-      isShown = true;
-
-      d3.select(viewContainer)
-        .select('.svg-container')
-        .transition('move')
-        .duration(700)
-        .ease(ease)
-        .style('opacity', 1);
-
-      // Change the badge style
-      d3.timer(() => {
-        let badge = d3.select(viewContainer)
-          .select('.badge')
-          .style('border-left', null)
-          .style('border-radius', '0 5px 5px 0')
-          .style('box-shadow', null)
-          .style('margin-left', null);
-        
-        badge.select('.badge-title')
-          .style('visibility', 'visible');
-
-        badge.select('.icon-wrapper > img')
-          .attr('src', '/figures/chevron-right-solid.svg');
-      }, 400);
-    }
-  };
-
   onMount(async () => {
     // Load the attention and atlas data
     if (attentions == null || atlasData == null || saliencies == null) {
@@ -321,7 +387,6 @@
       }
     }
   });
-  
 
 </script>
 

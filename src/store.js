@@ -51,3 +51,13 @@ export const sideStore = writable({
   layer: null,
   head: null
 });
+
+export const mapHeadStore = writable({
+  layer: 9,
+  head: 8
+});
+
+export const graphHeadStore = writable({
+  layer: 9,
+  head: 8
+});
