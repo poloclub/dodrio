@@ -14,11 +14,8 @@
   $: style = `left: ${left}px; top: ${top}px; width: ${width}px; max-width: 
               ${maxWidth}px; font-size: ${fontSize}`;
   $: tooltipShow, function() {
-    console.log('haha');
     if (tooltip === null) return;
     let selection = d3.select(tooltip);
-
-    console.log(tooltipShow);
 
     if (tooltipShow) {
       selection.style('visibility', 'visible');

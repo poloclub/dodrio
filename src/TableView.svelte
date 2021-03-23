@@ -9,13 +9,26 @@
   let tableData = [];
   let selectedInstanceId = 23;
   let currHighlightedRow = 0;
-  let mostRecentColumnSortCriterion = 'id';
+  let mostRecentColumnSortCriterion = 'true_label';
   let isEmbeddingViewUpdate = false;
 
-  let twitterLabelMap = {
-    'positive': 0,
-    'neutral': 1,
-    'negative': 2
+  let sortState = {
+    sentence: {
+      selected: false,
+      up: false
+    },
+    'true_label': {
+      selected: false,
+      up: false
+    },
+    'predicted_label': {
+      selected: false,
+      up: false
+    },
+    'logit_distance': {
+      selected: false,
+      up: false
+    }
   };
 
   let selectedRowColor = 'hsla(0, 0%, 0%, 0.1)';
@@ -32,6 +45,7 @@
       // when the instanceId store value changes from
       // another source (ie. EmbeddingView).
       if (isEmbeddingViewUpdate) {
+        console.log(mostRecentColumnSortCriterion);
         sort(mostRecentColumnSortCriterion);
       }
     }
@@ -43,9 +57,18 @@
     
     if (sortBy.col == column) {
       sortBy.ascending = !sortBy.ascending;
+      sortState[column].up = sortBy.ascending;
+      sortState = sortState;
     } else {
+      if (sortState[sortBy.col] !== undefined) {
+        sortState[sortBy.col].selected = false;
+      }
+      
       sortBy.col = column;
       sortBy.ascending = true;
+      sortState[column].selected = true;
+      sortState[column].up = true;
+      sortState = sortState;
     }
     
     let sortModifier = (sortBy.ascending) ? 1 : -1;
@@ -130,11 +153,11 @@
   }
 
   td {
-    padding-bottom: 10px;
+    padding: 0 20px 10px 20px;
   }
 
   th {
-    padding: 10px 0;
+    padding: 10px 10px;
     position: sticky;
     z-index: 100;
     top: 0;
@@ -144,13 +167,67 @@
 
     &.sentence {
       width: 61%;
+      padding: 10px 20px;
     }
 
-    &.true, &.predicted, &.error {
+    &.true {
+      width: 11%;
+      padding: 10px 15px;
+    }
+
+    &.predicted {
+      width: 15%;
+      padding: 10px 15px;
+    }
+    
+    &.error {
       width: 13%;
+      padding: 10px 15px;
     }
   }
 
+  .sentence-div {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    cursor: pointer;
+
+    &:hover img{
+      opacity: 0.5;
+    }
+
+    img {
+      margin-left: 3px;
+      width: 20px;
+      opacity: 0.1;
+
+      &.selected {
+        opacity: 1;
+      }
+    }
+  }
+
+  .true-div, .predicted-div, .error-div {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+    cursor: pointer;
+
+    &:hover img{
+      opacity: 0.5;
+    }
+
+    img {
+      margin-left: 3px;
+      width: 20px;
+      opacity: 0.1;
+
+      &.selected {
+        opacity: 1;
+      }
+    }
+  }
 
   tr:hover { 
     background-color: hsla(0, 0%, 0%, 0.05);
@@ -161,9 +238,14 @@
     background-color: hsla(0, 0%, 0%, 0.1);
   }
 
-  td.numberRow {
+  td.number-row {
     text-align: right;
   }
+
+  td.text-row {
+    text-align: left;
+  }
+
 </style>
 
 <div class='table-view'>
@@ -171,20 +253,56 @@
     <thead>
       <tr>
         <th style='display: none;' on:click={sort('id')}>id</th>
-        <th class='sentence' on:click={sort('sentence')}>Sentence</th>
-        <th class='true' on:click={sort('true_label')}>True</th>
-        <th class='predicted' on:click={sort('predicted_label')}>Predicted</th>
-        <th class='error' on:click={sort('logit_distance')}>Error</th>
+        <th class='sentence' on:click={sort('sentence')}>
+          <div class='sentence-div'>
+            Sentence
+            <img src={sortState.sentence.up ? '/figures/up.svg' : '/figures/down.svg'}
+              class:selected={sortState.sentence.selected}
+              alt='sort logo'
+            >
+          </div>
+        </th>
+
+        <th class='true' on:click={sort('true_label')}>
+          <div class='true-div'>
+            True
+            <img src={sortState['true_label'].up ? '/figures/up.svg' : '/figures/down.svg'}
+              class:selected={sortState['true_label'].selected}
+              alt='sort logo'
+            >
+          </div>
+        </th>
+
+        <th class='predicted' on:click={sort('predicted_label')}>
+          <div class='predicted-div'>
+            Predicted
+            <img src={sortState['predicted_label'].up ? '/figures/up.svg' : '/figures/down.svg'}
+              class:selected={sortState['predicted_label'].selected}
+              alt='sort logo'
+            >
+          </div>
+        </th>
+
+        <th class='error' on:click={sort('logit_distance')}>
+          <div class='error-div'>
+            Error
+            <img src={sortState['logit_distance'].up ? '/figures/up.svg' : '/figures/down.svg'}
+              class:selected={sortState['logit_distance'].selected}
+              alt='sort logo'
+            >
+          </div>
+        </th>
+
       </tr>
     </thead>
     <tbody>
       {#each tableData as row}
         <tr on:click={getInstance(this)}>
           <td style='display: none;'>{row.id}</td>
-          <td>{row.sentence}</td>
-          <td class="numberRow">{row.true_label}</td>
-          <td class="numberRow">{row.predicted_label}</td>
-          <td class="numberRow">{Number((row.logit_distance).toFixed(2))}</td>
+          <td class='text-row'>{row.sentence}</td>
+          <td class='number-row'>{row.true_label}</td>
+          <td class='number-row'>{row.predicted_label}</td>
+          <td class='number-row'>{Number((row.logit_distance).toFixed(2))}</td>
         </tr>
       {/each}
     </tbody>

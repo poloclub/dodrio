@@ -1,11 +1,12 @@
 <script>
-  import { graphViewConfigStore, hoverTokenStore, wordToSubwordMapStore } from './store';
+  import { graphViewConfigStore, hoverTokenStore, wordToSubwordMapStore, instanceIDStore } from './store';
   import * as d3 from 'd3';
   import { onMount } from 'svelte';
   
   // Shared states
   let graphViewCompConfig = undefined;
   let instanceID = 106;
+  instanceIDStore.subscribe(value => {instanceID = value;});
   let curLayer = 9;
   let curHead = 8;
 
@@ -39,16 +40,16 @@
   let tokenSize = null;
   let originalNodes = null;
 
-  let weightThreshold = 0.02;
+  let curLinkI = 1;
   let weightThresholdMin = 0.02;
-  let weightThresholdMax = 0.2;
+  let weightThresholdMax = 0.1;
   let weightThresholdSteps = 6;
   let weightThresholdGap = (weightThresholdMax - weightThresholdMin) / (weightThresholdSteps - 1);
+  let weightThreshold = weightThresholdMin + weightThresholdGap * curLinkI;
 
   let linkArrays = {};
   let simulation = null;
   let intermediateNodeMap = new Map();
-  let curLinkI = 0;
   let linkWidth = null;
 
   let linkColor = 'hsl(0, 0%, 76%)';
@@ -481,7 +482,7 @@
 
     let source = {x: sCoord.left, y: sCoord.top};
     let target = {x: tCoord.left, y: tCoord.top};
-    let center = {x: SVGWidth / 2, y: SVGHeight / 2};
+    let center = {x: SVGWidth / 2, y: SVGHeight / 2 + 50};
 
     // We need to shorten the path to leave space for arrow
     let theta = 1 - (minNodeRadius + 10) / radialRadius;
@@ -747,6 +748,57 @@
       .attr('transform', d => tickNodeForce(d, nodeRadiusScale));
   };
 
+  const drawSaliencyLegend = (legendGroup, legendPos, largestAbs,
+    leftColor='#eb2f06', rightColor='#4690C2') => {
+    // Define the gradient
+    let legendGradientDef = legendGroup.append('defs')
+      .append('linearGradient')
+      .attr('x1', 0)
+      .attr('y1', 1)
+      .attr('x2', 0)
+      .attr('y2', 0)
+      .attr('id', 'legend-gradient');
+
+    legendGradientDef.append('stop')
+      .attr('stop-color', leftColor)
+      .attr('offset', 0);
+
+    legendGradientDef.append('stop')
+      .attr('stop-color', '#ffffff')
+      .attr('offset', 0.5);
+
+    legendGradientDef.append('stop')
+      .attr('stop-color', rightColor)
+      .attr('offset', 1);
+
+    legendGroup.append('rect')
+      .attr('x', 0)
+      .attr('y', 0)
+      .attr('width', legendPos.width)
+      .attr('height', legendPos.height)
+      .style('fill', 'url(#legend-gradient)')
+      .style('stroke', 'black');
+
+    // Draw the legend axis
+    let legendScale = d3.scaleLinear()
+      .domain([-largestAbs, largestAbs])
+      .range([legendPos.height, 0])
+      .nice();
+
+    legendGroup.append('g')
+      .attr('transform', `translate(${legendPos.width}, ${0})`)
+      .call(d3.axisRight(legendScale).ticks(5));
+
+    legendGroup.append('text')
+      .attr('x', 0)
+      .attr('y', legendPos.height + 5)
+      .style('font-size', '12px')
+      .style('fill', 'hsl(0, 0%, 40%)')
+      .style('dominant-baseline', 'hanging')
+      .style('text-anchor', 'left')
+      .text('Saliency Score');
+  };
+
   const initGraph = () => {
     let svg = d3.select(graphSVG);
 
@@ -799,6 +851,16 @@
       .range([minNodeRadius, maxNodeRadius])
       .unknown(0)
       .nice();
+    
+    // Create a scale for the node color
+    let largestAbs = d3.max(allSaliencyScores.map(Math.abs));
+    let rightColor = '#E50035';
+    let leftColor = '#8c510a';
+
+    let nodeSaliencyColorScale = d3.scaleLinear()
+      .domain([-largestAbs, 0, largestAbs])
+      .range([d3.rgb(leftColor), d3.rgb('#ffffff'), d3.rgb(rightColor)])
+      .unknown(d3.rgb('white'));
 
     // Create a scale for link stroke width
     let attentionWeights = linkArrays[0].links.map(d => +d.weight);
@@ -874,8 +936,18 @@
       .attr('class', 'node-circle')
       .attr('r', d => currentLayout.value === 'force' ?
         nodeRadiusScale(+d.saliency) : minNodeRadius)
-      .style('fill', d => colorScale(d.id))
+      // .style('fill', d => colorScale(d.id))
+      .style('fill', d => nodeSaliencyColorScale(+d.saliency))
       .style('opacity', 1);
+
+    // Create legend for the saliency map view
+    let legendGroup = svg.append('g')
+      .attr('class', 'legend-group')
+      .attr('transform', `translate(${SVGPadding.left + 3}, ${SVGHeight - 122})`);
+
+    let legendPos = {width: 10, height: 100};
+
+    drawSaliencyLegend(legendGroup, legendPos, largestAbs, leftColor, rightColor);
     
     // Add token text to each node
     nodeGroups.append('text')
@@ -972,7 +1044,7 @@
     bindSlider('textOrder', 0, 10, forceStrength.force.textOrder);
     bindSlider('manyBody', -2000, 0, forceStrength.force.manyBody);
     bindSlider('collideRadius', 0, 20, forceStrength.force.collideRadius, nodeRadiusScale);
-    bindSlider('threshold', 0.05, 0.9, weightThreshold, nodeRadiusScale);
+    bindSlider('threshold', weightThresholdMin, weightThresholdMax, weightThreshold, nodeRadiusScale);
 
     bindSelect(nodeRadiusScale);
 

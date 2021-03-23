@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { instanceViewConfigStore, hoverTokenStore,
-    wordToSubwordMapStore } from '../store';
+    wordToSubwordMapStore, tableModalStore, instanceIDStore } from '../store';
   import { isSpecialToken, padZeroLeft } from './utils';
   import { drawParagraph } from './saliency-view';
   import { drawGraph } from './dependency-view';
@@ -21,6 +21,7 @@
   let relations = [];
   let selectedRelations = {};
   let instanceID = 1562;
+  instanceIDStore.subscribe(value => {instanceID = value;});
 
   let textTokenWidths = {};
   let tokenXs = [];
@@ -31,6 +32,10 @@
   let instanceViewConfig = undefined;
   let SVGInitialized = false;
   let inComparisonView = false;
+
+  // Table Modal info
+  let tableModalInfo = null;
+  tableModalStore.subscribe(value => {tableModalInfo = value;});
 
   const SVGPadding = {top: 10, left: 15, right: 15, bottom: 10};
   const textTokenPadding = {top: 3, left: 3, right: 3, bottom: 3};
@@ -453,7 +458,7 @@
     return wordToSubwordMap;
   };
 
-  const comparisonButtonClicked = (e) => {
+  const comparisonButtonClicked = () => {
     let topHeads = getInterestingHeads();
 
     if (inComparisonView) {
@@ -473,6 +478,11 @@
           textTokenWidths);
       }
     }
+  };
+
+  const editButtonClicked = () => {
+    tableModalInfo.show = true;
+    tableModalStore.set(tableModalInfo);
   };
 
   const checkboxChanged = (e) => {
@@ -788,7 +798,7 @@
   .dependency-label {
     color: hsl(0, 0%, 50%);
     font-size: 1.3rem;
-    margin: 0 20px 0 20px;
+    margin: 0 8px 0 20px;
   }
 
   .svg-control-panel {
@@ -927,6 +937,10 @@
         background: change-color($brown-dark, $alpha: 0.1);
       }
     }
+
+    &--edit {
+      margin-right: 20px;
+    }
   }
 
   .relation-container {
@@ -972,6 +986,17 @@
     cursor: pointer;
   }
 
+  .icon-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    opacity: 1;
+
+    img {
+      height: 19px;
+    }
+  }
+
 
   .hide {
     display: none;
@@ -993,6 +1018,17 @@
 
       <div class='dependency-label'>
         Current Sentence
+      </div>
+
+      <div class='select-row select-row--edit'>
+        <div class='relation-container' on:click={editButtonClicked}>
+          <div class='comparison-button'>
+            <div class='icon-wrapper'>
+              <img src='/figures/edit.svg' alt='editing icon'>
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <div class='select-row'>

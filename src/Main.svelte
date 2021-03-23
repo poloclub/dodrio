@@ -1,19 +1,17 @@
 <script>
   import Header from './Header.svelte';
   import GraphView from './GraphView.svelte';
-  import EmbeddingView from './EmbeddingView.svelte';
   import Dependency from './dependency-view/Dependency.svelte';
   import Atlas from './Atlas.svelte';
   import AtlasSide from './AtlasSide.svelte';
   import Tooltip from './TooltipGlobal.svelte';
   import LowerAtlas from './LowerAtlas.svelte';
-  import TableView from './TableView.svelte';
-  import { graphViewConfigStore, embeddingViewConfigStore, instanceViewConfigStore,
-    tableViewConfigStore, mapViewConfigStore, lowerMapViewConfigStore,
+  import TableModal from './TableModal.svelte';
+  import { graphViewConfigStore, instanceViewConfigStore,
+    mapViewConfigStore, lowerMapViewConfigStore,
     tooltipConfigStore, sideStore } from './store';
   import { onMount } from 'svelte';
   import * as d3 from 'd3';
-
 
   // Set up the tooltip
   let tooltip = null;
@@ -41,12 +39,6 @@
     compHeight: null
   };
   
-  let embeddingViewDIV = null;
-  let embeddingViewConfig = {
-    compWidth: null,
-    compHeight: null
-  };
-  
   let instanceViewDIV = null;
   let instanceViewConfig = {
     compWidth: null,
@@ -65,23 +57,9 @@
     compHeight: null
   };
 
-  let tableViewDIV = null;
-  let tableViewConfig = {
-    compWidth: null,
-    compHeight: null
-  };
-
   const atlasOpened = () => {
-
     mapViewDIV.style['display'] = '';
     mapViewDIV.style['opacity'] = '1';
-
-    // d3.select(mapViewDIV)
-    //   .transition()
-    //   .duration(200)
-    //   .ease(d3.easeCubicInOut)
-    //   .style('opacity', 1);
-
   };
 
   const atlasClosed = () => {
@@ -112,6 +90,7 @@
 
     const transitionEnd = () => {
       mapViewDIV.style['display'] = 'none';
+      mapViewDIV.style['visibility'] = '';
       mapViewDIV.style['width'] = '1000px';
       mapViewDIV.style['height'] = '100%';
 
@@ -156,13 +135,10 @@
     mapViewConfig.compHeight = Math.floor(mapViewDIV.clientHeight - 10);
     mapViewConfigStore.set(mapViewConfig);
 
-    // embeddingViewConfig.compWidth = Math.floor(embeddingViewDIV.clientWidth);
-    // embeddingViewConfig.compHeight = Math.floor(embeddingViewDIV.clientHeight);
-    // embeddingViewConfigStore.set(embeddingViewConfig);
-
-    // tableViewConfig.compWidth = Math.floor(tableViewDIV.clientWidth);
-    // tableViewConfig.compHeight = Math.floor(tableViewDIV.clientHeight);
-    // tableViewConfigStore.set(tableViewConfig);
+    mapViewDIV.style['opacity'] = '0';
+    mapViewDIV.style['visibility'] = 'hidden';
+    atlasClosed();
+   
   });
 
 </script>
@@ -197,22 +173,6 @@
     flex-direction: column;
     box-sizing: border-box;
     position: relative;
-  }
-
-  .embedding-container {
-    border-bottom: solid 1px $gray-border;
-    width: 100%;
-    height: 80%;
-    box-sizing: border-box;
-    // overflow:scroll;
-  }
-
-  .table-container {
-    //border-bottom: solid 1px $gray-border;
-    width: 100%;
-    height: 100%;
-    overflow:scroll;
-    box-sizing: border-box;
   }
 
   .instance-container {
@@ -256,12 +216,10 @@
     position: absolute;
     right: 0;
     bottom: 0;
-    transition: right 500ms ease-in-out, background-color 100ms ease-in-out;
     overflow: hidden;
     z-index: 10;
     padding: 10px 0 0 10px;
-
-    transition: width 1000ms ease-in-out, height 1000ms ease-in-out, opacity 1000ms ease-in-out;
+    transition: width 500ms ease-in-out, height 500ms ease-in-out, opacity 500ms ease-in-out;
   }
 
   .atlas-sidebar {
@@ -294,16 +252,6 @@
   <div class='main-content'>
     <div class='select-container'>
 
-      <!-- Embedding view -->
-      <!-- <div class='embedding-container' bind:this={embeddingViewDIV}>
-        <EmbeddingView />
-      </div> -->
-
-      <!-- Table view -->
-      <!-- <div class='table-container' bind:this={tableViewDIV}>
-        <TableView />
-      </div> -->
-
     </div>
 
     <div class='attention-container'>
@@ -316,7 +264,7 @@
       <div class='lower-container'>
         <!-- Graph View -->
         <div class='graph-container' bind:this={graphViewDIV} >
-          <!-- <GraphView /> -->
+          <GraphView />
         </div>
 
         <div class='lower-atlas-container' bind:this={lowerMapViewDIV}>
@@ -326,7 +274,7 @@
 
 
       <!-- Map view -->
-      <div class='atlas-container' bind:this={mapViewDIV}>
+      <div class='atlas-container' style='visibility=hidden' bind:this={mapViewDIV}>
         <Atlas on:close={atlasClosed}/>
       </div>
 
@@ -336,7 +284,8 @@
 
     </div>
 
+    <TableModal on:xClicked={() => {}} on:urlTyped={() => {}}/>
+
   </div>
-  <!-- <GraphView /> -->
 
 </div>

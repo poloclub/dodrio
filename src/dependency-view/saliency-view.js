@@ -28,7 +28,9 @@ export const drawParagraph = (saliencies, svg, SVGWidth,
 
   let tokenColorScale = d3.scaleLinear()
     .domain([-largestAbs, 0, largestAbs])
-    .range([d3.rgb('#eb2f06'), d3.rgb('#ffffff'), d3.rgb('#458FC1')]);
+    // .range([d3.rgb('#eb2f06'), d3.rgb('#ffffff'), d3.rgb('#458FC1')]);
+    .range([d3.rgb('#20BF6B'), d3.rgb('#ffffff'), d3.rgb('#EA3B5A')]);
+    // .range([d3.rgb('#FF8A28'), d3.rgb('#ffffff'), d3.rgb('#458FC1')]);
 
   console.log(saliencies);
 

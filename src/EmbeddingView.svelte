@@ -228,10 +228,20 @@
         embeddingViewConfig = value;
         SVGWidth = embeddingViewConfig.compWidth;
         SVGHeight = embeddingViewConfig.compHeight;
+
+        SVGWidth = 300;
+        SVGHeight = 300;
         renderEmbeddings();
       }
     }
   });
+
+  onMount(() => {
+    SVGWidth = 350;
+    SVGHeight = 300;
+    renderEmbeddings();
+  });
+
 
   currInstanceStore.subscribe(value => {
     selectedInstanceId = value;

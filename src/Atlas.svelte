@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { mapViewConfigStore, sideStore, attentionHeadColorStore } from './store';
+  import { mapViewConfigStore, sideStore, instanceIDStore, attentionHeadColorStore } from './store';
   import { createEventDispatcher } from 'svelte';
   import * as d3 from 'd3';
 
@@ -19,6 +19,8 @@
   const blue = d3.hcl(274, 85, 56);
 
   let instanceID = 1562;
+  instanceIDStore.subscribe(value => {instanceID = value;});
+  
   const dispatch = createEventDispatcher();
   let isShown = true;
 
@@ -393,7 +395,7 @@
   .svg-container {
     width: 100%;
     height: 100%;
-    overflow-x: hidden;
+    overflow: hidden;
     position: relative;
     cursor: default;
 

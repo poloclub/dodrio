@@ -18,7 +18,8 @@ export const tooltipConfigStore = writable({
 });
 
 export const svgStore = writable(undefined);
-export const currInstanceStore = writable(23);
+export const currInstanceStore = writable(1562);
+export const instanceIDStore = writable(1562);
 
 export const hoverTokenStore = writable();
 export const wordToSubwordMapStore = writable({});
@@ -26,6 +27,13 @@ export const wordToSubwordMapStore = writable({});
 export const attentionHeadColorStore = writable({});
 
 export const modalStore = writable({
+  show: false,
+  attention: null,
+  layer: null,
+  head: null
+});
+
+export const tableModalStore = writable({
   show: false,
   attention: null,
   layer: null,
