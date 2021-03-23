@@ -17,6 +17,11 @@ export const tooltipConfigStore = writable({
   fontSize: '1em'
 });
 
+export const comparisonViewStore = writable({
+  inComparison: false,
+  height: 0
+});
+
 export const svgStore = writable(undefined);
 export const currInstanceStore = writable(1562);
 export const instanceIDStore = writable(1562);

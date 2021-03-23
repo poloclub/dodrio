@@ -5,8 +5,6 @@ export const drawParagraph = (saliencies, svg, SVGWidth,
   SVGPadding, textTokenPadding, wordToSubwordMap, tokenNodeMouseover,
   tokenNodeMouseleave) => {
 
-  console.log(saliencies);
-
   // Give each saliency token a unique name
   if (saliencies.tokens[0].id !== undefined) {
     let tokenCount = {};
@@ -28,11 +26,7 @@ export const drawParagraph = (saliencies, svg, SVGWidth,
 
   let tokenColorScale = d3.scaleLinear()
     .domain([-largestAbs, 0, largestAbs])
-    // .range([d3.rgb('#eb2f06'), d3.rgb('#ffffff'), d3.rgb('#458FC1')]);
-    .range([d3.rgb('#20BF6B'), d3.rgb('#ffffff'), d3.rgb('#EA3B5A')]);
-    // .range([d3.rgb('#FF8A28'), d3.rgb('#ffffff'), d3.rgb('#458FC1')]);
-
-  console.log(saliencies);
+    .range([d3.rgb('#8c510a'), d3.rgb('#ffffff'), d3.rgb('#E50035')]);
 
   // Before drawing the texts, pre-render all texts to figure out their widths
   let textTokenSize = getTokenWidth(tokens.map(d => d.token), svg);
@@ -135,7 +129,7 @@ const drawSaliencyLegend = (legendGroup, legendPos, largestAbs) => {
     .attr('id', 'legend-gradient');
 
   legentGradientDef.append('stop')
-    .attr('stop-color', '#eb2f06')
+    .attr('stop-color', '#8c510a')
     .attr('offset', 0);
 
   legentGradientDef.append('stop')
@@ -143,7 +137,7 @@ const drawSaliencyLegend = (legendGroup, legendPos, largestAbs) => {
     .attr('offset', 0.5);
 
   legentGradientDef.append('stop')
-    .attr('stop-color', '#4690C2')
+    .attr('stop-color', '#E50035')
     .attr('offset', 1);
 
   legendGroup.append('rect')

@@ -1,14 +1,17 @@
 <script>
   import { onMount } from 'svelte';
   import { instanceViewConfigStore, hoverTokenStore,
-    wordToSubwordMapStore, tableModalStore, instanceIDStore } from '../store';
+    wordToSubwordMapStore, tableModalStore, instanceIDStore, comparisonViewStore } from '../store';
   import { isSpecialToken, padZeroLeft } from './utils';
   import { drawParagraph } from './saliency-view';
   import { drawGraph } from './dependency-view';
   import RadialModal from './RadialModal.svelte';
   import { drawDependencyComparison, removeDependencyComparison } from './comparison-view';
   import { drawTree } from './tree-view';
+  import { createEventDispatcher } from 'svelte';
   import * as d3 from 'd3';
+
+  const dispatch = createEventDispatcher();
 
   let svg = null;
   let data = null;
@@ -32,6 +35,23 @@
   let instanceViewConfig = undefined;
   let SVGInitialized = false;
   let inComparisonView = false;
+  let comparisonViewConfig = {};
+
+  comparisonViewStore.subscribe(value => {
+    comparisonViewConfig = value;
+    SVGHeight = comparisonViewConfig.height - 41;
+    console.log(comparisonViewConfig, inComparisonView);
+
+    if (comparisonViewConfig.inComparison && !inComparisonView) {
+      console.log('enter comaprison view');
+      // comparisonButtonClicked();
+      comparisonButtonClickedHandler();
+    } else if (!comparisonViewConfig.inComparison && inComparisonView){
+      console.log('exit comaprison view');
+      comparisonButtonClickedHandler();
+      // comparisonButtonClicked();
+    }
+  });
 
   // Table Modal info
   let tableModalInfo = null;
@@ -459,12 +479,25 @@
   };
 
   const comparisonButtonClicked = () => {
+    // Dispatch to parent if user clicks the button instead of arrow
+    if (inComparisonView) {
+      dispatch('close');
+    } else {
+      dispatch('open');
+    }
+  };
+
+  const comparisonButtonClickedHandler = () => {
+
+    svg.attr('height', SVGHeight);
+
     let topHeads = getInterestingHeads();
 
     if (inComparisonView) {
       inComparisonView = false;
       removeDependencyComparison(svg);
     } else {
+      console.log('button clicked, enter comparison');
       inComparisonView = true;
       if (attentions == null) {
         initAttentionData(
@@ -584,7 +617,7 @@
         instanceViewConfig.compWidth !== value.compWidth)
       ){
         instanceViewConfig = value;
-        
+
         SVGWidth = instanceViewConfig.compWidth;
         SVGHeight = instanceViewConfig.compHeight - 41;
 

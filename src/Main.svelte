@@ -8,7 +8,7 @@
   import LowerAtlas from './LowerAtlas.svelte';
   import TableModal from './TableModal.svelte';
   import { graphViewConfigStore, instanceViewConfigStore,
-    mapViewConfigStore, lowerMapViewConfigStore,
+    mapViewConfigStore, lowerMapViewConfigStore, comparisonViewStore,
     tooltipConfigStore, sideStore } from './store';
   import { onMount } from 'svelte';
   import * as d3 from 'd3';
@@ -17,6 +17,14 @@
   let tooltip = null;
   let atlasSVGWidth = null;
   let atlasSVGHeight = null;
+  const headerHeight = 50;
+
+  let downButton;
+  let buttonDown = true;
+  let downButtonPos = {
+    width: 50,
+    height: 20
+  };
 
   let tooltipConfig = {
     show: false,
@@ -33,17 +41,24 @@
   let sideInfo = {};
   sideStore.subscribe(value => {sideInfo = value;});
 
+  let lowerContainerDIV = null;
   let graphViewDIV = null;
   let graphViewConfig = {
     compWidth: null,
     compHeight: null
   };
   
+  let originalInstanceViewHeight = null;
   let instanceViewDIV = null;
   let instanceViewConfig = {
     compWidth: null,
     compHeight: null
   };
+
+  let comparisonViewConfig = {};
+  comparisonViewStore.subscribe(value => {
+    comparisonViewConfig = value;
+  });
 
   let mapViewDIV = null;
   let mapViewConfig = {
@@ -57,11 +72,17 @@
     compHeight: null
   };
 
+  /**
+   * Open the large map view.
+   */
   const atlasOpened = () => {
     mapViewDIV.style['display'] = '';
     mapViewDIV.style['opacity'] = '1';
   };
 
+  /**
+   * Close the large map view.
+   */
   const atlasClosed = () => {
 
     d3.select(mapViewDIV)
@@ -116,6 +137,56 @@
     mapViewDIV.addEventListener('transitionend', transitionEnd);
   };
 
+  const downButtonClicked = () => {
+
+    // Enter comparison view
+    if (buttonDown) {
+      instanceViewDIV.style.height = '100%';
+      lowerContainerDIV.style.bottom = `-${graphViewConfig.compHeight - 10}px`;
+      downButton.style.top = `${originalInstanceViewHeight + headerHeight
+        - downButtonPos.height / 2 + graphViewConfig.compHeight - 10}px`;
+
+      comparisonViewConfig.height = Math.floor(instanceViewDIV.clientHeight) - 5;
+      comparisonViewConfig.inComparison = true;
+      comparisonViewStore.set(comparisonViewConfig);
+    } else {
+      // Exit comparison view
+      instanceViewDIV.style.height = '34%';
+      lowerContainerDIV.style.bottom = '0px';
+      downButton.style.top = `${originalInstanceViewHeight + headerHeight
+        - downButtonPos.height / 2}px`;
+
+      comparisonViewConfig.height = originalInstanceViewHeight - 5;
+      comparisonViewConfig.inComparison = false;
+      comparisonViewStore.set(comparisonViewConfig);
+    }
+
+    buttonDown = !buttonDown;
+  };
+
+  const comparisonOpenHandler = () => {
+    instanceViewDIV.style.height = '100%';
+    lowerContainerDIV.style.bottom = `-${graphViewConfig.compHeight - 10}px`;
+    downButton.style.top = `${originalInstanceViewHeight + headerHeight
+      - downButtonPos.height / 2 + graphViewConfig.compHeight - 10}px`;
+    buttonDown = false;
+
+    comparisonViewConfig.height = Math.floor(instanceViewDIV.clientHeight) - 5;
+    comparisonViewConfig.inComparison = true;
+    comparisonViewStore.set(comparisonViewConfig);
+  };
+
+  const comparisonCloseHandler = () => {
+    instanceViewDIV.style.height = '34%';
+    lowerContainerDIV.style.bottom = '0px';
+    downButton.style.top = `${originalInstanceViewHeight + headerHeight
+      - downButtonPos.height / 2}px`;
+
+    comparisonViewConfig.height = originalInstanceViewHeight - 5;
+    comparisonViewConfig.inComparison = false;
+    comparisonViewStore.set(comparisonViewConfig);
+  };
+
   onMount(() => {
     graphViewConfig.compWidth = Math.floor(graphViewDIV.clientWidth);
     graphViewConfig.compHeight = Math.floor(graphViewDIV.clientHeight);
@@ -125,6 +196,7 @@
     // Need to offset the horizontal scroll bar height
     instanceViewConfig.compHeight = Math.floor(instanceViewDIV.clientHeight) - 5;
     instanceViewConfigStore.set(instanceViewConfig);
+    originalInstanceViewHeight = Math.floor(instanceViewDIV.clientHeight);
 
     lowerMapViewConfig.compWidth = Math.floor(lowerMapViewDIV.clientWidth);
     lowerMapViewConfig.compHeight = Math.floor(lowerMapViewDIV.clientHeight);
@@ -135,10 +207,19 @@
     mapViewConfig.compHeight = Math.floor(mapViewDIV.clientHeight - 10);
     mapViewConfigStore.set(mapViewConfig);
 
+    // Hide the large map view
     mapViewDIV.style['opacity'] = '0';
     mapViewDIV.style['visibility'] = 'hidden';
     atlasClosed();
-   
+
+    // Position the down button
+    console.log(headerHeight, downButtonPos.height);
+    downButton.style.top = `${Math.floor(instanceViewDIV.clientHeight) + headerHeight
+      - downButtonPos.height / 2}px`;
+    downButton.style.left = `${graphViewConfig.compWidth - downButtonPos.width / 2}px`;
+    downButton.style.width = `${downButtonPos.width}px`;
+    downButton.style.height = `${downButtonPos.height}px`;
+    downButton.style.visibility = 'visible';
   });
 
 </script>
@@ -152,6 +233,7 @@
     width: 100vw;
     display: flex;
     box-sizing: border-box;
+    overflow: hidden;
   }
 
   .select-container {
@@ -176,21 +258,29 @@
   }
 
   .instance-container {
-    border-bottom: solid 1px $gray-border;
     width: 100%;
     // height: 100%;
-    height: 50%;
+    height: 34%;
     overflow: hidden;
     box-sizing: border-box;
   }
 
   .lower-container {
+    border-top: solid 1px $gray-border;
     width: 100%;
-    height: 100%;
+    height: 66%;
     overflow: hidden;
     box-sizing: border-box;
     display: flex;
     flex-direction: row;
+
+    background: hsla(0, 0%, 99%);
+    box-shadow: 0 -5px 5px hsla(0, 0%, 0%, 0.07);
+
+    position: absolute;
+    bottom: 0;
+
+    transition: bottom 300ms ease-in-out;
   }
 
   .graph-container {
@@ -199,6 +289,7 @@
     height: 100%;
     overflow: hidden;
     box-sizing: border-box;
+    position: relative;
   }
 
   .lower-atlas-container {
@@ -241,6 +332,45 @@
     transition: right 700ms ease-in-out, background-color 100ms ease-in-out 600ms;
   }
 
+  .down-button {
+    position: absolute;
+    width: 50px;
+    height: 8px;
+    font-size: 0.7em;
+    visibility: hidden;
+    border-radius: 15px;
+    z-index: 10;
+    cursor: pointer;
+
+    border: 1px solid $gray-border;
+    background: white;
+    box-shadow: 0px 3px 3px hsla(0, 0%, 0%, 0.05);
+    transition: background 300ms ease-in-out, top 300ms ease-in-out;
+
+    &:hover {
+      background: change-color($brown-icon, $lightness:90%);
+    }
+  }
+
+  .icon-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    opacity: 1;
+
+    svg {
+      height: 20px;
+      color: $brown-icon;
+    }
+  }
+
+  .up-down {
+    transform: rotate(180deg);
+  }
+
 </style>
 
 <div class='main'>
@@ -257,11 +387,11 @@
     <div class='attention-container'>
       <!-- Instance View -->
       <div class='instance-container' bind:this={instanceViewDIV}>
-        <Dependency />
+        <Dependency on:close={comparisonCloseHandler} on:open={comparisonOpenHandler}/>
       </div>
 
       
-      <div class='lower-container'>
+      <div class='lower-container' bind:this={lowerContainerDIV}>
         <!-- Graph View -->
         <div class='graph-container' bind:this={graphViewDIV} >
           <GraphView />
@@ -285,6 +415,15 @@
     </div>
 
     <TableModal on:xClicked={() => {}} on:urlTyped={() => {}}/>
+
+    <div class='down-button' bind:this={downButton}>
+      <div class='icon-wrapper' on:click={downButtonClicked}>
+        <svg class='icon-down' class:up-down={!buttonDown} viewBox='0 0 512 512'>
+          <path fill='none' stroke='currentColor' stroke-linecap='round'
+            stroke-linejoin='round' stroke-width='80' d='M112 184l144 144 144-144'/>
+        </svg>
+      </div>
+    </div>
 
   </div>
 

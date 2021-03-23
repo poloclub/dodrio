@@ -53,7 +53,7 @@
     let availableHeight = SVGHeight - SVGPadding.top - SVGPadding.bottom;
 
     let availableLength = Math.min(availableHeight, availableWidth);
-    console.log(SVGHeight, availableLength, availableWidth, availableHeight);
+    // console.log(SVGHeight, availableLength, availableWidth, availableHeight);
     const gridGap = 8;
 
     const gridLength = Math.floor((availableHeight - (layerNum - 1) * gridGap) / layerNum);

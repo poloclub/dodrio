@@ -20,7 +20,7 @@
 
   let instanceID = 1562;
   instanceIDStore.subscribe(value => {instanceID = value;});
-  
+
   const dispatch = createEventDispatcher();
   let isShown = true;
 
@@ -152,8 +152,6 @@
         ${(layerNum - d - 1) * (maxOutRadius * 2 + adjustedColGap)})`)
       .append('text')
       .text(d => d > 2 ? d + 1 : `Layer ${d + 1}`);
-
-    console.log(atlasData);
 
     d3.select(viewContainer)
       .select('.head-arrow')
