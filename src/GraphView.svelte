@@ -55,6 +55,7 @@
 
   let linkColor = 'hsl(0, 0%, 76%)';
   let linkHoverColor = 'hsl(24, 95%, 59%)';
+  linkHoverColor = 'hsl(174, 65%, 48%)';
 
   // Control panel variables
   let settingIconActive = false;

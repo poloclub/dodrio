@@ -767,7 +767,7 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
         .attr('x', 0)
         .attr('y', 0)
         .attr('width', +svg.attr('width'))
-        .attr('height', controlPanelY + 5)
+        .attr('height', controlPanelY - 5)
         .style('fill', 'url(#top-opacity-gradient)');
 
       svg.append('rect')
@@ -843,7 +843,7 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
 
     if (attentionGroupID === 0){
       // TODO remove here
-      newTranslateY = arcGroupHeight + oldNodeGroupHeight + 60;
+      newTranslateY = arcGroupHeight + oldNodeGroupHeight + 50;
       // newTranslateY = arcGroupHeight + oldNodeGroupHeight + 200;
     } else {
       preTranslateY = +svg.select(`#attention-group-${attentionGroupID - 1}`)

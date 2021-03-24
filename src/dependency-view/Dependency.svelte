@@ -95,7 +95,12 @@
   let currentLayout = layoutOptions.dependency;
   let linkColor = 'hsl(0, 0%, 80%)';
   let linkHoverColor = 'hsl(24, 95%, 59%)';
-  let linkAttentionColor = 'hsla(0, 0%, 0%, 0.5)';
+  linkHoverColor = 'hsl(174, 65%, 48%)';
+
+  let linkHoverGradient1 = 'hsl(173, 66%, 90%)';
+  let linkHoverGradient2 = 'hsl(176, 74%, 70%)';
+  let linkHoverGradient3 = 'hsl(173, 66%, 35%)';
+
   let showRelationCheckboxes = false;
 
   const ease = d3.easeCubicInOut;
@@ -359,17 +364,17 @@
 
     gradient.append('stop')
       .style('stop-opacity', 1)
-      .style('stop-color', 'hsl(24, 100%, 45%)')
+      .style('stop-color', linkHoverGradient1)
       .attr('offset', '0');
 
     gradient.append('stop')
       .style('stop-opacity', 1)
-      .style('stop-color', 'hsl(24, 100%, 70%)')
+      .style('stop-color', linkHoverGradient2)
       .attr('offset', '0.3');
 
     gradient.append('stop')
       .style('stop-opacity', 1)
-      .style('stop-color', 'hsl(24, 100%, 90%)')
+      .style('stop-color', linkHoverGradient3)
       .attr('offset', '1');
 
     // Matched line gradient left to right
@@ -379,17 +384,17 @@
 
     gradient.append('stop')
       .style('stop-opacity', 1)
-      .style('stop-color', 'hsl(24, 100%, 90%)')
+      .style('stop-color', linkHoverGradient3)
       .attr('offset', '0');
 
     gradient.append('stop')
       .style('stop-opacity', 1)
-      .style('stop-color', 'hsl(24, 100%, 70%)')
+      .style('stop-color', linkHoverGradient2)
       .attr('offset', '0.7');
 
     gradient.append('stop')
       .style('stop-opacity', 1)
-      .style('stop-color', 'hsl(24, 100%, 55%)')
+      .style('stop-color', linkHoverGradient1)
       .attr('offset', '1');
 
     // Top line gradient right to left
@@ -829,7 +834,7 @@
     font-size: 0.8em;
     text-anchor: middle;
     stroke-linejoin: round;
-    fill: hsl(207, 48%, 44%);
+    fill: hsl(205, 100%, 50%);
   }
 
   :global(.arc-path) {
@@ -1060,7 +1065,7 @@
     width: 100%;
     z-index: 5;
     border-top: 1px solid hsla(0, 0%, 0%, 0.2);
-    box-shadow:  0 -3px 3px hsla(0, 0%, 0%, 0.05);
+    box-shadow:  0 -3px 3px hsla(0, 0%, 0%, 0.01);
   }
 
   .comparison-control-panel {
