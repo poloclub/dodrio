@@ -54,8 +54,9 @@
   let linkWidth = null;
 
   let linkColor = 'hsl(0, 0%, 76%)';
-  let linkHoverColor = 'hsl(24, 95%, 59%)';
-  linkHoverColor = 'hsl(174, 65%, 48%)';
+  let linkHoverColor = 'hsl(36, 100%, 55%)';
+  let nodeRadiusScale = null;
+  // linkHoverColor = 'hsl(174, 65%, 48%)';
 
   // Control panel variables
   let settingIconActive = false;
@@ -787,15 +788,11 @@
       .attr('y1', 1)
       .attr('x2', 0)
       .attr('y2', 0)
-      .attr('id', 'legend-gradient');
+      .attr('id', 'legend-gradient-graph');
 
     legendGradientDef.append('stop')
       .attr('stop-color', leftColor)
       .attr('offset', 0);
-
-    legendGradientDef.append('stop')
-      .attr('stop-color', '#ffffff')
-      .attr('offset', 0.5);
 
     legendGradientDef.append('stop')
       .attr('stop-color', rightColor)
@@ -806,12 +803,12 @@
       .attr('y', 0)
       .attr('width', legendPos.width)
       .attr('height', legendPos.height)
-      .style('fill', 'url(#legend-gradient)')
+      .style('fill', 'url(#legend-gradient-graph)')
       .style('stroke', 'black');
 
     // Draw the legend axis
     let legendScale = d3.scaleLinear()
-      .domain([-largestAbs, largestAbs])
+      .domain([0, largestAbs])
       .range([legendPos.height, 0])
       .nice();
 
@@ -821,12 +818,12 @@
 
     legendGroup.append('text')
       .attr('x', 0)
-      .attr('y', legendPos.height + 5)
+      .attr('y', legendPos.height + 8)
       .style('font-size', '12px')
       .style('fill', 'hsl(0, 0%, 40%)')
       .style('dominant-baseline', 'hanging')
       .style('text-anchor', 'left')
-      .text('Saliency Score');
+      .text('Semantic Saliency Score');
   };
 
   const initGraph = () => {
@@ -876,7 +873,8 @@
 
     // Create a scale for the node radius
     let allSaliencyScores = nodes.map(d => +d.saliency);
-    let nodeRadiusScale = d3.scaleLinear()
+    console.log(d3.extent(allSaliencyScores));
+    nodeRadiusScale = d3.scaleLinear()
       .domain(d3.extent(allSaliencyScores))
       .range([minNodeRadius, maxNodeRadius])
       .unknown(0)
@@ -885,18 +883,18 @@
     // Create a scale for the node color
     let largestAbs = d3.max(allSaliencyScores.map(Math.abs));
     let rightColor = '#E50035';
-    let leftColor = '#8c510a';
+    let leftColor = '#ffffff';
 
     let nodeSaliencyColorScale = d3.scaleLinear()
-      .domain([-largestAbs, 0, largestAbs])
-      .range([d3.rgb(leftColor), d3.rgb('#ffffff'), d3.rgb(rightColor)])
+      .domain([0, largestAbs])
+      .range([d3.rgb(leftColor), d3.rgb(rightColor)])
       .unknown(d3.rgb('white'));
 
     // Create a scale for link stroke width
     let attentionWeights = linkArrays[0].links.map(d => +d.weight);
     linkWidth = d3.scaleLinear()
       .domain(d3.extent(attentionWeights))
-      .range([0.5, 2.5])
+      .range([0.5, 3])
       .nice();
 
     // Add attention links
@@ -968,21 +966,36 @@
         nodeRadiusScale(+d.saliency) : minNodeRadius)
       // .style('fill', d => colorScale(d.id))
       .style('fill', d => nodeSaliencyColorScale(+d.saliency))
-      .style('opacity', 1);
+      .style('opacity', 1)
+      .clone(true)
+      .attr('r', d => currentLayout.value === 'force' ?
+        nodeRadiusScale(+d.saliency) : minNodeRadius)
+      .style('fill', linkHoverColor)
+      .attr('class', 'shadow-circle');
 
     // Create legend for the saliency map view
     let legendGroup = svg.append('g')
       .attr('class', 'legend-group')
-      .attr('transform', `translate(${SVGPadding.left + 3}, ${SVGHeight - 122})`);
+      .attr('transform', `translate(${SVGPadding.left + 3}, ${SVGHeight - 130})`);
 
     let legendPos = {width: 10, height: 100};
 
     drawSaliencyLegend(legendGroup, legendPos, largestAbs, leftColor, rightColor);
     
     // Add token text to each node
-    nodeGroups.append('text')
+    let texts = nodeGroups.append('text')
       .attr('class', 'node-text')
+      .style('font-weight', 600)
       .text(d => d.token);
+
+    texts.filter(d => d3.hcl(nodeSaliencyColorScale(+d.saliency)).l < 66)
+      .clone(true)
+      .lower()
+      .style('stroke-linejoin', 'round')
+      .attr('stroke-width', 4)
+      .attr('stroke', 'white');
+    
+    nodeGroups.selectAll('circle').lower();
 
     nodeGroups.append('title')
       .text(d => d.token);
@@ -1067,7 +1080,7 @@
       .attr('stroke', linkHoverColor)
       .attr('fill', linkHoverColor);
 
-    let nodeRadiusScale = initGraph();
+    nodeRadiusScale = initGraph();
 
     // Register UI elements from the control panel
     bindSlider('attention', 0, 10, forceStrength.force.attention);
@@ -1122,28 +1135,44 @@
     d3.select(graphSVG)
       .select('.attention-link-group')
       .selectAll('path.link')
-      .style('opacity', 0.1);
+      // TODO
+      .style('opacity', 0.05);
+      // .style('opacity', 0.3);
 
     d3.select(graphSVG)
       .select('.attention-link-group')
       .selectAll('path.link')
       .filter((d, i, g) => d3.select(g[i]).attr('id').includes(`-${hoverToken}`))
       .attr('marker-end', 'url(#arrow-hover)')
-      .style('stroke', linkHoverColor)
+      .classed('highlighted', true)
+      .style('stroke', null)
+      .style('stroke-width', 2)
       .style('opacity', 0.8)
       .raise();
+      // TODO
+      // .style('opacity', 0.9)
+      // .style('stroke-width', 2)
+      // .raise();
 
     d3.select(graphSVG)
       .select('.node-group')
       .selectAll('.node')
       .filter((d, i, g) => d3.select(g[i]).attr('id').includes(`-${hoverToken}`))
       .raise()
-      .select('circle')
-      .style('stroke', linkHoverColor)
-      .style('stroke-width', 4);
+      .select('.shadow-circle')
+      .attr('r', d => currentLayout.value === 'force' ?
+        nodeRadiusScale(+d.saliency) + 5 : minNodeRadius + 5)
+      .style('stroke', 'white')
+      .style('stroke-width', 1.5);
   };
 
   const dehighlightLink = (hoverToken) => {
+
+    // TODO
+    // return;
+    if (hoverToken.includes('jagged')) {
+      return;
+    }
 
     d3.select(graphSVG)
       .select('.attention-link-group')
@@ -1154,17 +1183,22 @@
       .select('.attention-link-group')
       .selectAll('path.link')
       .filter((d, i, g) => d3.select(g[i]).attr('id').includes(`-${hoverToken}`))
+      .classed('highlighted', false)
       .attr('marker-end', 'url(#arrow)')
       .style('stroke', linkColor)
+      .style('stroke-width', d => linkWidth(d.attention))
       .style('opacity', null);
 
     d3.select(graphSVG)
       .select('.node-group')
       .selectAll('.node')
       .filter((d, i, g) => d3.select(g[i]).attr('id').includes(`-${hoverToken}`))
-      .select('circle')
-      .style('stroke', 'white')
-      .style('stroke-width', 1.5);
+      .select('.shadow-circle')
+      .attr('r', d => currentLayout.value === 'force' ?
+        nodeRadiusScale(+d.saliency) : minNodeRadius)
+      .style('stroke', null)
+      .style('stroke-width', null)
+      .lower();
   };
 
   const createGraphData = (layer, head) => {
@@ -1323,14 +1357,6 @@
     height: 100%;
   }
 
-  .control-panel {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-right: 50px;
-  }
-
-
   :global(.node-circle) {
     stroke: #fff;
     stroke-width: 1.5; 
@@ -1347,30 +1373,12 @@
     fill: none;
   }
 
-  :global(.border-rect) {
-    display: none;
+  :global(.link.highlighted) {
+    stroke: hsl(36, 100%, 55%);
   }
 
-  .icon-wrapper {
-    width: 20px;
-    height: 20px;
-    border-radius: 20%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    border: 2px solid hsla(0, 0%, 60%, 50%);
-    font-size: 12px;
-    cursor: pointer;
-    color: hsl(0, 0%, 60%, 80%);
-
-    &.active {
-      color: $brown-icon;
-      border: 2px solid $brown-icon;
-    }
-
-    :global(svg) {
-      pointer-events: none;
-    }
+  :global(.border-rect) {
+    display: none;
   }
 
   .graph-label {
@@ -1563,7 +1571,7 @@
   <div class='svg-container'>
 
     <div class='graph-label'>
-      Attention Weights
+      Semantic Attention Graph
     </div>
 
     <!-- Control panel on top of the SVG -->

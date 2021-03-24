@@ -25,8 +25,8 @@ export const drawParagraph = (saliencies, svg, SVGWidth,
   let largestAbs = d3.max(saliencies.tokens.map(d => Math.abs(d[key])));
 
   let tokenColorScale = d3.scaleLinear()
-    .domain([-largestAbs, 0, largestAbs])
-    .range([d3.rgb('#8c510a'), d3.rgb('#ffffff'), d3.rgb('#E50035')]);
+    .domain([0, largestAbs])
+    .range([d3.rgb('#ffffff'), d3.rgb('#E50035')]);
 
   // Before drawing the texts, pre-render all texts to figure out their widths
   let textTokenSize = getTokenWidth(tokens.map(d => d.token), svg);
@@ -129,12 +129,8 @@ const drawSaliencyLegend = (legendGroup, legendPos, largestAbs) => {
     .attr('id', 'legend-gradient');
 
   legentGradientDef.append('stop')
-    .attr('stop-color', '#8c510a')
+    .attr('stop-color', '#FFFFFF')
     .attr('offset', 0);
-
-  legentGradientDef.append('stop')
-    .attr('stop-color', '#ffffff')
-    .attr('offset', 0.5);
 
   legentGradientDef.append('stop')
     .attr('stop-color', '#E50035')
@@ -150,7 +146,7 @@ const drawSaliencyLegend = (legendGroup, legendPos, largestAbs) => {
 
   // Draw the legend axis
   let legendScale = d3.scaleLinear()
-    .domain([-largestAbs, largestAbs])
+    .domain([0, largestAbs])
     .range([legendPos.height, 0])
     .nice();
 

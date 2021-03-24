@@ -161,6 +161,12 @@
         }
       })
       .on('mouseleave', (e) => {
+        // TODO
+        let datum = d3.select(e.target).data()[0];
+        if (datum.layer === 2 && datum.head === 9) {
+          return;
+        }
+
         tooltipConfig.show = false;
         tooltipConfigStore.set(tooltipConfig);
 
@@ -324,7 +330,10 @@
 
     // Create the links
     let links = [];
+
+    // Todo
     let threshold = 0.2;
+    // let threshold = 0;
 
     for (let i = 0; i < tokenSize; i++) {
       for (let j = 0; j < tokenSize; j++) {

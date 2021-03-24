@@ -94,12 +94,17 @@
 
   let currentLayout = layoutOptions.dependency;
   let linkColor = 'hsl(0, 0%, 80%)';
-  let linkHoverColor = 'hsl(24, 95%, 59%)';
-  linkHoverColor = 'hsl(174, 65%, 48%)';
+  let linkHoverColor = 'hsl(42, 95%, 58%)';
+  linkHoverColor = 'hsl(36, 100%, 55%)';
+  // linkHoverColor = 'hsl(174, 65%, 48%)';
 
-  let linkHoverGradient1 = 'hsl(173, 66%, 90%)';
-  let linkHoverGradient2 = 'hsl(176, 74%, 70%)';
-  let linkHoverGradient3 = 'hsl(173, 66%, 35%)';
+  // let linkHoverGradient1 = 'hsl(173, 66%, 90%)';
+  // let linkHoverGradient2 = 'hsl(176, 74%, 70%)';
+  // let linkHoverGradient3 = 'hsl(173, 66%, 35%)';
+
+  let linkHoverGradient1 = 'hsl(36, 100%, 90%)';
+  let linkHoverGradient2 = 'hsl(36, 100%, 80%)';
+  let linkHoverGradient3 = 'hsl(36, 100%, 55%)';
 
   let showRelationCheckboxes = false;
 
@@ -330,7 +335,7 @@
     gradient.append('stop')
       .style('stop-opacity', 1)
       .style('stop-color', 'hsl(0, 0%, 70%)')
-      .attr('offset', '0.3');
+      .attr('offset', '0.6');
 
     gradient.append('stop')
       .style('stop-opacity', 1)
@@ -350,7 +355,7 @@
     gradient.append('stop')
       .style('stop-opacity', 1)
       .style('stop-color', 'hsl(0, 0%, 70%)')
-      .attr('offset', '0.7');
+      .attr('offset', '0.4');
 
     gradient.append('stop')
       .style('stop-opacity', 1)
@@ -370,7 +375,7 @@
     gradient.append('stop')
       .style('stop-opacity', 1)
       .style('stop-color', linkHoverGradient2)
-      .attr('offset', '0.3');
+      .attr('offset', '0.6');
 
     gradient.append('stop')
       .style('stop-opacity', 1)
@@ -390,7 +395,7 @@
     gradient.append('stop')
       .style('stop-opacity', 1)
       .style('stop-color', linkHoverGradient2)
-      .attr('offset', '0.7');
+      .attr('offset', '0.4');
 
     gradient.append('stop')
       .style('stop-opacity', 1)
@@ -503,6 +508,10 @@
   };
 
   const deHighLightNode = () => {
+
+    // TODO
+    // return;
+
     svg.selectAll('.node')
       .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
       .select('rect')
@@ -834,7 +843,7 @@
     font-size: 0.8em;
     text-anchor: middle;
     stroke-linejoin: round;
-    fill: hsl(205, 100%, 50%);
+    fill: hsl(208, 100%, 50%);
   }
 
   :global(.arc-path) {
