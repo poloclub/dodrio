@@ -921,7 +921,7 @@
     }
   }
 
-  :global(.head-name-group) {
+  :global(.comparison-head-name-group) {
     :global(.name) {
       font-size: 12px;
       dominant-baseline: hanging;

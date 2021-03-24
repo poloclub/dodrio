@@ -496,6 +496,7 @@ const arcButtonClicked = (e) => {
 
   d3.select(e.target).classed('symbol-highlight', isMoved[curID] == null);
 
+
   if (isMoved[curID] == null) {
     // Move the groups below if it is in the first half
     if (curID < Math.floor(rowNum / 2)) {
@@ -533,6 +534,14 @@ const arcButtonClicked = (e) => {
       isMoved[curID] = 'up';
     }
 
+    // Add label
+    nameGroup.append('text')
+      .attr('class', 'arc-label name')
+      .attr('x', -8)
+      .attr('y', -15)
+      .style('fill', 'hsl(0, 0%, 60%)')
+      .text('Attention Weights');
+
     // Show the arc diagram
     d3.select(`.attention-group-arc-${curID}`)
       .style('display', null)
@@ -552,6 +561,8 @@ const arcButtonClicked = (e) => {
       .style('opacity', 0)
       .on('end', (d, i, g) => {
         d3.select(g[i]).style('display', 'none');
+        // Remove label
+        nameGroup.select('.arc-label').remove();
       });
 
     // Restore the movement
@@ -681,7 +692,7 @@ export const removeDependencyComparison = (svg) => {
     .attr('transform', `translate(${oldTranslateX - moveX}, ${oldTranslateY})`);
 
   // Remove the added elements
-  svg.select('.head-name-group').remove();
+  svg.select('.comparison-head-name-group').remove();
   svg.selectAll('.attention-group').remove();
 
   // Hide the text label
@@ -742,7 +753,7 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
   updateSVGWidth(svg, +svg.attr('width') + moveX);
 
   let headNameGroup = svg.append('g')
-    .attr('class', 'head-name-group')
+    .attr('class', 'comparison-head-name-group')
     .attr('transform', `translate(${SVGPadding.left},
       ${SVGPadding.top + textTokenPadding.top + 4})`)
     .style('opacity', 0);
