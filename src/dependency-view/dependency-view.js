@@ -87,6 +87,7 @@ export const drawGraph = (data, saliencies, wordToSubwordMap, svg, tokenXs,
       return cls;
     })
     .attr('id', d => `node-${d.id}`)
+    .attr('data-id', d => d.id)
     .attr('transform', (d, i) => `translate(${tokenXs[i]}, ${0})`)
     .on('mouseover', tokenNodeMouseover)
     .on('mouseleave', tokenNodeMouseleave);

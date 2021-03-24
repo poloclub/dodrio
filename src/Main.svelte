@@ -181,6 +181,7 @@
     lowerContainerDIV.style.bottom = '0px';
     downButton.style.top = `${originalInstanceViewHeight + headerHeight
       - downButtonPos.height / 2}px`;
+    buttonDown = true;
 
     comparisonViewConfig.height = originalInstanceViewHeight - 5;
     comparisonViewConfig.inComparison = false;

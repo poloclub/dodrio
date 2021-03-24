@@ -24,7 +24,6 @@
   let relations = [];
   let selectedRelations = {};
   let instanceID = 1562;
-  instanceIDStore.subscribe(value => {instanceID = value;});
 
   let textTokenWidths = {};
   let tokenXs = [];
@@ -40,16 +39,11 @@
   comparisonViewStore.subscribe(value => {
     comparisonViewConfig = value;
     SVGHeight = comparisonViewConfig.height - 41;
-    console.log(comparisonViewConfig, inComparisonView);
 
     if (comparisonViewConfig.inComparison && !inComparisonView) {
-      console.log('enter comaprison view');
-      // comparisonButtonClicked();
       comparisonButtonClickedHandler();
     } else if (!comparisonViewConfig.inComparison && inComparisonView){
-      console.log('exit comaprison view');
       comparisonButtonClickedHandler();
-      // comparisonButtonClicked();
     }
   });
 
@@ -222,7 +216,7 @@
   };
 
   const initSVG = () => {
-    svg = d3.select(svg)
+    svg = d3.select('svg.dependency-svg')
       .attr('width', SVGWidth)
       .attr('height', SVGHeight);
 
@@ -492,6 +486,15 @@
       .classed('highlighted', true)
       .style('opacity', 1)
       .raise();
+
+    svg.selectAll('.attention-arc')
+      .style('opacity', 0.2);
+
+    svg.selectAll('.attention-arc')
+      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
+      .classed('highlighted', true)
+      .style('opacity', 0.9)
+      .raise();
   };
 
   const deHighLightNode = () => {
@@ -524,10 +527,17 @@
       .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
       .classed('highlighted', false)
       .raise();
+
+    svg.selectAll('.attention-arc')
+      .style('opacity', 0.5);
+
+    svg.selectAll('.attention-arc')
+      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
+      .classed('highlighted', false)
+      .raise();
   };
 
   const initWordToSubwordMap = (tokens, saliencies) => {
-    console.log(tokens, saliencies);
 
     wordToSubwordMap = {};
     let j = 0;
@@ -577,7 +587,6 @@
       inComparisonView = false;
       removeDependencyComparison(svg);
     } else {
-      console.log('button clicked, enter comparison');
       inComparisonView = true;
       if (attentions == null) {
         initAttentionData(
@@ -690,6 +699,45 @@
     bindSelect();
   });
 
+  const createGraph = () => {
+    let results = null;
+    switch(currentLayout.value) {
+    case 'saliency':
+      if (!SVGInitialized) {
+        initSVG();
+      }
+      drawParagraph(saliencies, svg, SVGWidth, SVGPadding, textTokenPadding,
+        wordToSubwordMap, tokenNodeMouseover, tokenNodeMouseleave);
+      saliencyViewInitialized = true;
+      break;
+    
+    case 'dependency':
+      if (!SVGInitialized) {
+        initSVG();
+      }
+      results = drawGraph(data, saliencies, wordToSubwordMap, svg, tokenXs,
+        textTokenPadding, SVGPadding, SVGHeight, tokenNodeMouseover,
+        tokenNodeMouseleave, initWordToSubwordMap);
+      tokenXs = results.tokenXs;
+      textTokenWidths = results.textTokenWidths;
+
+      getInterestingHeads();
+
+      dependencyViewInitialized = true;
+      break;
+
+    case 'tree':
+      if (!SVGInitialized) {
+        initSVG();
+      }
+      drawTree(data, saliencies, svg, SVGWidth, SVGHeight, SVGPadding,
+        tokenNodeMouseoverTree, tokenNodeMouseleave, textTokenPadding, wordToSubwordMap,
+        initWordToSubwordMap);
+      treeViewInitialized = true;
+      break; 
+    }
+  };
+
   instanceViewConfigStore.subscribe(async value => {
     if (value.compHeight !== undefined && value.compWidth !== undefined){
       if (instanceViewConfig === undefined ||
@@ -701,45 +749,6 @@
         SVGWidth = instanceViewConfig.compWidth;
         SVGHeight = instanceViewConfig.compHeight - 41;
 
-        const createGraph = () => {
-          let results = null;
-          switch(currentLayout.value) {
-          case 'saliency':
-            if (!SVGInitialized) {
-              initSVG();
-            }
-            drawParagraph(saliencies, svg, SVGWidth, SVGPadding, textTokenPadding,
-              wordToSubwordMap, tokenNodeMouseover, tokenNodeMouseleave);
-            saliencyViewInitialized = true;
-            break;
-          
-          case 'dependency':
-            if (!SVGInitialized) {
-              initSVG();
-            }
-            results = drawGraph(data, saliencies, wordToSubwordMap, svg, tokenXs,
-              textTokenPadding, SVGPadding, SVGHeight, tokenNodeMouseover,
-              tokenNodeMouseleave, initWordToSubwordMap);
-            tokenXs = results.tokenXs;
-            textTokenWidths = results.textTokenWidths;
-
-            getInterestingHeads();
-
-            dependencyViewInitialized = true;
-            break;
-
-          case 'tree':
-            if (!SVGInitialized) {
-              initSVG();
-            }
-            drawTree(data, saliencies, svg, SVGWidth, SVGHeight, SVGPadding,
-              tokenNodeMouseoverTree, tokenNodeMouseleave, textTokenPadding, wordToSubwordMap,
-              initWordToSubwordMap);
-            treeViewInitialized = true;
-            break; 
-          }
-        };
-
         // Load the dependency and saliency data
         if (data == null || saliencies == null) {
           initData('/data/sst2-dependencies.json',
@@ -747,12 +756,36 @@
             '/data/sst2-sorted-syntactic-heads.json')
             .then(createGraph);
         } else {
-          console.log('wow');
           createGraph();
         }
 
       }
     }
+  });
+
+  instanceIDStore.subscribe(value => {
+    console.log('Instance changed!!');
+    if (value !== instanceID) {
+      svg.selectAll('*').remove();
+      SVGInitialized = false;
+      attentions = null;
+
+      data = null;
+      existingLinkSet = null;
+      saliencies = null;
+      attentions = null;
+      headOrder = null;
+
+      wordToSubwordMap = null;
+      dependencyViewInitialized = false;
+      saliencyViewInitialized = false;
+      treeViewInitialized = false;
+      instanceID = value;
+      initData('/data/sst2-dependencies.json',
+        '/data/sst2-saliency-list-grad-l1.json',
+        '/data/sst2-sorted-syntactic-heads.json').then(createGraph);
+    }
+    
   });
   
   hoverTokenStore.subscribe(value => {
@@ -899,6 +932,24 @@
     fill: none;
   }
 
+  :global(.attention-arc--lr) {
+    stroke: url(#link-opacity-gradient-lr);
+  }
+
+  :global(.attention-arc--rl) {
+    stroke: url(#link-opacity-gradient-rl);
+  }
+
+  :global(.attention-arc--lr.highlighted) {
+    stroke: url(#matched-link-opacity-gradient-lr);
+    stroke-width: 2;
+  }
+
+  :global(.attention-arc--rl.highlighted) {
+    stroke: url(#matched-link-opacity-gradient-rl);
+    stroke-width: 2;
+  }
+
   :global(.matched-attention-path) {
     stroke: $orange-reg;
     stroke-width: 2;
@@ -967,6 +1018,7 @@
     top: 0;
     left: 0;
     z-index: 5;
+    width: 98vw;
     cursor: default;
 
     padding-top: 5px;
@@ -1005,7 +1057,10 @@
 
   .comparison-panel-container {
     @extend .panel-container;
-    top: 200px;
+    width: 100%;
+    z-index: 5;
+    border-top: 1px solid hsla(0, 0%, 0%, 0.2);
+    box-shadow:  0 -3px 3px hsla(0, 0%, 0%, 0.05);
   }
 
   .comparison-control-panel {
@@ -1167,6 +1222,14 @@
     color: $gray-light;
   }
 
+  .gradient-guide {
+    margin-left: auto;
+
+    img {
+      height: 22px;
+    }
+  }
+
 
 </style>
 
@@ -1219,6 +1282,10 @@
         </div>
       </div>
 
+      <div class='gradient-guide'>
+        <img src='/figures/gradient.png' alt='gradient guide'>
+      </div>
+
       <!-- Control panel after syntactic relation item is selected -->
       <div class='relation-checkboxes' class:hide={!showRelationCheckboxes}>
         {#each relations as entry}
@@ -1262,7 +1329,7 @@
   </div>
 
   <div class='svg-container'>
-    <svg class='dependency-svg' bind:this={svg}></svg>
+    <svg class='dependency-svg'></svg>
   </div>
   
 </div>

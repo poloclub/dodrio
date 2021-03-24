@@ -6,8 +6,7 @@
   
   // Shared states
   let graphViewCompConfig = undefined;
-  let instanceID = 106;
-  instanceIDStore.subscribe(value => {instanceID = value;});
+  let instanceID = 1562;
   let curLayer = 9;
   let curHead = 8;
   let mapHead = {layer: 9, head: 8};
@@ -1292,6 +1291,22 @@
 
   wordToSubwordMapStore.subscribe(value => {
     wordToSubwordMap = value;
+  });
+
+  instanceIDStore.subscribe(value => {
+    console.log('Instance changed!!');
+    if (value !== instanceID) {
+
+      d3.select(graphSVG).selectAll('*').remove();
+
+      attentionData = null;
+      saliencyData = null;
+
+      instanceID = value;
+
+      renderGraph();
+    }
+    
   });
 
 

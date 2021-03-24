@@ -1,6 +1,6 @@
 import * as d3 from 'd3';
 import { tokenIDName, isSpecialToken, updateSVGWidth, round } from './utils.js';
-import { modalStore, attentionHeadColorStore } from '../store';
+import { modalStore, attentionHeadColorStore, hoverTokenStore } from '../store';
 
 let isMoved = {};
 let modalInfo = {};
@@ -187,7 +187,6 @@ const createRankedDepMap = (maxAttentionLinks, tokenXs, textTokenPadding, textTo
 
 const drawBottomDependencyLine = (rankedDepMap, attentionGroup, tokenHeight,
   firstRow, existingLinkSet, wordToSubwordMap, tokens) => {
-  console.log(tokens);
 
   Object.keys(rankedDepMap).forEach((k, i) => {
 
@@ -381,8 +380,8 @@ const createAttentionArcs = (attentionArcs, tokenXs, textTokenPadding, textToken
   return arcs;
 };
 
-const drawAttentionArc = (attentionArcs, attentionGroup, attentionGroupID,
-  minHeight=5, maxHeight=70) => {
+const drawAttentionArc = (attentionArcs, attentionGroup, attentionGroupID, wordToSubwordMap,
+  tokens, minHeight=5, maxHeight=70) => {
   let arcYScale = d3.scaleLinear()
     .domain(d3.extent(attentionArcs.map(d => Math.abs(d.parent - d.child))))
     .range([minHeight, maxHeight]);
@@ -390,6 +389,10 @@ const drawAttentionArc = (attentionArcs, attentionGroup, attentionGroupID,
   let arcOpacityScale = d3.scaleLinear()
     .domain(d3.extent(attentionArcs.map(d => d.attention)))
     .range([0.1, 0.6]);
+
+  let arcWidthScale = d3.scaleLinear()
+    .domain(d3.extent(attentionArcs.map(d => d.attention)))
+    .range([0.2, 2]);
 
   // Draw the arc diagram on top of the tokens
   attentionGroup.append('g')
@@ -401,9 +404,26 @@ const drawAttentionArc = (attentionArcs, attentionGroup, attentionGroupID,
     .data(attentionArcs, d => `${d.parent}-${d.child}`)
     .join('path')
     .attr('class', `attention-arc attention-arc-${attentionGroupID}`)
-    .attr('marker-end', 'url(#dep-attention-arc-arrow)')
-    .style('width', 0.5)
-    .style('opacity', d => arcOpacityScale(d.attention))
+    .attr('class', d => {
+      let cls = `attention-arc attention-arc-${tokens[d.parent].id}-${tokens[d.child].id}`;
+      if (wordToSubwordMap[tokens[d.parent].token] !== undefined) {
+        wordToSubwordMap[tokens[d.parent].token].forEach(n => {
+          cls += ` attention-arc-${n}-${tokens[d.child].id}`;
+        });
+      }
+      if (wordToSubwordMap[tokens[d.child].token] !== undefined) {
+        wordToSubwordMap[tokens[d.child].token].forEach(n => {
+          cls += ` attention-arc-${tokens[d.parent].id}-${n}`;
+        });
+      }
+      return cls;
+    })
+    .classed('attention-arc--lr', d => d.parent <= d.child)
+    .classed('attention-arc--rl', d => d.parent > d.child)
+    // .attr('marker-end', 'url(#dep-attention-arc-arrow)')
+    .style('width', d => arcWidthScale(d.attention))
+    // .style('opacity', d => arcOpacityScale(d.attention))
+    .style('opacity', 0.5)
     .attr('d', d => {
       let sourceX = d.sourceX;
       let targetX = d.targetX;
@@ -800,7 +820,7 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
   let controlPanelY = +d3.select('.graph-view .svg-container')
     .style('top')
     .replace(/(.*)px/, '$1');
-  controlPanelY += arcGroupHeight + oldNodeGroupHeight + SVGPadding.top;
+  controlPanelY += arcGroupHeight + oldNodeGroupHeight + SVGPadding.top + 10;
 
   d3.select('.comparison-panel-container')
     .style('top', `${controlPanelY}px`)
@@ -823,7 +843,7 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
 
     if (attentionGroupID === 0){
       // TODO remove here
-      newTranslateY = arcGroupHeight + oldNodeGroupHeight + 50;
+      newTranslateY = arcGroupHeight + oldNodeGroupHeight + 60;
       // newTranslateY = arcGroupHeight + oldNodeGroupHeight + 200;
     } else {
       preTranslateY = +svg.select(`#attention-group-${attentionGroupID - 1}`)
@@ -856,7 +876,14 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
     
     newGroup.selectAll('g.node')
       .classed('node', false)
-      .classed('node-clone', true);
+      .classed('node-clone', true)
+      .on('mouseover', (e) => {
+        let nodeID = e.target.parentNode.dataset.id;
+        hoverTokenStore.set(nodeID);
+      })
+      .on('mouseleave', () => {
+        hoverTokenStore.set(null);
+      });
     
     newGroup.selectAll('rect')
       .style('stroke', 'none');
@@ -901,7 +928,8 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
     let attentionArcs = createAttentionArcs(HighAttention, tokenXs,
       textTokenPadding, textTokenWidths);
 
-    drawAttentionArc(attentionArcs, attentionGroup, attentionGroupID);
+    drawAttentionArc(attentionArcs, attentionGroup, attentionGroupID,
+      wordToSubwordMap, depTokens);
 
     if (curHeight + SVGPadding.bottom > SVGHeight) {
       attentionGroup.remove();

@@ -1,9 +1,8 @@
 <script>
   import { onMount, createEventDispatcher } from 'svelte';
-  import { tableModalStore, sideStore, attentionHeadColorStore } from './store';
+  import { tableModalStore, instanceIDStore, currInstanceStore } from './store';
   import EmbeddingView from './EmbeddingView.svelte';
   import TableView from './TableView.svelte';
-  import * as d3 from 'd3';
 
   let modalComponent;
 
@@ -11,6 +10,8 @@
   let modalInfo = {
     show: false
   };
+  let tempID = null;
+  currInstanceStore.subscribe(value => {tempID = value;});
 
   tableModalStore.set(modalInfo);
   tableModalStore.subscribe(value => {modalInfo = value});
@@ -18,6 +19,13 @@
   const crossClicked = () => {
     modalInfo.show = false;
     tableModalStore.set(modalInfo);
+    // Dispatch the parent component
+    dispatch('xClicked', {preImage: modalInfo.preImage});
+  };
+
+  const okClicked = () => {
+    modalInfo.show = false;
+    instanceIDStore.set(tempID);
     // Dispatch the parent component
     dispatch('xClicked', {preImage: modalInfo.preImage});
   };
@@ -120,7 +128,8 @@
               Cancel
             </button>
 
-            <button class="button is-success is-smaller">
+            <button class="button is-success is-smaller"
+              on:click={okClicked}>
               Add
             </button>
           </div>
