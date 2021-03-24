@@ -27,7 +27,6 @@
   const blue = d3.hcl(274, 85, 56);
 
   let instanceID = 1562;
-  instanceIDStore.subscribe(value => {instanceID = value;});
 
   const dispatch = createEventDispatcher();
   let isShown = true;
@@ -54,11 +53,12 @@
     const layerNum = attentions.length;
     const headNum = attentions[0].length;
     const layerNameWidth = 47;
+    const headNameHeight = 20;
 
     console.log(SVGWidth, SVGHeight);
 
     let availableWidth = SVGWidth - 210 - layerNameWidth - SVGPadding.left - SVGPadding.right;
-    let availableHeight = SVGHeight - SVGPadding.top - SVGPadding.bottom;
+    let availableHeight = SVGHeight - SVGPadding.top - SVGPadding.bottom - headNameHeight;
 
     let availableLength = Math.min(availableHeight, availableWidth);
     console.log(SVGHeight, availableLength, availableWidth, availableHeight);
@@ -71,10 +71,10 @@
     let adjustedRowGap = Math.floor((availableWidth - maxOutRadius - headNum * gridLength) / (layerNum - 1));
     let adjustedColGap = Math.floor((availableHeight - layerNum * gridLength) / (layerNum - 1));
 
-    svg = d3.select(svg)
+    svg = d3.select('.atlas-svg-full')
       .attr('viewbox', `0 0 ${availableWidth + layerNameWidth} ${availableHeight}`)
       .attr('width', availableWidth + layerNameWidth)
-      .attr('height', availableHeight);
+      .attr('height', availableHeight + headNameHeight);
 
     // Add a border
     svg.append('rect')
@@ -86,7 +86,8 @@
 
     let donutGroup = svg.append('g')
       .attr('class', 'donut-group')
-      .attr('transform', `translate(${SVGPadding.left + maxOutRadius + layerNameWidth}, ${maxOutRadius})`);
+      .attr('transform', `translate(${SVGPadding.left + maxOutRadius + layerNameWidth},
+        ${maxOutRadius + headNameHeight})`);
     
     // Create color scale
     let hueScale = d3.scaleLinear()
@@ -137,7 +138,7 @@
 
         tooltipConfig.html = `
         <div class='tooltip-tb' style='display: flex; flex-direction: column;
-          justify-content: center;'>
+          justify-content: center; font-weight: 600;'>
           <div> Layer ${d.layer + 1} Head ${d.head + 1} </div>
           <div style='font-size: 12px; opacity: 0.6;'> Semantic: ${round(d.semantic, 2)} </div>
           <div style='font-size: 12px; opacity: 0.6;'> Syntactic ${round(d.syntactic, 2)} </div>
@@ -237,7 +238,7 @@
     // Draw the label names
     let nameGroup = svg.append('g')
       .attr('class', 'name-group')
-      .attr('transform', `translate(${SVGPadding.left}, ${maxOutRadius})`);
+      .attr('transform', `translate(${SVGPadding.left}, ${maxOutRadius + headNameHeight})`);
     
     nameGroup.selectAll('g.layer-name-group')
       .data(Array(layerNum).fill(0).map( (_, i) => i))
@@ -246,7 +247,21 @@
       .attr('transform', d => `translate(${layerNameWidth - 10},
         ${(layerNum - d - 1) * (maxOutRadius * 2 + adjustedColGap)})`)
       .append('text')
-      .text(d => d > 2 ? d + 1 : `Layer ${d + 1}`);
+      .text(d => d > 0 ? d + 1 : `Layer ${d + 1}`);
+
+    let headNameGroup = svg.append('g')
+      .attr('class', 'name-group')
+      .attr('transform', `translate(${SVGPadding.left + layerNameWidth + maxOutRadius},
+        ${9})`);
+
+    headNameGroup.selectAll('g.head-name-group')
+      .data(Array(layerNum).fill(0).map( (_, i) => i))
+      .join('g')
+      .attr('class', 'head-name-group')
+      .attr('transform', d => `translate(${d * (maxOutRadius * 2 + adjustedRowGap)},
+        ${0})`)
+      .append('text')
+      .text(d => d > 0 ? d + 1 : `Head ${d + 1}`);
 
     d3.select(viewContainer)
       .select('.head-arrow')
@@ -479,6 +494,17 @@
     }
   });
 
+  instanceIDStore.subscribe(async value => {
+    if (value !== instanceID) {
+      instanceID = value;
+      saliencies = await d3.json('/data/sst2-saliency-list-grad-l1.json');
+      saliencies = saliencies[instanceID];
+      tokenSize = saliencies.tokens.length;
+      svg.select('*').remove();
+      createGraph();
+    }
+  });
+
   sideStore.subscribe(value => {sideInfo = value;});
 
   mapViewConfigStore.subscribe(async value => {
@@ -683,7 +709,7 @@
   <div class='svg-container'>
 
     <div class='atlas-svg-container'>
-      <svg class='atlas-svg' bind:this={svg}></svg>
+      <svg class='atlas-svg-full'></svg>
     </div>
 
     <div class='legend-container'>

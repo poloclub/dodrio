@@ -93,7 +93,7 @@
       .select('.atlas-svg-container')
       .style('width', '100%')
       .style('height', '100%')
-      .select('.atlas-svg');
+      .select('.atlas-svg-full');
 
     atlasSVGWidth = svg.attr('width');
     atlasSVGHeight = svg.attr('height');
@@ -123,7 +123,7 @@
         .select('.atlas-svg-container')
         .style('width', null)
         .style('height', null)
-        .select('.atlas-svg')
+        .select('.atlas-svg-full')
         .style('padding-top', null)
         .style('padding-left', null)
         .style('width', null)
@@ -234,7 +234,8 @@
     width: 100vw;
     display: flex;
     box-sizing: border-box;
-    overflow: hidden;
+    // overflow: hidden;
+    overflow: show;
   }
 
   .select-container {

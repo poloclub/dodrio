@@ -29,7 +29,7 @@
     
     let color = attentionHeadColor.get([modalInfo.layer, modalInfo.head].toString());
 
-    svg.select('#atlas-arrow')
+    svg.select('#atlas-side-arrow')
       .select('path')
       .attr('fill', color)
       .attr('stroke', color);
@@ -168,7 +168,7 @@
       .style('fill', 'white')
       .style('opacity', 0)
       .on('mouseover', (e, d) => {
-        svg.select('#atlas-arrow')
+        svg.select('#atlas-side-arrow')
           .select('path')
           .attr('opacity', 0.1);
 
@@ -181,20 +181,22 @@
           .filter(dd => {
             return dd.source === d.id || dd.target === d.id;
           })
-          .attr('marker-end', 'url(#atlas-arrow-hover)')
-          .style('stroke', 'hsl(24, 95%, 59%)')
+          .attr('marker-end', 'url(#atlas-side-arrow-hover)')
+          .style('stroke', 'hsl(36, 100%, 55%)')
+          .style('stroke-width', 3)
           .style('opacity', 1)
           .raise();
       })
       .on('mouseleave', () => {
-        svg.select('#atlas-arrow')
+        svg.select('#atlas-side-arrow')
           .select('path')
           .attr('opacity', null);
 
         donut.select('.path-group')
           .selectAll('path.donut-link')
-          .attr('marker-end', 'url(#atlas-arrow)')
+          .attr('marker-end', 'url(#atlas-side-arrow)')
           .style('stroke', color)
+          .style('stroke-width', d => linkWidthScale(d.attention))
           .style('opacity', 1);
       });
 
@@ -215,7 +217,7 @@
       .attr('text-anchor', d => d.angle < Math.PI / 2 ? 'start' : 'end')
       .text(d => d.token)
       .on('mouseover', (e, d) => {
-        svg.select('#atlas-arrow')
+        svg.select('#atlas-side-arrow')
           .select('path')
           .attr('opacity', 0.1);
 
@@ -228,19 +230,19 @@
           .filter(dd => {
             return dd.source === d.id || dd.target === d.id;
           })
-          .attr('marker-end', 'url(#atlas-arrow-hover)')
+          .attr('marker-end', 'url(#atlas-side-arrow-hover)')
           .style('stroke', 'hsl(24, 95%, 59%)')
           .style('opacity', 1)
           .raise();
       })
       .on('mouseleave', () => {
-        svg.select('#atlas-arrow')
+        svg.select('#atlas-side-arrow')
           .select('path')
           .attr('opacity', null);
 
         donut.select('.path-group')
           .selectAll('path.donut-link')
-          .attr('marker-end', 'url(#atlas-arrow)')
+          .attr('marker-end', 'url(#atlas-side-arrow)')
           .style('stroke', color)
           .style('opacity', 1);
       });
@@ -252,7 +254,7 @@
       .data(links, d => d.id)
       .join('path')
       .attr('class', 'donut-link')
-      .attr('marker-end', 'url(#atlas-arrow)')
+      .attr('marker-end', 'url(#atlas-side-arrow)')
       .attr('d', d => {
         let source = tokenPos[d.source];
         let target = tokenPos[d.target];
@@ -302,9 +304,9 @@
       .attr('transform', 'translate(250, 250)');
 
     markerDef = svg.append('defs')
-      .attr('id', 'atlas-arrow-def')
+      .attr('id', 'atlas-side-arrow-def')
       .append('marker')
-      .attr('id', 'atlas-arrow')
+      .attr('id', 'atlas-side-arrow')
       .attr('viewBox', [0, 0, 10, 10])
       .attr('refX', 10)
       .attr('refY', 5)
@@ -319,9 +321,9 @@
       .attr('fill', 'gray');
 
     markerDef = svg.append('defs')
-      .attr('id', 'atlas-arrow-def-hover')
+      .attr('id', 'atlas-side-arrow-def-hover')
       .append('marker')
-      .attr('id', 'atlas-arrow-hover')
+      .attr('id', 'atlas-side-arrow-hover')
       .attr('viewBox', [0, 0, 10, 10])
       .attr('refX', 10)
       .attr('refY', 5)
