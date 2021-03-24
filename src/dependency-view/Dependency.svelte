@@ -100,7 +100,7 @@
 
   let currentLayout = layoutOptions.dependency;
   let linkColor = 'hsl(0, 0%, 80%)';
-  let linkHoverColor = 'hsl(358, 94%, 73%)';
+  let linkHoverColor = 'hsl(24, 95%, 59%)';
   let linkAttentionColor = 'hsla(0, 0%, 0%, 0.5)';
   let showRelationCheckboxes = false;
 
@@ -365,17 +365,17 @@
 
     gradient.append('stop')
       .style('stop-opacity', 1)
-      .style('stop-color', 'hsl(205, 100%, 35%)')
+      .style('stop-color', 'hsl(24, 100%, 35%)')
       .attr('offset', '0');
 
     gradient.append('stop')
       .style('stop-opacity', 1)
-      .style('stop-color', 'hsl(205, 100%, 70%)')
+      .style('stop-color', 'hsl(24, 100%, 70%)')
       .attr('offset', '0.3');
 
     gradient.append('stop')
       .style('stop-opacity', 1)
-      .style('stop-color', 'hsl(205, 100%, 90%)')
+      .style('stop-color', 'hsl(24, 100%, 90%)')
       .attr('offset', '1');
 
     // Matched line gradient left to right
@@ -385,17 +385,57 @@
 
     gradient.append('stop')
       .style('stop-opacity', 1)
-      .style('stop-color', 'hsl(205, 100%, 90%)')
+      .style('stop-color', 'hsl(24, 100%, 90%)')
       .attr('offset', '0');
 
     gradient.append('stop')
       .style('stop-opacity', 1)
-      .style('stop-color', 'hsl(205, 100%, 70%)')
+      .style('stop-color', 'hsl(24, 100%, 70%)')
       .attr('offset', '0.7');
 
     gradient.append('stop')
       .style('stop-opacity', 1)
-      .style('stop-color', 'hsl(205, 100%, 35%)')
+      .style('stop-color', 'hsl(24, 100%, 35%)')
+      .attr('offset', '1');
+
+    // Top line gradient right to left
+    gradient = svg.append('defs')
+      .append('linearGradient')
+      .attr('id', 'top-link-opacity-gradient-rl');
+
+    gradient.append('stop')
+      .style('stop-opacity', 0.8)
+      .style('stop-color', 'hsl(0, 0%, 20%)')
+      .attr('offset', '0');
+
+    gradient.append('stop')
+      .style('stop-opacity', 0.8)
+      .style('stop-color', 'hsl(0, 0%, 70%)')
+      .attr('offset', '0.3');
+
+    gradient.append('stop')
+      .style('stop-opacity', 0.8)
+      .style('stop-color', 'hsl(0, 0%, 90%)')
+      .attr('offset', '1');
+
+    // Line gradient left to right
+    gradient = svg.append('defs')
+      .append('linearGradient')
+      .attr('id', 'top-link-opacity-gradient-lr');
+
+    gradient.append('stop')
+      .style('stop-opacity', 0.8)
+      .style('stop-color', 'hsl(0, 0%, 90%)')
+      .attr('offset', '0');
+
+    gradient.append('stop')
+      .style('stop-opacity', 0.8)
+      .style('stop-color', 'hsl(0, 0%, 70%)')
+      .attr('offset', '0.7');
+
+    gradient.append('stop')
+      .style('stop-opacity', 0.8)
+      .style('stop-color', 'hsl(0, 0%, 20%)')
       .attr('offset', '1');
 
     SVGInitialized = true;
@@ -426,10 +466,31 @@
       .style('stroke-width', 2);
     
     svg.selectAll('.arc-path')
+      .style('opacity', 0.2);
+
+    svg.selectAll('.arc-path')
       .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
+      .classed('highlighted', true)
+      .style('opacity', 1)
+      .raise();
+
+    svg.selectAll('.node-clone')
+      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
+      .select('rect')
       .style('stroke', linkHoverColor)
-      .style('stroke-width', 2)
-      .attr('marker-end', 'url(#dep-arrow-hover)')
+      .style('opacity', 1)
+      .style('stroke-width', 2);
+
+    svg.selectAll('.matched-attention-path')
+      .classed('de-highlighted', true);
+
+    svg.selectAll('.attention-path')
+      .style('opacity', 0.2);
+
+    svg.selectAll('.attention-path')
+      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
+      .classed('highlighted', true)
+      .style('opacity', 1)
       .raise();
   };
 
@@ -439,11 +500,30 @@
       .select('rect')
       .style('stroke', 'hsl(180, 1%, 80%)')
       .style('stroke-width', 1);
+
+    svg.selectAll('.arc-path')
+      .style('opacity', null);
+
     svg.selectAll('.arc-path')
       .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
-      .style('stroke', null)
-      .style('stroke-width', 1)
-      .attr('marker-end', 'url(#dep-arrow)');
+      .classed('highlighted', false);
+
+    svg.selectAll('.node-clone')
+      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
+      .select('rect')
+      .style('opacity', null)
+      .style('stroke', 'none');
+
+    svg.selectAll('.matched-attention-path')
+      .classed('de-highlighted', false);
+
+    svg.selectAll('.attention-path')
+      .style('opacity', null);
+
+    svg.selectAll('.attention-path')
+      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
+      .classed('highlighted', false)
+      .raise();
   };
 
   const initWordToSubwordMap = (tokens, saliencies) => {
@@ -504,11 +584,11 @@
           `/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`
         ).then(() => drawDependencyComparison(topHeads, svg, SVGPadding, data,
           attentions, saliencies, SVGHeight, existingLinkSet, tokenXs,
-          textTokenPadding, textTokenWidths));
+          textTokenPadding, textTokenWidths, wordToSubwordMap, initWordToSubwordMap));
       } else {
         drawDependencyComparison(topHeads, svg, SVGPadding, data, attentions,
           saliencies, SVGHeight, existingLinkSet, tokenXs, textTokenPadding,
-          textTokenWidths);
+          textTokenWidths, wordToSubwordMap, initWordToSubwordMap);
       }
     }
   };
@@ -720,9 +800,27 @@
   }
 
   :global(.arc-path) {
-    stroke: hsl(0, 0%, 80%);
-    stroke-width: 1.5;
+    // stroke: hsl(0, 0%, 80%);
+    stroke-width: 2;
     fill: none;
+  }
+
+  :global(.arc-path--lr) {
+    stroke: url(#top-link-opacity-gradient-lr);
+  }
+
+  :global(.arc-path--lr.highlighted) {
+    stroke: url(#matched-link-opacity-gradient-lr);
+    stroke-width: 3;
+  }
+
+  :global(.arc-path--rl) {
+    stroke: url(#top-link-opacity-gradient-rl);
+  }
+
+  :global(.arc-path--rl.highlighted) {
+    stroke: url(#matched-link-opacity-gradient-rl);
+    stroke-width: 3;
   }
 
   :global(.node-circle) {
@@ -812,6 +910,36 @@
 
   :global(.matched-attention-path.attention-path--rl) {
     stroke: url(#matched-link-opacity-gradient-rl);
+  }
+
+  :global(.matched-attention-path.attention-path--lr.de-highlighted) {
+    stroke: url(#link-opacity-gradient-lr);
+    stroke-width: 1;
+  }
+
+  :global(.matched-attention-path.attention-path--rl.de-highlighted) {
+    stroke: url(#link-opacity-gradient-rl);
+    stroke-width: 1;
+  }
+
+  :global(.attention-path--lr.highlighted) {
+    stroke: url(#matched-link-opacity-gradient-lr);
+    stroke-width: 2;
+  }
+
+  :global(.attention-path--rl.highlighted) {
+    stroke: url(#matched-link-opacity-gradient-rl);
+    stroke-width: 2;
+  }
+
+  :global(.matched-attention-path.attention-path--lr.de-highlighted.highlighted) {
+    stroke: url(#matched-link-opacity-gradient-lr);
+    stroke-width: 2;
+  }
+
+  :global(.matched-attention-path.attention-path--rl.de-highlighted.highlighted) {
+    stroke: url(#matched-link-opacity-gradient-rl);
+    stroke-width: 2;
   }
 
   :global(.comparison-svg-button) {

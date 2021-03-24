@@ -185,8 +185,10 @@ export const drawGraph = (data, saliencies, wordToSubwordMap, svg, tokenXs,
         }
         return cls;
       })
+      .classed('arc-path--lr', d => d.parent < d.child)
+      .classed('arc-path--rl', d => d.parent > d.child)
       .attr('id', d => `arc-path-${tokens[d.parent].id}-${tokens[d.child].id}`)
-      .attr('marker-end', 'url(#dep-arrow)')
+      // .attr('marker-end', 'url(#dep-arrow)')
       .attr('d', d => {
         let sourceX = d.sourceX;
         let targetX = d.targetX;

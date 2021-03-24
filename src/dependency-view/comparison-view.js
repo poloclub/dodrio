@@ -1,11 +1,14 @@
 import * as d3 from 'd3';
-import { isSpecialToken, updateSVGWidth, round } from './utils.js';
-import { modalStore } from '../store';
+import { tokenIDName, isSpecialToken, updateSVGWidth, round } from './utils.js';
+import { modalStore, attentionHeadColorStore } from '../store';
 
 let isMoved = {};
 let modalInfo = {};
 
 modalStore.subscribe(value => { modalInfo = value; });
+
+let attentionHeadColor = new Map();
+attentionHeadColorStore.subscribe(value => { attentionHeadColor = value; });
 
 /**
  * Create a dependency graph list using the attention data. For each token,
@@ -183,7 +186,9 @@ const createRankedDepMap = (maxAttentionLinks, tokenXs, textTokenPadding, textTo
 };
 
 const drawBottomDependencyLine = (rankedDepMap, attentionGroup, tokenHeight,
-  firstRow, existingLinkSet) => {
+  firstRow, existingLinkSet, wordToSubwordMap, tokens) => {
+  console.log(tokens);
+
   Object.keys(rankedDepMap).forEach((k, i) => {
 
     attentionGroup.append('g')
@@ -191,7 +196,20 @@ const drawBottomDependencyLine = (rankedDepMap, attentionGroup, tokenHeight,
       .selectAll(`path.attention-path-${i}`)
       .data(rankedDepMap[k], d => `${d.parent}-${d.child}`)
       .join('path')
-      .attr('class', `attention-path attention-path-${i}`)
+      .attr('class', d => {
+        let cls = `attention-path attention-path-${i} attention-path-${tokens[d.parent].id}-${tokens[d.child].id}`;
+        if (wordToSubwordMap[tokens[d.parent].token] !== undefined) {
+          wordToSubwordMap[tokens[d.parent].token].forEach(n => {
+            cls += ` attention-path-${n}-${tokens[d.child].id}`;
+          });
+        }
+        if (wordToSubwordMap[tokens[d.child].token] !== undefined) {
+          wordToSubwordMap[tokens[d.child].token].forEach(n => {
+            cls += ` attention-path-${tokens[d.parent].id}-${n}`;
+          });
+        }
+        return cls;
+      })
       .classed('matched-attention-path', d => existingLinkSet.has(String([d.parent, d.child])))
       .classed('attention-path--lr', d => d.parent < d.child)
       .classed('attention-path--rl', d => d.parent > d.child)
@@ -636,7 +654,7 @@ export const removeDependencyComparison = (svg) => {
 
   svg.selectAll('.blocker').remove();
 
-  let tokenGroup = svg.select('.token-group')
+  svg.select('.token-group')
     .transition('move-x')
     .duration(500)
     .ease(d3.easeCubicInOut)
@@ -652,9 +670,47 @@ export const removeDependencyComparison = (svg) => {
 };
 
 export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attentions,
-  saliencies, SVGHeight, existingLinkSet, tokenXs, textTokenPadding, textTokenWidths) => {
+  saliencies, SVGHeight, existingLinkSet, tokenXs, textTokenPadding, textTokenWidths,
+  wordToSubwordMap, initWordToSubwordMap) => {
+
   const attentionRowGap = 10;
   let tokens = saliencies.tokens.map(d => { return { 'token': d.token }; });
+
+  // Need to split the original words into sub-words if applicable
+  let depTokens = data.words.map(d => { return { 'token': d }; });
+
+  // Give each saliency token a unique name
+  if (saliencies.tokens[0].id === undefined) {
+    let tokenCount = {};
+    saliencies.tokens.forEach(d => {
+      let curCount = 0;
+      if (tokenCount[d.token] === undefined) {
+        tokenCount[d.token] = curCount + 1;
+      } else {
+        curCount = tokenCount[d.token];
+        tokenCount[d.token] += 1;
+      }
+      d.id = `${tokenIDName(d.token)}-${curCount}`;
+    });
+  }
+
+  if (wordToSubwordMap == null) {
+    wordToSubwordMap = initWordToSubwordMap(depTokens, saliencies);
+  }
+  console.log(wordToSubwordMap);
+
+  // Give each saliency token a unique name
+  let tokenCount = {};
+  depTokens.forEach(d => {
+    let curCount = 0;
+    if (tokenCount[d.token] === undefined) {
+      tokenCount[d.token] = curCount + 1;
+    } else {
+      curCount = tokenCount[d.token];
+      tokenCount[d.token] += 1;
+    }
+    d.id = `${tokenIDName(d.token)}-${curCount}`;
+  });
 
   let oldTranslate = svg.select('.token-group')
     .attr('transform');
@@ -791,15 +847,21 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
     isMoved[attentionGroupID] = null;
 
     // Copy the node group
-    attentionGroup.append(
-      () => svg.select('.token-group')
-        .select('.node-group')
-        .classed('original-node-group', true)
-        .clone(true)
-        .classed('original-node-group', false)
-        .classed('node-group-attention', true)
-        .node()
-    );
+    let newGroup = svg.select('.token-group')
+      .select('.node-group')
+      .classed('original-node-group', true)
+      .clone(true)
+      .classed('original-node-group', false)
+      .classed('node-group-attention', true);
+    
+    newGroup.selectAll('g.node')
+      .classed('node', false)
+      .classed('node-clone', true);
+    
+    newGroup.selectAll('rect')
+      .style('stroke', 'none');
+
+    attentionGroup.append(() => newGroup.node());
 
     // Draw the dependencies
     maxAttentionLinks = getDependencyListFromAttention(
@@ -810,7 +872,8 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
 
     let rankedDepMap = createRankedDepMap(maxAttentionLinks, tokenXs, textTokenPadding, textTokenWidths);
 
-    drawBottomDependencyLine(rankedDepMap, attentionGroup, tokenHeight, false, existingLinkSet);
+    drawBottomDependencyLine(rankedDepMap, attentionGroup, tokenHeight, false,
+      existingLinkSet, wordToSubwordMap, depTokens);
 
     let nameGroup = headNameGroup.append('g')
       .datum(attentionGroupID)
@@ -818,8 +881,11 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
       .attr('transform', `translate(${0}, ${newTranslateY})`)
       .style('visibility', 'hidden');
 
+    let color = attentionHeadColor.get([topHeads[attentionGroupID].id.layer,
+      topHeads[attentionGroupID].id.head].toString());
     nameGroup.append('text')
       .attr('class', 'name')
+      .style('fill', color)
       .text(`layer ${topHeads[attentionGroupID].id.layer}
           head ${topHeads[attentionGroupID].id.head}`);
     
