@@ -365,7 +365,7 @@
 
     gradient.append('stop')
       .style('stop-opacity', 1)
-      .style('stop-color', 'hsl(24, 100%, 35%)')
+      .style('stop-color', 'hsl(24, 100%, 45%)')
       .attr('offset', '0');
 
     gradient.append('stop')
@@ -395,7 +395,7 @@
 
     gradient.append('stop')
       .style('stop-opacity', 1)
-      .style('stop-color', 'hsl(24, 100%, 35%)')
+      .style('stop-color', 'hsl(24, 100%, 55%)')
       .attr('offset', '1');
 
     // Top line gradient right to left

@@ -55,7 +55,7 @@
   let linkWidth = null;
 
   let linkColor = 'hsl(0, 0%, 76%)';
-  let linkHoverColor = 'hsl(358, 94%, 73%)';
+  let linkHoverColor = 'hsl(24, 95%, 59%)';
 
   // Control panel variables
   let settingIconActive = false;
@@ -1118,13 +1118,19 @@
   };
 
   const highLightLink = (hoverToken) => {
+
+    d3.select(graphSVG)
+      .select('.attention-link-group')
+      .selectAll('path.link')
+      .style('opacity', 0.1);
+
     d3.select(graphSVG)
       .select('.attention-link-group')
       .selectAll('path.link')
       .filter((d, i, g) => d3.select(g[i]).attr('id').includes(`-${hoverToken}`))
       .attr('marker-end', 'url(#arrow-hover)')
       .style('stroke', linkHoverColor)
-      .style('opacity', 0.7)
+      .style('opacity', 0.8)
       .raise();
 
     d3.select(graphSVG)
@@ -1138,6 +1144,12 @@
   };
 
   const dehighlightLink = (hoverToken) => {
+
+    d3.select(graphSVG)
+      .select('.attention-link-group')
+      .selectAll('path.link')
+      .style('opacity', null);
+
     d3.select(graphSVG)
       .select('.attention-link-group')
       .selectAll('path.link')
