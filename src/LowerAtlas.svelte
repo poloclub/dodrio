@@ -20,6 +20,8 @@
   let curLayer = 9;
   let curHead = 8;
 
+  let attentionHeadColors = new Map;
+
   const red = d3.hcl(23, 85, 56);
   const purple = d3.hcl(328, 85, 56);
   const blue = d3.hcl(274, 85, 56);
@@ -116,6 +118,10 @@
 
     // Draw the donuts
     donuts.each((d, i, g) => drawDonut(d, i, g, scales));
+
+    // Record the head color
+    console.log(attentionHeadColors);
+    attentionHeadColorStore.set(attentionHeadColors);
 
     donuts.on('mouseover',
       (e, d) => {
@@ -242,7 +248,6 @@
       donutGroup.select(`#donut-rect-${curLayer}-${curHead}`)
         .node().parentNode
     );
-    console.log(curDonut);
 
     // Style the new rect
     curDonut.select('.donut-rect')
@@ -319,6 +324,9 @@
 
     let color = d3.hcl(scales.hueScale(d.syntactic - d.semantic));
     color.l = scales.lightnessScale(Math.max(d.semantic, d.syntactic));
+
+    // Record the color
+    attentionHeadColors.set([d.layer, d.head].toString(), color.formatHex());
 
     donut.append('path')
       .attr('class', 'donut-chart')

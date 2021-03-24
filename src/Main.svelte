@@ -308,7 +308,7 @@
     right: 0;
     bottom: 0;
     overflow: hidden;
-    z-index: 10;
+    z-index: 11;
     padding: 10px 0 0 10px;
     transition: width 500ms ease-in-out, height 500ms ease-in-out, opacity 500ms ease-in-out;
   }
@@ -344,7 +344,7 @@
 
     border: 1px solid $gray-border;
     background: white;
-    box-shadow: 0px 3px 3px hsla(0, 0%, 0%, 0.05);
+    box-shadow: 0px 0px 6px hsla(0, 0%, 0%, 0.2);
     transition: background 300ms ease-in-out, top 300ms ease-in-out;
 
     &:hover {

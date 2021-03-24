@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { modalStore } from '../store';
+  import { modalStore, attentionHeadColorStore } from '../store';
   import { getTokenWidth } from './utils';
   import { resetRadialButtons } from './comparison-view';
   import * as d3 from 'd3';
@@ -12,6 +12,10 @@
   let svgLength = 480;
 
   let modalInfo = {};
+  let markerDef = null;
+
+  let attentionHeadColor = new Map();
+  attentionHeadColorStore.subscribe(value => {attentionHeadColor = value;});
 
   modalStore.set(modalInfo);
   modalStore.subscribe(value => {
@@ -93,8 +97,12 @@
         .style('left', `${(SVGWidth - 380) / 2}px`);
     }
 
-    // TODO: change color!
-    let color = 'red';
+    let color = attentionHeadColor.get([modalInfo.layer, modalInfo.head].toString());
+
+    svg.select('#atlas-arrow')
+      .select('path')
+      .attr('fill', color)
+      .attr('stroke', color);
 
     // Pre-draw the text
     let tempSVG = d3.select(document.body)
@@ -213,6 +221,53 @@
       });
     }
 
+    // Draw invisible background for interaction
+    textTokenGroup.selectAll('rect')
+      .data(tokenPos, d => d.id)
+      .join('rect')
+      .attr('transform', d => {
+        let degree = d.angle * 180 / Math.PI;
+        return `rotate(${degree})
+          translate(${inRadius}, 0)
+        `;
+      })
+      .attr('x', 0)
+      .attr('y', -5)
+      .attr('width', 50)
+      .attr('height', 15)
+      .style('fill', 'white')
+      .style('opacity', 0)
+      .on('mouseover', (e, d) => {
+        svg.select('#atlas-arrow')
+          .select('path')
+          .attr('opacity', 0.1);
+
+        donut.select('.path-group')
+          .selectAll('path.donut-link')
+          .style('opacity', 0.1);
+
+        donut.select('.path-group')
+          .selectAll('path.donut-link')
+          .filter(dd => {
+            return dd.source === d.id || dd.target === d.id;
+          })
+          .attr('marker-end', 'url(#atlas-arrow-hover)')
+          .style('stroke', 'hsl(24, 95%, 59%)')
+          .style('opacity', 1)
+          .raise();
+      })
+      .on('mouseleave', () => {
+        svg.select('#atlas-arrow')
+          .select('path')
+          .attr('opacity', null);
+
+        donut.select('.path-group')
+          .selectAll('path.donut-link')
+          .attr('marker-end', 'url(#atlas-arrow)')
+          .style('stroke', color)
+          .style('opacity', 1);
+      });
+
     // Update text position
     textTokenGroup.selectAll('text')
       .data(tokenPos, d => d.id)
@@ -228,7 +283,37 @@
       .attr('dominant-baseline', 'middle')
       .attr('x', d => d.angle < Math.PI / 2 ? 6 : -6)
       .attr('text-anchor', d => d.angle < Math.PI / 2 ? 'start' : 'end')
-      .text(d => d.token);
+      .text(d => d.token)
+      .on('mouseover', (e, d) => {
+        svg.select('#atlas-arrow')
+          .select('path')
+          .attr('opacity', 0.1);
+
+        donut.select('.path-group')
+          .selectAll('path.donut-link')
+          .style('opacity', 0.1);
+
+        donut.select('.path-group')
+          .selectAll('path.donut-link')
+          .filter(dd => {
+            return dd.source === d.id || dd.target === d.id;
+          })
+          .attr('marker-end', 'url(#atlas-arrow-hover)')
+          .style('stroke', 'hsl(24, 95%, 59%)')
+          .style('opacity', 1)
+          .raise();
+      })
+      .on('mouseleave', () => {
+        svg.select('#atlas-arrow')
+          .select('path')
+          .attr('opacity', null);
+
+        donut.select('.path-group')
+          .selectAll('path.donut-link')
+          .attr('marker-end', 'url(#atlas-arrow)')
+          .style('stroke', color)
+          .style('opacity', 1);
+      });
 
     // Draw the links as bezier curves
     donut.append('g')
@@ -237,6 +322,7 @@
       .data(links, d => d.id)
       .join('path')
       .attr('class', 'donut-link')
+      .attr('marker-end', 'url(#atlas-arrow)')
       .attr('d', d => {
         let source = tokenPos[d.source];
         let target = tokenPos[d.target];
@@ -286,6 +372,39 @@
       .attr('transform', 'translate(250, 250)');
 
     // drawDonut(donut);
+    markerDef = svg.append('defs')
+      .attr('id', 'atlas-arrow-def')
+      .append('marker')
+      .attr('id', 'atlas-arrow')
+      .attr('viewBox', [0, 0, 10, 10])
+      .attr('refX', 10)
+      .attr('refY', 5)
+      .attr('markerWidth', 12)
+      .attr('markerHeight', 9)
+      .attr('orient', 'auto')
+      .attr('stroke-width', 1)
+      .attr('markerUnits', 'userSpaceOnUse')
+      .append('path')
+      .attr('d', 'M 0 0 L 10 5 L 0 10 z')
+      .attr('stroke', 'gray')
+      .attr('fill', 'gray');
+
+    markerDef = svg.append('defs')
+      .attr('id', 'atlas-arrow-def-hover')
+      .append('marker')
+      .attr('id', 'atlas-arrow-hover')
+      .attr('viewBox', [0, 0, 10, 10])
+      .attr('refX', 10)
+      .attr('refY', 5)
+      .attr('markerWidth', 12)
+      .attr('markerHeight', 9)
+      .attr('orient', 'auto')
+      .attr('stroke-width', 1)
+      .attr('markerUnits', 'userSpaceOnUse')
+      .append('path')
+      .attr('d', 'M 0 0 L 10 5 L 0 10 z')
+      .attr('stroke', 'hsl(24, 95%, 59%)')
+      .attr('fill', 'hsl(24, 95%, 59%)');
     
   };
 
@@ -304,6 +423,15 @@
     drawRadial();
 
   });
+
+  const getColor = (layer, head) => {
+    if (attentionHeadColor == null || attentionHeadColor.has === undefined ||
+      !attentionHeadColor.has([layer, head].toString())) {
+      return 'black';
+    } else {
+      return attentionHeadColor.get([layer, head].toString());
+    }
+  };
 
 </script>
 
@@ -370,7 +498,8 @@
 
     <div class='modal-card'>
       <header class='modal-card-head'>
-        <div class='modal-card-title'>
+        <div class='modal-card-title'
+          style={`color: ${getColor(modalInfo.layer, modalInfo.head)}`}>
           Layer {modalInfo.layer} Head {modalInfo.head} Attention Wights
         </div>
         <button class='delete' aria-label='close' on:click={crossClicked}></button>

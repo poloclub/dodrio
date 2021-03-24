@@ -512,7 +512,7 @@
 
     let source = {x: sCoord.left, y: sCoord.top};
     let target = {x: tCoord.left, y: tCoord.top};
-    let center = {x: SVGWidth / 2, y: SVGHeight / 2 + 50};
+    let center = {x: SVGWidth / 2, y: SVGHeight / 2 + 20};
 
     // We need to shorten the path to leave space for arrow
     let theta = 1 - (minNodeRadius + 10) / radialRadius;
@@ -1411,6 +1411,7 @@
 
   .select-num-div::after {
     top: 50%;
+    z-index: 0;
   }
 
   .select:not(.is-multiple) {
@@ -1420,6 +1421,7 @@
   .select:not(.is-multiple):not(.is-loading)::after {
     right: 0.2em;
     border-color: $brown-icon;
+    z-index: 0;
   }
 
   .select:not(.is-multiple).select-num-div {
@@ -1432,6 +1434,7 @@
 
   .select:not(.is-multiple).select-num-div::after {
     right: 0.1em;
+    z-index: 0;
   }
 
   .select-row {
