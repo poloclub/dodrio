@@ -470,7 +470,9 @@
       .style('stroke-width', 2);
     
     svg.selectAll('.arc-path')
-      .style('opacity', 0.2);
+      // TODO
+      // .style('opacity', 0.2);
+      .style('opacity', 0.8);
 
     svg.selectAll('.arc-path')
       .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
@@ -560,6 +562,8 @@
     }
 
     for (let i = 0; i < tokens.length; i++) {
+      if (j >= saliencies.tokens.length) break;
+
       let curWord = tokens[i].token;
       let curToken = saliencies.tokens[j].token;
 
@@ -570,6 +574,8 @@
         while (saliencies.tokens[j].token !== nextWord) {
           wordToSubwordMap[curWord].push(saliencies.tokens[j].id);
           j += 1;
+
+          if (j >= saliencies.tokens.length) break;
         }
       } else {
         j += 1;

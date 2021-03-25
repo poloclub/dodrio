@@ -347,8 +347,8 @@
     let links = [];
 
     // Todo
-    let threshold = 0.2;
-    // let threshold = 0;
+    // let threshold = 0.2;
+    let threshold = 0;
 
     for (let i = 0; i < tokenSize; i++) {
       for (let j = 0; j < tokenSize; j++) {
@@ -364,7 +364,7 @@
       }
     }
 
-    // links = links.sort((a, b) => b.attention - a.attention).slice(0, 150);
+    links = links.sort((a, b) => b.attention - a.attention).slice(0, 150);
 
     // Define link width scale
     let linkWidthScale = d3.scaleLinear()

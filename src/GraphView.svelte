@@ -33,7 +33,7 @@
   const radialRadius = 225;
   const radialCurveAlpha = 0.3;
 
-  const gridRowSize = 10;
+  const gridRowSize = 8;
   const gridRowGap = 35;
   const gridColumnGap = 35;
 
@@ -513,7 +513,7 @@
 
     let source = {x: sCoord.left, y: sCoord.top};
     let target = {x: tCoord.left, y: tCoord.top};
-    let center = {x: SVGWidth / 2, y: SVGHeight / 2 + 20};
+    let center = {x: SVGWidth / 2, y: SVGHeight / 2 + 40};
 
     // We need to shorten the path to leave space for arrow
     let theta = 1 - (minNodeRadius + 10) / radialRadius;
@@ -1136,8 +1136,8 @@
       .select('.attention-link-group')
       .selectAll('path.link')
       // TODO
-      .style('opacity', 0.05);
-      // .style('opacity', 0.3);
+      // .style('opacity', 0.05);
+      .style('opacity', 0.2);
 
     d3.select(graphSVG)
       .select('.attention-link-group')
@@ -1170,9 +1170,9 @@
 
     // TODO
     // return;
-    if (hoverToken.includes('jagged')) {
-      return;
-    }
+    // if (hoverToken.includes('jagged')) {
+    //   return;
+    // }
 
     d3.select(graphSVG)
       .select('.attention-link-group')
