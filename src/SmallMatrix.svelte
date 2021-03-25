@@ -158,7 +158,7 @@ function resample_single(canvas, width, height, resize_canvas) {
 
   onMount(async () => {
     console.log('loading matrix');
-    matrixData = await d3.json('/data/sample_attention_top_10.json');
+    matrixData = await d3.json('PUBLIC_URL/data/sample_attention_top_10.json');
     console.log('loaded matrix');
 
     drawMatrix();

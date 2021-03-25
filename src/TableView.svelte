@@ -132,7 +132,7 @@
 
   onMount(async () => {
     // console.log('loading table');
-    tableData = await d3.json('/data/table-list-sst2.json');
+    tableData = await d3.json('PUBLIC_URL/data/table-list-sst2.json');
     // console.log('loaded table');
   });
   
@@ -256,7 +256,7 @@
         <th class='sentence' on:click={sort('sentence')}>
           <div class='sentence-div'>
             Sentence
-            <img src={sortState.sentence.up ? '/figures/up.svg' : '/figures/down.svg'}
+            <img src={sortState.sentence.up ? 'PUBLIC_URL/figures/up.svg' : 'PUBLIC_URL/figures/down.svg'}
               class:selected={sortState.sentence.selected}
               alt='sort logo'
             >
@@ -266,7 +266,7 @@
         <th class='true' on:click={sort('true_label')}>
           <div class='true-div'>
             True
-            <img src={sortState['true_label'].up ? '/figures/up.svg' : '/figures/down.svg'}
+            <img src={sortState['true_label'].up ? 'PUBLIC_URL/figures/up.svg' : 'PUBLIC_URL/figures/down.svg'}
               class:selected={sortState['true_label'].selected}
               alt='sort logo'
             >
@@ -276,7 +276,7 @@
         <th class='predicted' on:click={sort('predicted_label')}>
           <div class='predicted-div'>
             Predicted
-            <img src={sortState['predicted_label'].up ? '/figures/up.svg' : '/figures/down.svg'}
+            <img src={sortState['predicted_label'].up ? 'PUBLIC_URL/figures/up.svg' : 'PUBLIC_URL/figures/down.svg'}
               class:selected={sortState['predicted_label'].selected}
               alt='sort logo'
             >
@@ -286,7 +286,7 @@
         <th class='error' on:click={sort('logit_distance')}>
           <div class='error-div'>
             Error
-            <img src={sortState['logit_distance'].up ? '/figures/up.svg' : '/figures/down.svg'}
+            <img src={sortState['logit_distance'].up ? 'PUBLIC_URL/figures/up.svg' : 'PUBLIC_URL/figures/down.svg'}
               class:selected={sortState['logit_distance'].selected}
               alt='sort logo'
             >

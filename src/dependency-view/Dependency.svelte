@@ -610,7 +610,7 @@
       inComparisonView = true;
       if (attentions == null) {
         initAttentionData(
-          `/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`
+          `PUBLIC_URL/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`
         ).then(() => drawDependencyComparison(topHeads, svg, SVGPadding, data,
           attentions, saliencies, SVGHeight, existingLinkSet, tokenXs,
           textTokenPadding, textTokenWidths, wordToSubwordMap, initWordToSubwordMap));
@@ -711,9 +711,9 @@
   onMount(async () => {
     // Load the dependency and saliency data
     if (data == null || saliencies == null) {
-      initData('/data/sst2-dependencies.json',
-        '/data/sst2-saliency-list-grad-l1.json',
-        '/data/sst2-sorted-syntactic-heads.json');
+      initData('PUBLIC_URL/data/sst2-dependencies.json',
+        'PUBLIC_URL/data/sst2-saliency-list-grad-l1.json',
+        'PUBLIC_URL/data/sst2-sorted-syntactic-heads.json');
     }
 
     bindSelect();
@@ -771,9 +771,9 @@
 
         // Load the dependency and saliency data
         if (data == null || saliencies == null) {
-          initData('/data/sst2-dependencies.json',
-            '/data/sst2-saliency-list-grad-l1.json',
-            '/data/sst2-sorted-syntactic-heads.json')
+          initData('PUBLIC_URL/data/sst2-dependencies.json',
+            'PUBLIC_URL/data/sst2-saliency-list-grad-l1.json',
+            'PUBLIC_URL/data/sst2-sorted-syntactic-heads.json')
             .then(createGraph);
         } else {
           createGraph();
@@ -801,9 +801,9 @@
       saliencyViewInitialized = false;
       treeViewInitialized = false;
       instanceID = value;
-      initData('/data/sst2-dependencies.json',
-        '/data/sst2-saliency-list-grad-l1.json',
-        '/data/sst2-sorted-syntactic-heads.json').then(createGraph);
+      initData('PUBLIC_URL/data/sst2-dependencies.json',
+        'PUBLIC_URL/data/sst2-saliency-list-grad-l1.json',
+        'PUBLIC_URL/data/sst2-sorted-syntactic-heads.json').then(createGraph);
     }
     
   });
@@ -1268,7 +1268,7 @@
         <div class='relation-container' on:click={editButtonClicked}>
           <div class='comparison-button'>
             <div class='icon-wrapper'>
-              <img src='/figures/edit.svg' alt='editing icon'>
+              <img src='PUBLIC_URL/figures/edit.svg' alt='editing icon'>
             </div>
           </div>
         </div>
@@ -1303,7 +1303,7 @@
       </div>
 
       <div class='gradient-guide'>
-        <img src='/figures/gradient.png' alt='gradient guide'>
+        <img src='PUBLIC_URL/figures/gradient.png' alt='gradient guide'>
       </div>
 
       <!-- Control panel after syntactic relation item is selected -->

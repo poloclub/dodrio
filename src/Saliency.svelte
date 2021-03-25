@@ -454,7 +454,7 @@
 
   onMount(async () => {
     console.log('loading');
-    saliencies = await d3.json('/data/saliency_list.json');
+    saliencies = await d3.json('PUBLIC_URL/data/saliency_list.json');
     console.log('loaded');
 
     drawSaliencies(saliencies, saliencyKey);

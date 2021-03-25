@@ -516,7 +516,7 @@
 
   onMount(async () => {
     console.log('loading matrix');
-    graphData = await d3.json('/data/twitter_graph_800_9_7.json');
+    graphData = await d3.json('PUBLIC_URL/data/twitter_graph_800_9_7.json');
     console.log('loaded matrix');
 
     drawGraph();

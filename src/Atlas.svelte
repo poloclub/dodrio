@@ -452,7 +452,7 @@
           .style('visibility', 'hidden');
 
         badge.select('.icon-wrapper > img')
-          .attr('src', '/figures/map-marked-alt-solid.svg');
+          .attr('src', 'PUBLIC_URL/figures/map-marked-alt-solid.svg');
       }, 400);
     } else {
       dispatch('open');
@@ -478,7 +478,7 @@
           .style('visibility', 'visible');
 
         badge.select('.icon-wrapper > img')
-          .attr('src', '/figures/chevron-right-solid.svg');
+          .attr('src', 'PUBLIC_URL/figures/chevron-right-solid.svg');
       }, 400);
     }
   };
@@ -487,9 +487,9 @@
     // Load the attention and atlas data
     if (attentions == null || atlasData == null || saliencies == null) {
       initData(
-        `/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`,
-        '/data/sst2-saliency-list-grad-l1.json',
-        '/data/sst2-atlas.json'
+        `PUBLIC_URL/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`,
+        'PUBLIC_URL/data/sst2-saliency-list-grad-l1.json',
+        'PUBLIC_URL/data/sst2-atlas.json'
       );
     }
   });
@@ -497,7 +497,7 @@
   instanceIDStore.subscribe(async value => {
     if (value !== instanceID) {
       instanceID = value;
-      saliencies = await d3.json('/data/sst2-saliency-list-grad-l1.json');
+      saliencies = await d3.json('PUBLIC_URL/data/sst2-saliency-list-grad-l1.json');
       saliencies = saliencies[instanceID];
       tokenSize = saliencies.tokens.length;
       svg.select('*').remove();
@@ -521,9 +521,9 @@
         // Load the attention and atlas data
         if (attentions == null || atlasData == null || saliencies == null) {
           initData(
-            `/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`,
-            '/data/sst2-saliency-list-grad-l1.json',
-            '/data/sst2-atlas.json'
+            `PUBLIC_URL/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`,
+            'PUBLIC_URL/data/sst2-saliency-list-grad-l1.json',
+            'PUBLIC_URL/data/sst2-atlas.json'
           ).then(createGraph);
         } else {
           createGraph();
@@ -695,7 +695,7 @@
         <div class='relation-container' on:click={closeClicked}>
           <div class='expand-button'>
             <div class='icon-wrapper'>
-              <img src='/figures/arrow-forward-outline.svg' alt='expanding icon'>
+              <img src='PUBLIC_URL/figures/arrow-forward-outline.svg' alt='expanding icon'>
             </div>
           </div>
         </div>
@@ -714,11 +714,11 @@
 
     <div class='legend-container'>
       <div>
-        <img src='/figures/click.png' width='180px' alt='click guide'>
+        <img src='PUBLIC_URL/figures/click.png' width='180px' alt='click guide'>
       </div>
       <div class='bottom-images'>
-        <img src='/figures/size-legend.png' width='160px' alt='size legend'>
-        <img src='/figures/legend.png' width='200px' alt='color legend'>
+        <img src='PUBLIC_URL/figures/size-legend.png' width='160px' alt='size legend'>
+        <img src='PUBLIC_URL/figures/legend.png' width='200px' alt='color legend'>
       </div>
     </div>
 

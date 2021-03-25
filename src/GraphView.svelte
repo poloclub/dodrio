@@ -1274,17 +1274,17 @@
 
     // Load data from files if they have not been loaded
     if (attentionData == null) {
-      attentionData = await d3.json(`/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`);
+      attentionData = await d3.json(`PUBLIC_URL/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`);
     }
     if (saliencyData == null) {
-      saliencyData = await d3.json('/data/sst2-saliency-list-grad-l1.json');
+      saliencyData = await d3.json('PUBLIC_URL/data/sst2-saliency-list-grad-l1.json');
       tokenSize = saliencyData[instanceID].tokens.length;
     }
 
     // Create graph data
     graphData = createGraphData(curLayer, curHead);
 
-    // graphData = await d3.json('/data/twitter_graph_800_9_7.json');
+    // graphData = await d3.json('PUBLIC_URL/data/twitter_graph_800_9_7.json');
     // console.log('loaded matrix');
 
     drawGraph();
@@ -1292,15 +1292,15 @@
 
   onMount(async() => {
     if (attentionData == null) {
-      attentionData = await d3.json(`/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`);
+      attentionData = await d3.json(`PUBLIC_URL/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`);
     }
 
     if (saliencyData == null) {
-      saliencyData = await d3.json('/data/sst2-saliency-list-grad-l1.json');
+      saliencyData = await d3.json('PUBLIC_URL/data/sst2-saliency-list-grad-l1.json');
       tokenSize = saliencyData[instanceID].tokens.length;
     }
 
-    // gradSortedIndexes = await d3.json('/data/sst2-sorted-grad-heads.json');
+    // gradSortedIndexes = await d3.json('PUBLIC_URL/data/sst2-sorted-grad-heads.json');
     // gradSortedIndexes = gradSortedIndexes[instanceID];
     // relevantAttentions = loadAttentionMatrix();
     // console.log(relevantAttentions, saliencyData);

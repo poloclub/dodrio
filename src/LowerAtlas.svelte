@@ -380,9 +380,9 @@
     // Load the attention and atlas data
     if (attentions == null || atlasData == null || saliencies == null) {
       initData(
-        `/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`,
-        '/data/sst2-saliency-list-grad-l1.json',
-        '/data/sst2-atlas.json'
+        `PUBLIC_URL/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`,
+        'PUBLIC_URL/data/sst2-saliency-list-grad-l1.json',
+        'PUBLIC_URL/data/sst2-atlas.json'
       );
     }
   });
@@ -401,9 +401,9 @@
         // Load the attention and atlas data
         if (attentions == null || atlasData == null || saliencies == null) {
           initData(
-            `/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`,
-            '/data/sst2-saliency-list-grad-l1.json',
-            '/data/sst2-atlas.json'
+            `PUBLIC_URL/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`,
+            'PUBLIC_URL/data/sst2-saliency-list-grad-l1.json',
+            'PUBLIC_URL/data/sst2-atlas.json'
           ).then(createGraph);
         } else {
           createGraph();
@@ -539,7 +539,7 @@
       <div class='relation-container' on:click={() => dispatch('open')}>
         <div class='expand-button'>
           <div class='icon-wrapper'>
-            <img src='/figures/expand-outline.svg' alt='expanding icon'>
+            <img src='PUBLIC_URL/figures/expand-outline.svg' alt='expanding icon'>
           </div>
           Show Detail
         </div>
@@ -547,7 +547,7 @@
     </div>
 
     <div class='color-legend'>
-      <img src='/figures/color-legend.png' alt='expanding icon'>
+      <img src='PUBLIC_URL/figures/color-legend.png' alt='expanding icon'>
     </div>
 
   </div>

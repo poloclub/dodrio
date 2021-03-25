@@ -651,7 +651,7 @@ const addButtons = (nameGroup, attentions, tokens, layer, head) => {
     .on('click', e => radialButtonClicked(e, attentions, tokens, layer, head));
 
   radialSymbol.append('image')
-    .attr('href', '/figures/radial-symbol.svg')
+    .attr('href', 'PUBLIC_URL/figures/radial-symbol.svg')
     .attr('x', 2)
     .attr('y', 2)
     .attr('height', 16)
@@ -668,7 +668,7 @@ const addButtons = (nameGroup, attentions, tokens, layer, head) => {
     .on('click', arcButtonClicked);
 
   arcSymbol.select('image')
-    .attr('href', '/figures/arc-symbol.svg');
+    .attr('href', 'PUBLIC_URL/figures/arc-symbol.svg');
 
 };
 
