@@ -11,6 +11,11 @@
   import { createEventDispatcher } from 'svelte';
   import * as d3 from 'd3';
 
+  export let attentionDataDir;
+  export let saliencyDataFilepath;
+  export let dependencyDataFilepath;
+  export let syntacticHeadDataFilepath;
+
   const dispatch = createEventDispatcher();
 
   let svg = null;
@@ -711,9 +716,9 @@
   onMount(async () => {
     // Load the dependency and saliency data
     if (data == null || saliencies == null) {
-      initData('PUBLIC_URL/data/sst2-dependencies.json',
-        'PUBLIC_URL/data/sst2-saliency-list-grad-l1.json',
-        'PUBLIC_URL/data/sst2-sorted-syntactic-heads.json');
+      initData(dependencyDataFilepath,
+        saliencyDataFilepath,
+        syntacticHeadDataFilepath);
     }
 
     bindSelect();
@@ -771,10 +776,9 @@
 
         // Load the dependency and saliency data
         if (data == null || saliencies == null) {
-          initData('PUBLIC_URL/data/sst2-dependencies.json',
-            'PUBLIC_URL/data/sst2-saliency-list-grad-l1.json',
-            'PUBLIC_URL/data/sst2-sorted-syntactic-heads.json')
-            .then(createGraph);
+          initData(dependencyDataFilepath,
+            saliencyDataFilepath,
+            syntacticHeadDataFilepath).then(createGraph);
         } else {
           createGraph();
         }
@@ -801,9 +805,9 @@
       saliencyViewInitialized = false;
       treeViewInitialized = false;
       instanceID = value;
-      initData('PUBLIC_URL/data/sst2-dependencies.json',
-        'PUBLIC_URL/data/sst2-saliency-list-grad-l1.json',
-        'PUBLIC_URL/data/sst2-sorted-syntactic-heads.json').then(createGraph);
+      initData(dependencyDataFilepath,
+        saliencyDataFilepath,
+        syntacticHeadDataFilepath).then(createGraph);
     }
     
   });

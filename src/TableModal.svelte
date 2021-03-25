@@ -4,6 +4,9 @@
   import EmbeddingView from './EmbeddingView.svelte';
   import TableView from './TableView.svelte';
 
+  export let tableDataFilepath;
+  export let embeddingDataFilepath;
+
   let modalComponent;
 
   const dispatch = createEventDispatcher();
@@ -116,7 +119,7 @@
 
         <section class="modal-card-body">
           
-          <TableView />
+          <TableView tableDataFilepath={tableDataFilepath} />
 
         </section>
 
@@ -143,7 +146,7 @@
           <p class="modal-card-title center">Instance Embedding</p>
         </header>
 
-        <EmbeddingView />
+        <EmbeddingView embeddingDataFilepath={embeddingDataFilepath} />
       </div>
 
     </div>

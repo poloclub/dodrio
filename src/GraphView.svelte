@@ -3,6 +3,9 @@
     instanceIDStore, mapHeadStore } from './store';
   import * as d3 from 'd3';
   import { onMount } from 'svelte';
+
+  export let attentionDataDir;
+  export let saliencyDataFilepath;
   
   // Shared states
   let graphViewCompConfig = undefined;
@@ -1274,10 +1277,10 @@
 
     // Load data from files if they have not been loaded
     if (attentionData == null) {
-      attentionData = await d3.json(`PUBLIC_URL/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`);
+      attentionData = await d3.json(attentionDataDir + `attention-${padZeroLeft(instanceID, 4)}.json`);
     }
     if (saliencyData == null) {
-      saliencyData = await d3.json('PUBLIC_URL/data/sst2-saliency-list-grad-l1.json');
+      saliencyData = await d3.json(saliencyDataFilepath);
       tokenSize = saliencyData[instanceID].tokens.length;
     }
 
@@ -1292,11 +1295,11 @@
 
   onMount(async() => {
     if (attentionData == null) {
-      attentionData = await d3.json(`PUBLIC_URL/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`);
+      attentionData = await d3.json(attentionDataDir + `attention-${padZeroLeft(instanceID, 4)}.json`);
     }
 
     if (saliencyData == null) {
-      saliencyData = await d3.json('PUBLIC_URL/data/sst2-saliency-list-grad-l1.json');
+      saliencyData = await d3.json(saliencyDataFilepath);
       tokenSize = saliencyData[instanceID].tokens.length;
     }
 

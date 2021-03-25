@@ -5,6 +5,10 @@
   import { createEventDispatcher } from 'svelte';
   import * as d3 from 'd3';
 
+  export let attentionDataDir;
+  export let saliencyDataFilepath;
+  export let atlasDataFilepath;
+
   let svg = null;
   let atlasData = null;
   let attentions = null;
@@ -487,9 +491,9 @@
     // Load the attention and atlas data
     if (attentions == null || atlasData == null || saliencies == null) {
       initData(
-        `PUBLIC_URL/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`,
-        'PUBLIC_URL/data/sst2-saliency-list-grad-l1.json',
-        'PUBLIC_URL/data/sst2-atlas.json'
+        attentionDataDir + `attention-${padZeroLeft(instanceID, 4)}.json`,
+        saliencyDataFilepath,
+        atlasDataFilepath
       );
     }
   });
@@ -497,7 +501,7 @@
   instanceIDStore.subscribe(async value => {
     if (value !== instanceID) {
       instanceID = value;
-      saliencies = await d3.json('PUBLIC_URL/data/sst2-saliency-list-grad-l1.json');
+      saliencies = await d3.json(saliencyDataFilepath);
       saliencies = saliencies[instanceID];
       tokenSize = saliencies.tokens.length;
       svg.select('*').remove();
@@ -521,9 +525,9 @@
         // Load the attention and atlas data
         if (attentions == null || atlasData == null || saliencies == null) {
           initData(
-            `PUBLIC_URL/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`,
-            'PUBLIC_URL/data/sst2-saliency-list-grad-l1.json',
-            'PUBLIC_URL/data/sst2-atlas.json'
+            attentionDataDir + `attention-${padZeroLeft(instanceID, 4)}.json`,
+            saliencyDataFilepath,
+            atlasDataFilepath
           ).then(createGraph);
         } else {
           createGraph();

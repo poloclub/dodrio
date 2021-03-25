@@ -3,6 +3,8 @@
   import { embeddingViewConfigStore, currInstanceStore } from './store';
   import Tooltip from './Tooltip.svelte';
   import * as d3 from 'd3';
+
+  export let embeddingDataFilepath;
   
   // Shared states
   let embeddingViewConfig = undefined;
@@ -213,7 +215,7 @@
 
   const renderEmbeddings = async () => {
     // console.log('loading embeddings');
-    embeddingData = await d3.json('PUBLIC_URL/data/embedding-list-sst2.json');
+    embeddingData = await d3.json(embeddingDataFilepath);
     // console.log('loaded embeddings');
 
     drawEmbeddingsPlot();

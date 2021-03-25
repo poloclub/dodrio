@@ -2,6 +2,8 @@
   import { onMount, afterUpdate } from 'svelte';
   import { tableViewConfigStore, currInstanceStore } from './store';
   import * as d3 from 'd3';
+
+  export let tableDataFilepath;
   
   // Shared states
   let tableViewConfig = undefined;
@@ -132,7 +134,7 @@
 
   onMount(async () => {
     // console.log('loading table');
-    tableData = await d3.json('PUBLIC_URL/data/table-list-sst2.json');
+    tableData = await d3.json(tableDataFilepath);
     // console.log('loaded table');
   });
   

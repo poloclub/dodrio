@@ -13,6 +13,14 @@
   import { onMount } from 'svelte';
   import * as d3 from 'd3';
 
+  const attentionDataDir = 'PUBLIC_URL/data/sst2-attention-data/';
+  const dependencyDataFilepath = 'PUBLIC_URL/data/sst2-dependencies.json';
+  const syntacticHeadDataFilepath = 'PUBLIC_URL/data/sst2-sorted-syntactic-heads.json';
+  const saliencyDataFilepath = 'PUBLIC_URL/data/sst2-saliency-list-grad-l1.json';
+  const atlasDataFilepath = 'PUBLIC_URL/data/sst2-atlas.json';
+  const embeddingDataFilepath = 'PUBLIC_URL/data/embedding-list-sst2.json';
+  const tableDataFilepath = 'PUBLIC_URL/data/table-list-sst2.json';
+
   // Set up the tooltip
   let tooltip = null;
   let atlasSVGWidth = null;
@@ -394,25 +402,29 @@
       <div class='attention-container'>
         <!-- Instance View -->
         <div class='instance-container' bind:this={instanceViewDIV}>
-          <Dependency on:close={comparisonCloseHandler} on:open={comparisonOpenHandler}/>
+          <Dependency dependencyDataFilepath={dependencyDataFilepath} saliencyDataFilepath={saliencyDataFilepath}
+                      attentionDataDir={attentionDataDir} syntacticHeadDataFilepath={syntacticHeadDataFilepath}
+                      on:close={comparisonCloseHandler} on:open={comparisonOpenHandler}/>
         </div>
 
         
         <div class='lower-container' bind:this={lowerContainerDIV}>
           <!-- Graph View -->
           <div class='graph-container' bind:this={graphViewDIV} >
-            <GraphView />
+            <GraphView attentionDataDir={attentionDataDir} saliencyDataFilepath={saliencyDataFilepath}/>
           </div>
 
           <div class='lower-atlas-container' bind:this={lowerMapViewDIV}>
-            <LowerAtlas on:open={atlasOpened}/>
+            <LowerAtlas attentionDataDir={attentionDataDir} saliencyDataFilepath={saliencyDataFilepath}
+                        atlasDataFilepath={atlasDataFilepath} on:open={atlasOpened}/>
           </div>
         </div>
 
 
         <!-- Map view -->
         <div class='atlas-container' style='visibility=hidden' bind:this={mapViewDIV}>
-          <Atlas on:close={atlasClosed}/>
+          <Atlas attentionDataDir={attentionDataDir} saliencyDataFilepath={saliencyDataFilepath}
+                atlasDataFilepath={atlasDataFilepath} on:close={atlasClosed}/>
         </div>
 
         <div class='atlas-sidebar' class:hidden={!sideInfo.show}>
@@ -421,7 +433,8 @@
 
       </div>
 
-      <TableModal on:xClicked={() => {}} on:urlTyped={() => {}}/>
+      <TableModal tableDataFilepath={tableDataFilepath} embeddingDataFilepath={embeddingDataFilepath}
+                  on:xClicked={() => {}} on:urlTyped={() => {}}/>
 
       <div class='down-button' bind:this={downButton}>
         <div class='icon-wrapper' on:click={downButtonClicked}>
