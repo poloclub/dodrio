@@ -50,7 +50,7 @@ export const drawGraph = (data, saliencies, wordToSubwordMap, svg, tokenXs,
   let textTokenWidths = textTokenSize.textTokenWidths;
   let textTokenHeight = textTokenSize.textTokenHeight;
 
-  console.log(textTokenWidths, textTokenHeight);
+  // console.log(textTokenWidths, textTokenHeight);
 
   const minTokenGap = 5;
 

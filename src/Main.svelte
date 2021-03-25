@@ -214,7 +214,7 @@
     atlasClosed();
 
     // Position the down button
-    console.log(headerHeight, downButtonPos.height);
+    // console.log(headerHeight, downButtonPos.height);
     downButton.style.top = `${Math.floor(instanceViewDIV.clientHeight) + headerHeight
       - downButtonPos.height / 2}px`;
     downButton.style.left = `${graphViewConfig.compWidth - downButtonPos.width / 2}px`;

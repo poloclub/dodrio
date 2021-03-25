@@ -55,13 +55,13 @@
     const layerNameWidth = 47;
     const headNameHeight = 20;
 
-    console.log(SVGWidth, SVGHeight);
+    // console.log(SVGWidth, SVGHeight);
 
     let availableWidth = SVGWidth - 210 - layerNameWidth - SVGPadding.left - SVGPadding.right;
     let availableHeight = SVGHeight - SVGPadding.top - SVGPadding.bottom - headNameHeight;
 
     let availableLength = Math.min(availableHeight, availableWidth);
-    console.log(SVGHeight, availableLength, availableWidth, availableHeight);
+    // console.log(SVGHeight, availableLength, availableWidth, availableHeight);
     const gridGap = 8;
 
     const gridLength = Math.floor((availableHeight - (layerNum - 1) * gridGap) / layerNum);
@@ -163,10 +163,10 @@
       })
       .on('mouseleave', (e) => {
         // TODO
-        let datum = d3.select(e.target).data()[0];
-        if (datum.layer === 2 && datum.head === 9) {
-          return;
-        }
+        // let datum = d3.select(e.target).data()[0];
+        // if (datum.layer === 2 && datum.head === 9) {
+        //   return;
+        // }
 
         tooltipConfig.show = false;
         tooltipConfigStore.set(tooltipConfig);
@@ -188,7 +188,7 @@
         sideStore.set(sideInfo);
       })
       .on('dblclick', (e) => {
-        console.log('double!');
+        // console.log('double!');
         let curDonut = d3.select(e.currentTarget);
         if (curDonut.classed('selected')) {
           // pass

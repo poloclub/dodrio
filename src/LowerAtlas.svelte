@@ -122,7 +122,7 @@
     donuts.each((d, i, g) => drawDonut(d, i, g, scales));
 
     // Record the head color
-    console.log(attentionHeadColors);
+    // console.log(attentionHeadColors);
     attentionHeadColorStore.set(attentionHeadColors);
 
     donuts.on('mouseover',
@@ -247,7 +247,7 @@
       .append('text')
       .text(d => d > 0 ? d + 1 : `Head ${d + 1}`);
 
-    console.log(atlasData);
+    // console.log(atlasData);
 
     d3.select(viewContainer)
       .select('.head-arrow')
@@ -275,7 +275,7 @@
 
   mapHeadStore.subscribe(value => {
     mapHead = value;
-    console.log(mapHead, curLayer, curHead);
+    // console.log(mapHead, curLayer, curHead);
 
     if (mapHead.layer !== curLayer || mapHead.head !== curHead) {
 

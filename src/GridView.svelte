@@ -232,7 +232,7 @@
     // });
     hiddenLinks = hiddenLinks.map(d => Object.create(d));
     
-    console.log(nodes, links);
+    // console.log(nodes, links);
 
     // Add intermediate nodes to create bezier curves
     let nodeByID = new Map(nodes.map(d => [d.id, d]));
@@ -271,7 +271,7 @@
       }
     }
 
-    console.log(gridLinks);
+    // console.log(gridLinks);
 
     // Create a scale for the node radius
     let allSaliencyScores = nodes.map(d => +d.saliency);
@@ -449,7 +449,7 @@
 
     // Simulation tick updates
     simulation.on('tick', () => {
-      console.log('Tick');
+      // console.log('Tick');
 
       // Update the attention links
       linkLines.attr('d', d => {

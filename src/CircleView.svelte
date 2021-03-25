@@ -90,7 +90,7 @@
       bilinks.push({source: source, target: target, selfLoop: source === target});
     });
 
-    console.log(bilinks);
+    // console.log(bilinks);
 
 
     // Maintain a set of all existing node indices
@@ -103,7 +103,7 @@
       SVGWidth / 2 - minNodeRadius - SVGPadding.left
     );
 
-    console.log(nodes);
+    // console.log(nodes);
 
     // Add arrow markers
     const arrowBoxWidth = 20;

@@ -212,9 +212,9 @@
   }
 
   const renderEmbeddings = async () => {
-    console.log('loading embeddings');
+    // console.log('loading embeddings');
     embeddingData = await d3.json('/data/embedding-list-sst2.json');
-    console.log('loaded embeddings');
+    // console.log('loaded embeddings');
 
     drawEmbeddingsPlot();
   };

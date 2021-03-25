@@ -728,7 +728,7 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
   if (wordToSubwordMap == null) {
     wordToSubwordMap = initWordToSubwordMap(depTokens, saliencies);
   }
-  console.log(wordToSubwordMap);
+  // console.log(wordToSubwordMap);
 
   // Give each saliency token a unique name
   let tokenCount = {};
@@ -945,7 +945,7 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
     if (curHeight + SVGPadding.bottom > SVGHeight) {
       attentionGroup.remove();
       nameGroup.remove();
-      console.log(curHeight, attentionGroupID);
+      // console.log(curHeight, attentionGroupID);
       break;
     } else {
       attentionGroup.style('visibility', 'visible');

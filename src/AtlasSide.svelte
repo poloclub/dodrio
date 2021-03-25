@@ -231,7 +231,8 @@
             return dd.source === d.id || dd.target === d.id;
           })
           .attr('marker-end', 'url(#atlas-side-arrow-hover)')
-          .style('stroke', 'hsl(24, 95%, 59%)')
+          .style('stroke', 'hsl(36, 100%, 55%)')
+          .style('stroke-width', 3)
           .style('opacity', 1)
           .raise();
       })
@@ -244,6 +245,7 @@
           .selectAll('path.donut-link')
           .attr('marker-end', 'url(#atlas-side-arrow)')
           .style('stroke', color)
+          .style('stroke-width', d => linkWidthScale(d.attention))
           .style('opacity', 1);
       });
 

@@ -238,7 +238,7 @@
 
     hiddenLinks = hiddenLinks.map(d => Object.create(d));
     
-    console.log(nodes, links);
+    // console.log(nodes, links);
 
     // Add intermediate nodes to create bezier curves
     let nodeByID = new Map(nodes.map(d => [d.id, d]));
@@ -467,7 +467,7 @@
 
     // Simulation tick updates
     simulation.on('tick', () => {
-      console.log('Tick');
+      // console.log('Tick');
 
       // Update the attention links
       linkLines.attr('d', d => {

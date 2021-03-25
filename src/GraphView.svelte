@@ -280,7 +280,7 @@
 
       // Need to switch layout
       if (newLayerValue !== curLayer) {
-        console.log(newLayerValue);
+        // console.log(newLayerValue);
         curLayer = newLayerValue;
         updateLayerHead();
 
@@ -295,7 +295,7 @@
 
       // Need to switch layout
       if (newHeadValue !== curHead) {
-        console.log(newHeadValue);
+        // console.log(newHeadValue);
         curHead = newHeadValue;
         updateLayerHead();
 
@@ -310,7 +310,7 @@
     mapHead = value;
 
     if (mapHead.layer !== curLayer || mapHead.head !== curHead) {
-      console.log('change');
+      // console.log('change');
       d3.select('#select-layer')
         .property('value', mapHead.layer);
 
@@ -751,7 +751,7 @@
   };
 
   const simulationTick = (nodeRadiusScale) => {
-    console.log('Tick');
+    // console.log('Tick');
 
     let linkLines = d3.select(graphSVG)
       .select('g.attention-link-group')
@@ -873,7 +873,7 @@
 
     // Create a scale for the node radius
     let allSaliencyScores = nodes.map(d => +d.saliency);
-    console.log(d3.extent(allSaliencyScores));
+    // console.log(d3.extent(allSaliencyScores));
     nodeRadiusScale = d3.scaleLinear()
       .domain(d3.extent(allSaliencyScores))
       .range([minNodeRadius, maxNodeRadius])
@@ -1270,7 +1270,7 @@
   });
 
   const renderGraph = async () => {
-    console.log('loading matrix');
+    // console.log('loading matrix');
 
     // Load data from files if they have not been loaded
     if (attentionData == null) {
@@ -1285,7 +1285,7 @@
     graphData = createGraphData(curLayer, curHead);
 
     // graphData = await d3.json('/data/twitter_graph_800_9_7.json');
-    console.log('loaded matrix');
+    // console.log('loaded matrix');
 
     drawGraph();
   };
@@ -1329,7 +1329,7 @@
   });
 
   instanceIDStore.subscribe(value => {
-    console.log('Instance changed!!');
+    // console.log('Instance changed!!');
     if (value !== instanceID) {
 
       d3.select(graphSVG).selectAll('*').remove();

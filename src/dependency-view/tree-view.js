@@ -25,13 +25,13 @@ export const drawTree = (data, saliencies, svg, SVGWidth, SVGHeight, SVGPadding,
     });
   }
 
-  console.log(saliencies, tokens);
+  // console.log(saliencies, tokens);
 
   if (wordToSubwordMap == null) {
     initWordToSubwordMap(tokens, saliencies);
   }
 
-  console.log(wordToSubwordMap);
+  // console.log(wordToSubwordMap);
 
   // Give each saliency token a unique name
   let tokenCount = {};
@@ -55,7 +55,7 @@ export const drawTree = (data, saliencies, svg, SVGWidth, SVGHeight, SVGPadding,
     .id(d => d.child)
     .parentId(d => d.parent)(depList);
 
-  console.log(root);
+  // console.log(root);
 
   let treeRoot = d3.tree()
     .separation((a, b) => Math.max(textTokenWidths[a.id], textTokenWidths[b.id]))
@@ -64,7 +64,7 @@ export const drawTree = (data, saliencies, svg, SVGWidth, SVGHeight, SVGPadding,
       SVGHeight - SVGPadding.top - SVGPadding.bottom - 2 * textTokenHeight,
     ])(root);
 
-  console.log(treeRoot.descendants(), treeRoot.links());
+  // console.log(treeRoot.descendants(), treeRoot.links());
 
   let treeGroup = svg.append('g')
     .attr('class', 'tree-group')
@@ -77,7 +77,7 @@ export const drawTree = (data, saliencies, svg, SVGWidth, SVGHeight, SVGPadding,
     rootLinks[i].vertical = Math.abs(+rootLinks[i].target.x - +rootLinks[i].source.x) < 5;
   }
 
-  console.log(rootLinks);
+  // console.log(rootLinks);
 
   treeGroup.append('g')
     .attr('class', 'link-group')

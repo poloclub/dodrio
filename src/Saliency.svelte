@@ -306,7 +306,7 @@
     }
 
     let saliencyTokens = saliencies.tokens;
-    console.log(saliencyTokens);
+    // console.log(saliencyTokens);
 
     // Create a divering color scale from red to green
     let largestAbs = d3.max(saliencyTokens.map(d => Math.abs(d[key])));

@@ -784,7 +784,7 @@
   });
 
   instanceIDStore.subscribe(value => {
-    console.log('Instance changed!!');
+    // console.log('Instance changed!!');
     if (value !== instanceID) {
       svg.selectAll('*').remove();
       SVGInitialized = false;

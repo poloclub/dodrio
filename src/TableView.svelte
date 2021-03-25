@@ -45,7 +45,7 @@
       // when the instanceId store value changes from
       // another source (ie. EmbeddingView).
       if (isEmbeddingViewUpdate) {
-        console.log(mostRecentColumnSortCriterion);
+        // console.log(mostRecentColumnSortCriterion);
         sort(mostRecentColumnSortCriterion);
       }
     }
@@ -106,7 +106,7 @@
   $: getInstance = (row) => {
     currInstanceStore.set(row.cells[0].innerText);
     isEmbeddingViewUpdate = false;
-    console.log('selected row id: ' + row.cells[0].innerText);
+    // console.log('selected row id: ' + row.cells[0].innerText);
     // Remove style from previously selected row.
     document.getElementsByTagName('table')[0].children[1]
       .children[currHighlightedRow].style = 'background-color: inherit;';
@@ -131,9 +131,9 @@
   });
 
   onMount(async () => {
-    console.log('loading table');
+    // console.log('loading table');
     tableData = await d3.json('/data/table-list-sst2.json');
-    console.log('loaded table');
+    // console.log('loaded table');
   });
   
 </script>

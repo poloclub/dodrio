@@ -244,7 +244,7 @@
 
         donut.select('.path-group')
           .selectAll('path.donut-link')
-          .style('opacity', 0.1);
+          .style('opacity', 0.5);
 
         donut.select('.path-group')
           .selectAll('path.donut-link')
@@ -252,7 +252,8 @@
             return dd.source === d.id || dd.target === d.id;
           })
           .attr('marker-end', 'url(#atlas-arrow-hover)')
-          .style('stroke', 'hsl(24, 95%, 59%)')
+          .style('stroke', 'hsl(36, 100%, 55%)')
+          .style('stroke-width', 3)
           .style('opacity', 1)
           .raise();
       })
@@ -265,6 +266,7 @@
           .selectAll('path.donut-link')
           .attr('marker-end', 'url(#atlas-arrow)')
           .style('stroke', color)
+          .style('stroke-width', d => linkWidthScale(d.attention))
           .style('opacity', 1);
       });
 
@@ -287,7 +289,7 @@
       .on('mouseover', (e, d) => {
         svg.select('#atlas-arrow')
           .select('path')
-          .attr('opacity', 0.1);
+          .style('opacity', 0.5);
 
         donut.select('.path-group')
           .selectAll('path.donut-link')
@@ -301,6 +303,7 @@
           .attr('marker-end', 'url(#atlas-arrow-hover)')
           .style('stroke', 'hsl(24, 95%, 59%)')
           .style('opacity', 1)
+          .style('stroke-width', 3)
           .raise();
       })
       .on('mouseleave', () => {
@@ -312,6 +315,7 @@
           .selectAll('path.donut-link')
           .attr('marker-end', 'url(#atlas-arrow)')
           .style('stroke', color)
+          .style('stroke-width', d => linkWidthScale(d.attention))
           .style('opacity', 1);
       });
 
