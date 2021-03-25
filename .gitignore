@@ -5,3 +5,4 @@ package-lock.json
 *.swp
 
 .vercel
+deploy-gh-page.sh
