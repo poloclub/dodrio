@@ -1,0 +1,395 @@
+{
+  "meta": {
+    "true_label": "negative",
+    "predicted_label": "negative",
+    "softmax_scores": {
+      "negative": 0.8345704674720764,
+      "neutral": 0.16405817866325378,
+      "positive": 0.0013713265070691705
+    }
+  },
+  "tokens": [{
+    "token": "[CLS]",
+    "negative": 0.7037158012390137,
+    "neutral": -0.4752737879753113,
+    "positive": -0.40234971046447754
+  },
+  {
+    "token": "ow",
+    "negative": 0.021453022956848145,
+    "neutral": -0.2431989163160324,
+    "positive": 0.1815793365240097
+  },
+  {
+    "token": "##w",
+    "negative": 0.04459330067038536,
+    "neutral": -0.14585863053798676,
+    "positive": 0.07006823271512985
+  },
+  {
+    "token": "##w",
+    "negative": 0.29142042994499207,
+    "neutral": -0.11634927988052368,
+    "positive": -0.254106730222702
+  },
+  {
+    "token": "i",
+    "negative": -0.46918466687202454,
+    "neutral": 0.16496199369430542,
+    "positive": 0.3989610970020294
+  },
+  {
+    "token": "think",
+    "negative": -0.10236751288175583,
+    "neutral": -0.07649598270654678,
+    "positive": 0.18738879263401031
+  },
+  {
+    "token": "i",
+    "negative": -0.014188083820044994,
+    "neutral": 0.010388835333287716,
+    "positive": 0.039087846875190735
+  },
+  {
+    "token": "tore",
+    "negative": 0.14382100105285645,
+    "neutral": -0.34115615487098694,
+    "positive": 0.22239428758621216
+  },
+  {
+    "token": "something",
+    "negative": -0.28818947076797485,
+    "neutral": 0.22856956720352173,
+    "positive": 0.16723360121250153
+  },
+  {
+    "token": "in",
+    "negative": 0.1993338018655777,
+    "neutral": -0.019211681559681892,
+    "positive": -0.21895310282707214
+  },
+  {
+    "token": "my",
+    "negative": 0.020578371360898018,
+    "neutral": 0.3105379343032837,
+    "positive": -0.2970660626888275
+  },
+  {
+    "token": "leg",
+    "negative": 0.1675224006175995,
+    "neutral": -0.4525752067565918,
+    "positive": 0.22075039148330688
+  },
+  {
+    "token": "[SEP]",
+    "negative": 0.12097938358783722,
+    "neutral": 0.4203883707523346,
+    "positive": -0.526788055896759
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  },
+  {
+    "token": "[PAD]",
+    "negative": 0.0,
+    "neutral": 0.0,
+    "positive": 0.0
+  }]
+}
