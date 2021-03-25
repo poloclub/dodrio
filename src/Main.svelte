@@ -227,6 +227,11 @@
 
 <style type='text/scss'>
   @import 'define';
+
+  .dodrio-vis {
+    overflow: hidden;
+    border-bottom: 1px solid hsla(0, 0%, 0%, 0.2);
+  }
   
   .main-content {
     border-bottom: solid 1px $gray-border;
@@ -234,8 +239,7 @@
     width: 100vw;
     display: flex;
     box-sizing: border-box;
-    // overflow: hidden;
-    overflow: show;
+    overflow: visible;
   }
 
   .select-container {
@@ -377,54 +381,57 @@
 
 <div class='main'>
 
-  <Header />
+  <div class='dodrio-vis'>
+    <Header />
 
-  <Tooltip bind:this={tooltip}/>
- 
-  <div class='main-content'>
-    <div class='select-container'>
+    <Tooltip bind:this={tooltip}/>
+  
+    <div class='main-content'>
+      <div class='select-container'>
 
-    </div>
-
-    <div class='attention-container'>
-      <!-- Instance View -->
-      <div class='instance-container' bind:this={instanceViewDIV}>
-        <Dependency on:close={comparisonCloseHandler} on:open={comparisonOpenHandler}/>
       </div>
 
-      
-      <div class='lower-container' bind:this={lowerContainerDIV}>
-        <!-- Graph View -->
-        <div class='graph-container' bind:this={graphViewDIV} >
-          <GraphView />
+      <div class='attention-container'>
+        <!-- Instance View -->
+        <div class='instance-container' bind:this={instanceViewDIV}>
+          <Dependency on:close={comparisonCloseHandler} on:open={comparisonOpenHandler}/>
         </div>
 
-        <div class='lower-atlas-container' bind:this={lowerMapViewDIV}>
-          <LowerAtlas on:open={atlasOpened}/>
+        
+        <div class='lower-container' bind:this={lowerContainerDIV}>
+          <!-- Graph View -->
+          <div class='graph-container' bind:this={graphViewDIV} >
+            <GraphView />
+          </div>
+
+          <div class='lower-atlas-container' bind:this={lowerMapViewDIV}>
+            <LowerAtlas on:open={atlasOpened}/>
+          </div>
+        </div>
+
+
+        <!-- Map view -->
+        <div class='atlas-container' style='visibility=hidden' bind:this={mapViewDIV}>
+          <Atlas on:close={atlasClosed}/>
+        </div>
+
+        <div class='atlas-sidebar' class:hidden={!sideInfo.show}>
+          <AtlasSide />
+        </div>
+
+      </div>
+
+      <TableModal on:xClicked={() => {}} on:urlTyped={() => {}}/>
+
+      <div class='down-button' bind:this={downButton}>
+        <div class='icon-wrapper' on:click={downButtonClicked}>
+          <svg class='icon-down' class:up-down={!buttonDown} viewBox='0 0 512 512'>
+            <path fill='none' stroke='currentColor' stroke-linecap='round'
+              stroke-linejoin='round' stroke-width='80' d='M112 184l144 144 144-144'/>
+          </svg>
         </div>
       </div>
 
-
-      <!-- Map view -->
-      <div class='atlas-container' style='visibility=hidden' bind:this={mapViewDIV}>
-        <Atlas on:close={atlasClosed}/>
-      </div>
-
-      <div class='atlas-sidebar' class:hidden={!sideInfo.show}>
-        <AtlasSide />
-      </div>
-
-    </div>
-
-    <TableModal on:xClicked={() => {}} on:urlTyped={() => {}}/>
-
-    <div class='down-button' bind:this={downButton}>
-      <div class='icon-wrapper' on:click={downButtonClicked}>
-        <svg class='icon-down' class:up-down={!buttonDown} viewBox='0 0 512 512'>
-          <path fill='none' stroke='currentColor' stroke-linecap='round'
-            stroke-linejoin='round' stroke-width='80' d='M112 184l144 144 144-144'/>
-        </svg>
-      </div>
     </div>
 
   </div>
