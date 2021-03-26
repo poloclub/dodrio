@@ -1,7 +1,7 @@
 # -----------------------------------------------------------
 # This is a script to generate the files necessary to run
 # Dodrio locally on a custom dataset. More documentation
-# is available in the READ_ME.md.
+# is available in the README.md.
 #
 # (C) 2021 Jay Wang, Robert Turko, Polo Chau
 # College of Computing, Georgia Tech
