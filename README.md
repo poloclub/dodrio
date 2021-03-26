@@ -4,7 +4,7 @@ An interactive visualization system designed to help NLP researchers and practit
 
 [![build](https://github.com/poloclub/dodrio/workflows/build/badge.svg)](https://github.com/poloclub/dodrio/actions)
 
-<a href="https://youtu.be/uboTKqPNU5Y" target="_blank"><img src="https://i.imgur.com/x6Ii3vd.png" style="max-width:100%;"></a>
+<a href="https://youtu.be/uboTKqPNU5Y" target="_blank"><img src="https://i.imgur.com/h2x23o6.png" style="max-width:100%;"></a>
 
 For more information, check out our manuscript:
 
