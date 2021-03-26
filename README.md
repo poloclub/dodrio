@@ -1,6 +1,6 @@
-# Dodrio
+# Dodrio <a href="https://poloclub.github.io/dodrio/"><img align="right" src="public/figures/dodrio-logo.svg" height="38"></img></a>
 
-An interactive visualization system designed to help NLP researchers and practitioners analyze and compare attention mechanisms with linguistic knowledge.
+An interactive visualization system designed to help NLP researchers and practitioners analyze and compare attention weights in transformer-based models with linguistic knowledge.
 
 [![build](https://github.com/poloclub/dodrio/workflows/build/badge.svg)](https://github.com/poloclub/dodrio/actions)
 
