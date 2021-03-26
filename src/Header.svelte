@@ -25,6 +25,11 @@
     margin-right: 10px;
   }
 
+  #logo-icon {
+    width: 26px;
+    margin-right: 10px;
+  }
+
   #logo-tagline {
     font-size: 1.5rem;
     color: $brown-light;
@@ -54,6 +59,9 @@
 <div id="header">
 
   <div id="logo">
+    <div id='logo-icon'>
+      <img src='PUBLIC_URL/figures/dodrio-logo.svg' alt='logo'>
+    </div>
     <div id="logo-text">
       Dodrio
     </div>
