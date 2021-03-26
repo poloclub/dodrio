@@ -2,6 +2,8 @@
 
 An interactive visualization system designed to help NLP researchers and practitioners analyze and compare attention mechanisms with linguistic knowledge.
 
+[![Actions Status](https://github.com/poloclub/dodrio/workflows/build.yml/badge.svg)](https://github.com/poloclub/dodrio/actions)
+
 <a href="https://youtu.be/uboTKqPNU5Y" target="_blank"><img src="https://i.imgur.com/sCsudVg.png" style="max-width:100%;"></a>
 
 For more information, check out our manuscript:
