@@ -182,7 +182,6 @@ const createRankedDepMap = (maxAttentionLinks, tokenXs, textTokenPadding, textTo
     }
   });
 
-  console.log(rankedDepMap);
   return rankedDepMap;
 };
 
@@ -704,7 +703,7 @@ export const removeDependencyComparison = (svg) => {
     .classed('hide', true);
 };
 
-export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attentions,
+export const drawDependencyComparison = (topHeadMap, svg, SVGPadding, data, attentions,
   saliencies, SVGHeight, existingLinkSet, tokenXs, textTokenPadding, textTokenWidths,
   wordToSubwordMap, initWordToSubwordMap) => {
 
@@ -713,6 +712,10 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
 
   // Need to split the original words into sub-words if applicable
   let depTokens = data.words.map(d => { return { 'token': d }; });
+
+  // Use currently selected head list as default
+  let selectOption = d3.select('#head-select');
+  let topHeads = topHeadMap[selectOption.property('value')];
 
   // Give each saliency token a unique name
   if (saliencies.tokens[0].id === undefined) {
@@ -841,6 +844,70 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
     .style('top', `${controlPanelY}px`)
     .classed('hide', false);
 
+  // Bind the sort list select so users can change the sorting order
+  selectOption.on('change', () => {
+    let newHeadListValue = selectOption.property('value');
+
+    switch (newHeadListValue) {
+    case 'semantic':
+      svg.select('.token-group')
+        .selectAll('.attention-group')
+        .remove();
+
+      svg.select('.comparison-head-name-group')
+        .selectAll('.name-group')
+        .remove();
+
+      drawBottomRows(topHeadMap.semantic, attentions, data, saliencies, arcGroupHeight,
+        oldNodeGroupHeight, svg, tokenHeight, attentionRowGap, tokenXs, textTokenPadding,
+        textTokenWidths, existingLinkSet, wordToSubwordMap, depTokens, headNameGroup,
+        tokens, SVGPadding, SVGHeight);
+
+      break;
+    case 'syntactic':
+      svg.select('.token-group')
+        .selectAll('.attention-group')
+        .remove();
+
+      svg.select('.comparison-head-name-group')
+        .selectAll('.name-group')
+        .remove();
+
+      drawBottomRows(topHeadMap.syntactic, attentions, data, saliencies, arcGroupHeight,
+        oldNodeGroupHeight, svg, tokenHeight, attentionRowGap, tokenXs, textTokenPadding,
+        textTokenWidths, existingLinkSet, wordToSubwordMap, depTokens, headNameGroup,
+        tokens, SVGPadding, SVGHeight);
+
+      break;
+    case 'important':
+      console.log('wow');
+      svg.select('.token-group')
+        .selectAll('.attention-group')
+        .remove();
+
+      svg.select('.comparison-head-name-group')
+        .selectAll('.name-group')
+        .remove();
+
+      drawBottomRows(topHeadMap.important, attentions, data, saliencies, arcGroupHeight,
+        oldNodeGroupHeight, svg, tokenHeight, attentionRowGap, tokenXs, textTokenPadding,
+        textTokenWidths, existingLinkSet, wordToSubwordMap, depTokens, headNameGroup,
+        tokens, SVGPadding, SVGHeight);
+
+      break;
+    }
+  });
+
+  drawBottomRows(topHeads, attentions, data, saliencies, arcGroupHeight,
+    oldNodeGroupHeight, svg, tokenHeight, attentionRowGap, tokenXs, textTokenPadding,
+    textTokenWidths, existingLinkSet, wordToSubwordMap, depTokens, headNameGroup,
+    tokens, SVGPadding, SVGHeight);
+};
+
+const drawBottomRows = (topHeads, attentions, data, saliencies, arcGroupHeight,
+  oldNodeGroupHeight, svg, tokenHeight, attentionRowGap, tokenXs, textTokenPadding,
+  textTokenWidths, existingLinkSet, wordToSubwordMap, depTokens, headNameGroup,
+  tokens, SVGPadding, SVGHeight) => {
   // Draw the first row
   let attentionGroupID = 0;
 
@@ -856,8 +923,7 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
     let preTranslateY = 0;
     let preHeight = 0;
 
-    if (attentionGroupID === 0){
-      // TODO remove here
+    if (attentionGroupID === 0) {
       newTranslateY = arcGroupHeight + oldNodeGroupHeight + 50;
       // newTranslateY = arcGroupHeight + oldNodeGroupHeight + 200;
     } else {
@@ -878,7 +944,7 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
       .attr('id', `attention-group-${attentionGroupID}`)
       .attr('transform', `translate(0, ${newTranslateY})`)
       .style('visibility', 'hidden');
-    
+
     isMoved[attentionGroupID] = null;
 
     // Copy the node group
@@ -888,7 +954,7 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
       .clone(true)
       .classed('original-node-group', false)
       .classed('node-group-attention', true);
-    
+
     newGroup.selectAll('g.node')
       .classed('node', false)
       .classed('node-clone', true)
@@ -899,7 +965,7 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
       .on('mouseleave', () => {
         hoverTokenStore.set(null);
       });
-    
+
     newGroup.selectAll('rect')
       .style('stroke', 'none');
 
@@ -930,7 +996,7 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
       .style('fill', color)
       .text(`layer ${topHeads[attentionGroupID].id.layer}
           head ${topHeads[attentionGroupID].id.head}`);
-    
+
     addButtons(nameGroup, attentions, tokens, topHeads[attentionGroupID].id.layer,
       topHeads[attentionGroupID].id.head);
 
@@ -949,15 +1015,17 @@ export const drawDependencyComparison = (topHeads, svg, SVGPadding, data, attent
     if (curHeight + SVGPadding.bottom > SVGHeight) {
       attentionGroup.remove();
       nameGroup.remove();
-      // console.log(curHeight, attentionGroupID);
+      
+      // Update the number in the title label
+      d3.select('#comparison-label-top')
+        .text(`Dependencies predicted by top-${attentionGroupID} attention heads with the highest `);
+
       break;
+
     } else {
       attentionGroup.style('visibility', 'visible');
       nameGroup.style('visibility', 'visible');
       attentionGroupID += 1;
-      // TODO remove here
-      // break;
     }
   }
-
 };

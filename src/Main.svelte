@@ -17,6 +17,8 @@
   const attentionDataDir = 'PUBLIC_URL/data/sst2-attention-data/';
   const dependencyDataFilepath = 'PUBLIC_URL/data/sst2-dependencies.json';
   const syntacticHeadDataFilepath = 'PUBLIC_URL/data/sst2-sorted-syntactic-heads.json';
+  const semanticHeadDataFilepath = 'PUBLIC_URL/data/sst2-sorted-saliency-heads.json';
+  const importantHeadDataFilepath = 'PUBLIC_URL/data/sst2-sorted-confidence-heads.json';
   const saliencyDataFilepath = 'PUBLIC_URL/data/sst2-saliency-list-grad-l1.json';
   const atlasDataFilepath = 'PUBLIC_URL/data/sst2-atlas.json';
   const embeddingDataFilepath = 'PUBLIC_URL/data/embedding-list-sst2.json';
@@ -403,9 +405,13 @@
       <div class='attention-container'>
         <!-- Instance View -->
         <div class='instance-container' bind:this={instanceViewDIV}>
-          <Dependency dependencyDataFilepath={dependencyDataFilepath} saliencyDataFilepath={saliencyDataFilepath}
-                      attentionDataDir={attentionDataDir} syntacticHeadDataFilepath={syntacticHeadDataFilepath}
-                      on:close={comparisonCloseHandler} on:open={comparisonOpenHandler}/>
+          <Dependency dependencyDataFilepath={dependencyDataFilepath}
+            saliencyDataFilepath={saliencyDataFilepath}
+            attentionDataDir={attentionDataDir}
+            syntacticHeadDataFilepath={syntacticHeadDataFilepath}
+            semanticHeadDataFilepath={semanticHeadDataFilepath}
+            importantHeadDataFilepath={importantHeadDataFilepath}
+            on:close={comparisonCloseHandler} on:open={comparisonOpenHandler}/>
         </div>
 
         

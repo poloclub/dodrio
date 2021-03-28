@@ -15,6 +15,8 @@
   export let saliencyDataFilepath;
   export let dependencyDataFilepath;
   export let syntacticHeadDataFilepath;
+  export let semanticHeadDataFilepath;
+  export let importantHeadDataFilepath;
 
   const dispatch = createEventDispatcher();
 
@@ -23,7 +25,7 @@
   let existingLinkSet = null;
   let saliencies = null;
   let attentions = null;
-  let headOrder = null;
+  let headOrderMap = {};
 
   let wordToSubwordMap = null;
   let relations = [];
@@ -88,7 +90,7 @@
       name: 'semantic correlations '
     },
     importance: {
-      value: 'importance',
+      value: 'important',
       name: 'importance scores'
     } 
   };
@@ -606,7 +608,7 @@
 
     svg.attr('height', SVGHeight);
 
-    let topHeads = getInterestingHeads();
+    let topHeadMap = getInterestingHeads();
 
     if (inComparisonView) {
       inComparisonView = false;
@@ -616,11 +618,11 @@
       if (attentions == null) {
         initAttentionData(
           `PUBLIC_URL/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`
-        ).then(() => drawDependencyComparison(topHeads, svg, SVGPadding, data,
+        ).then(() => drawDependencyComparison(topHeadMap, svg, SVGPadding, data,
           attentions, saliencies, SVGHeight, existingLinkSet, tokenXs,
           textTokenPadding, textTokenWidths, wordToSubwordMap, initWordToSubwordMap));
       } else {
-        drawDependencyComparison(topHeads, svg, SVGPadding, data, attentions,
+        drawDependencyComparison(topHeadMap, svg, SVGPadding, data, attentions,
           saliencies, SVGHeight, existingLinkSet, tokenXs, textTokenPadding,
           textTokenWidths, wordToSubwordMap, initWordToSubwordMap);
       }
@@ -653,8 +655,12 @@
    * syntactic dependencies.
   */
   const getInterestingHeads = () => {
+    let topHeadMap = {};
+
+    // Load the syntactic list
     let potentialHeads = new Map();
 
+    let headOrder = headOrderMap.syntactic;
     for (let key in selectedRelations) {
       if (!selectedRelations[key] || headOrder[key] === undefined) {
         continue;
@@ -683,10 +689,40 @@
       acc: d[1]
     }));
 
-    return sortedObjHeads;
+    topHeadMap.syntactic = sortedObjHeads;
+
+    // Load the semantic list
+    // Create a list of interesting heads based on the original order (semantic score
+    // or the importance score)
+    headOrder = headOrderMap.semantic;
+    sortedObjHeads = headOrder.map(d => ({
+      id: {
+        layer: d[1][0],
+        head: d[1][1]
+      },
+      score: d[0]
+    }));
+
+    topHeadMap.semantic = sortedObjHeads;
+
+    // Load the important list
+    headOrder = headOrderMap.important;
+    sortedObjHeads = headOrder.map(d => ({
+      id: {
+        layer: d[1][0],
+        head: d[1][1]
+      },
+      score: d[0]
+    }));
+
+    topHeadMap.important = sortedObjHeads;
+
+    return topHeadMap;
+
   };
 
-  const initData = async (dependencyFile, saliencyFile, orderFile) => {
+  const initData = async (dependencyFile, saliencyFile, syntacticOrderFile,
+    semanticOrderFile, importantOrderFile) => {
     // Init dependency data
     data = await d3.json(dependencyFile);
     data = data[instanceID];
@@ -715,7 +751,14 @@
     saliencies = saliencies[instanceID];
 
     // Init the dependency layer/head accuracy list
-    headOrder = await d3.json(orderFile);
+    headOrderMap.syntactic = await d3.json(syntacticOrderFile);
+
+    headOrderMap.semantic = await d3.json(semanticOrderFile);
+    headOrderMap.semantic = headOrderMap.semantic[instanceID];
+
+    headOrderMap.important = await d3.json(importantOrderFile);
+    headOrderMap.important = headOrderMap.important[instanceID];
+
   };
 
   const initAttentionData = async (attentionFile) => {
@@ -727,7 +770,9 @@
     if (data == null || saliencies == null) {
       initData(dependencyDataFilepath,
         saliencyDataFilepath,
-        syntacticHeadDataFilepath);
+        syntacticHeadDataFilepath,
+        semanticHeadDataFilepath,
+        importantHeadDataFilepath);
     }
 
     bindSelect();
@@ -754,8 +799,6 @@
         tokenNodeMouseleave, initWordToSubwordMap);
       tokenXs = results.tokenXs;
       textTokenWidths = results.textTokenWidths;
-
-      getInterestingHeads();
 
       dependencyViewInitialized = true;
       break;
@@ -787,7 +830,9 @@
         if (data == null || saliencies == null) {
           initData(dependencyDataFilepath,
             saliencyDataFilepath,
-            syntacticHeadDataFilepath).then(createGraph);
+            syntacticHeadDataFilepath,
+            semanticHeadDataFilepath,
+            importantHeadDataFilepath).then(createGraph);
         } else {
           createGraph();
         }
@@ -807,7 +852,7 @@
       existingLinkSet = null;
       saliencies = null;
       attentions = null;
-      headOrder = null;
+      headOrderMap = {};
 
       wordToSubwordMap = null;
       dependencyViewInitialized = false;
@@ -816,7 +861,9 @@
       instanceID = value;
       initData(dependencyDataFilepath,
         saliencyDataFilepath,
-        syntacticHeadDataFilepath).then(createGraph);
+        syntacticHeadDataFilepath,
+        semanticHeadDataFilepath,
+        importantHeadDataFilepath).then(createGraph);
     }
     
   });
@@ -1092,8 +1139,7 @@
     @extend .panel-container;
     width: 100%;
     z-index: 5;
-    border-top: 1px solid hsla(0, 0%, 0%, 0.2);
-    box-shadow:  0 -3px 3px hsla(0, 0%, 0%, 0.01);
+    border-top: 3px solid hsl(24, 28%, 52%);
   }
 
   .comparison-control-panel {
@@ -1345,7 +1391,7 @@
         Dependency predicted by 5 attentions heads having the highest score.
       </div> -->
 
-      <div class='comparison-label'>
+      <div class='comparison-label' id='comparison-label-top'>
         Dependencies predicted by attention heads with top 
       </div>
 
