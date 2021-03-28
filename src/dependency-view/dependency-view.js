@@ -165,6 +165,8 @@ export const drawGraph = (data, saliencies, wordToSubwordMap, svg, tokenXs,
     .attr('class', 'arc-group')
     .attr('transform', `translate(0, ${textTokenHeight + textTokenPadding.top + textTokenPadding.bottom})`);
 
+  console.log(rankedDepMap);
+
   Object.keys(rankedDepMap).forEach((k, i) => {
 
     arcGroup.append('g')

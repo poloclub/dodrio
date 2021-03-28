@@ -334,7 +334,7 @@
 
     gradient.append('stop')
       .style('stop-opacity', 1)
-      .style('stop-color', 'hsl(0, 0%, 20%)')
+      .style('stop-color', 'hsl(0, 0%, 90%)')
       .attr('offset', '0');
 
     gradient.append('stop')
@@ -344,7 +344,7 @@
 
     gradient.append('stop')
       .style('stop-opacity', 1)
-      .style('stop-color', 'hsl(0, 0%, 90%)')
+      .style('stop-color', 'hsl(0, 0%, 20%)')
       .attr('offset', '1');
 
     // Line gradient left to right
@@ -354,7 +354,7 @@
 
     gradient.append('stop')
       .style('stop-opacity', 1)
-      .style('stop-color', 'hsl(0, 0%, 90%)')
+      .style('stop-color', 'hsl(0, 0%, 20%)')
       .attr('offset', '0');
 
     gradient.append('stop')
@@ -364,9 +364,9 @@
 
     gradient.append('stop')
       .style('stop-opacity', 1)
-      .style('stop-color', 'hsl(0, 0%, 20%)')
+      .style('stop-color', 'hsl(0, 0%, 90%)')
       .attr('offset', '1');
-    
+
     // Matched line gradient right to left
     gradient = svg.append('defs')
       .append('linearGradient')
@@ -637,6 +637,15 @@
     // svelte's bind:checked call back and this function (on:change)
     let curRel = e.target.dataset.rel;
     selectedRelations[curRel] = e.target.checked;
+
+    // Hide/show corresponding links
+    svg.selectAll('.arc-path')
+      .filter(d => d.relation === curRel)
+      .style('visibility', selectedRelations[curRel] ? 'visible' : 'hidden');
+
+    // Highlight/dehighlight corresponding attention predictions
+    svg.selectAll(`.matched-attention-path-${curRel}`)
+      .classed('matched-attention-path', selectedRelations[curRel]);
   };
 
   /**
@@ -686,10 +695,10 @@
     selectedRelations = {};
 
     // Create a set of existing [parent, child] pairs
-    existingLinkSet = new Set();
+    existingLinkSet = new Map();
 
     data.list.forEach(d => {
-      existingLinkSet.add(String([d.parent, d.child]));
+      existingLinkSet.set(String([d.parent, d.child]), d.relation);
       if (relationCounter.has(d.relation)) {
         relationCounter.set(d.relation, relationCounter.get(d.relation) + 1);
       } else {
@@ -1128,7 +1137,7 @@
   .relation-checkboxes {
     position: absolute;
     top: -40px;
-    left: 655px;
+    left: 700px;
     width: 700px;
     padding: 5px 10px;
     cursor: default;

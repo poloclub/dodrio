@@ -182,6 +182,7 @@ const createRankedDepMap = (maxAttentionLinks, tokenXs, textTokenPadding, textTo
     }
   });
 
+  console.log(rankedDepMap);
   return rankedDepMap;
 };
 
@@ -207,9 +208,12 @@ const drawBottomDependencyLine = (rankedDepMap, attentionGroup, tokenHeight,
             cls += ` attention-path-${tokens[d.parent].id}-${n}`;
           });
         }
+        if (existingLinkSet.has(String([d.parent, d.child]))) {
+          cls += ` matched-attention-path
+            matched-attention-path-${existingLinkSet.get(String([d.parent, d.child]))}`;
+        }
         return cls;
       })
-      .classed('matched-attention-path', d => existingLinkSet.has(String([d.parent, d.child])))
       .classed('attention-path--lr', d => d.parent < d.child)
       .classed('attention-path--rl', d => d.parent > d.child)
       // .attr('marker-end', 'url(#dep-attention-arrow)')
