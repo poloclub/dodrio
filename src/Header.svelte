@@ -73,19 +73,19 @@
 
   <div class="icons">
   
-    <a class="icon-a" target="_blank" href="https://arxiv.org/abs/2004.15004">
+    <a class="icon-a" target="_blank" href="https://arxiv.org/abs/2103.14625">
       <div class="icon" title="Research paper">
         <i class="fas fa-file-pdf"></i>
       </div>
     </a>
 
-    <a target="_blank" href="https://youtu.be/HnWIHWFbuUQ">
+    <a target="_blank" href="https://youtu.be/uboTKqPNU5Y">
       <div class="icon" title="Demo video">
         <i class="fab fa-youtube"></i>
       </div>
     </a>
 
-    <a target="_blank" href="https://github.com/poloclub/cnn-explainer">
+    <a target="_blank" href="https://github.com/poloclub/dodrio">
       <div class="icon" title="Open-source code">
         <i class="fab fa-github"></i>
       </div>
