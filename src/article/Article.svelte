@@ -125,7 +125,7 @@
 
 <body>
   <div id="description">
-    <h2>What is <span class='dodrio-text'><img class="icon is-rounded" src="PUBLIC_URL/figures/dodrio-logo.svg" height="30px" width="30px" alt="Dodrio logo">&nbsp;Dodrio</span>?</h2>
+    <h2>What is <span class='dodrio-text'><img class="icon is-rounded" src="PUBLIC_URL/figures/dodrio-logo.svg" style="height: 30px; width: 30px;" alt="Dodrio logo">&nbsp;Dodrio</span>?</h2>
       <p>
   		  <a href="https://arxiv.org/pdf/1706.03762.pdf" title="Attention Is All You Need">Transformers</a>
         are sequence transduction models that excel at modeling long-term dependencies with non-sequential processing.
