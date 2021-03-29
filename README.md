@@ -51,6 +51,19 @@ Dodrio was created by
 <a href="https://www.linkedin.com/in/robert-turko/">Robert Turko</a>, and
 <a href="https://www.cc.gatech.edu/~dchau/">Polo Chau</a>.
 
+## Citation
+
+```bibTeX
+@misc{wang2021dodrio,
+  title={Dodrio: Exploring Transformer Models with Interactive Visualization}, 
+  author={Zijie J. Wang and Robert Turko and Duen Horng Chau},
+  year={2021},
+  eprint={2103.14625},
+  archivePrefix={arXiv},
+  primaryClass={cs.CL}
+}
+```
+
 ## License
 
 The software is available under the [MIT License](https://github.com/poloclub/dodrio/blob/master/LICENSE).
