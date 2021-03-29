@@ -7,7 +7,7 @@
   import Tooltip from './TooltipGlobal.svelte';
   import LowerAtlas from './LowerAtlas.svelte';
   import TableModal from './TableModal.svelte';
-  import Article from './article/Article.svelte'
+  import Article from './article/Article.svelte';
   import { graphViewConfigStore, instanceViewConfigStore,
     mapViewConfigStore, lowerMapViewConfigStore, comparisonViewStore,
     tooltipConfigStore, sideStore } from './store';
@@ -454,8 +454,7 @@
 
     </div>
 
-    <Article/>
-
   </div>
+  <Article/>
 
 </div>
