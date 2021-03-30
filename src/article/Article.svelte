@@ -194,7 +194,7 @@
       </li>
     </ul>
     <div class="video">
-      <Youtube videoId="uboTKqPNU5Y" playerId="demo_video" bind:this={currentPlayer}/>
+      <Youtube videoId="qB-T9j7UTgE" playerId="demo_video" bind:this={currentPlayer}/>
     </div>
 
     <h2>How is <span class='dodrio-text'>Dodrio</span> implemented?</h2>

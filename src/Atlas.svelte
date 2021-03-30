@@ -407,6 +407,7 @@
       })
       .style('fill', 'none')
       .style('stroke', color)
+      .style('pointer-events', 'none')
       .style('stroke-width', d => linkWidthScale(d.attention))
       .style('opacity', d => linkOpacityScale(d.attention));
 

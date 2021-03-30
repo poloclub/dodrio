@@ -66,6 +66,7 @@
     display: flex;
     justify-content: center;
     box-sizing: border-box;
+    pointer-events: none;
   }
 </style>
 
