@@ -5,7 +5,7 @@ An interactive visualization system designed to help NLP researchers and practit
 [![build](https://github.com/poloclub/dodrio/workflows/build/badge.svg)](https://github.com/poloclub/dodrio/actions)
 [![arxiv badge](https://img.shields.io/badge/arXiv-2103.14625-red)](http://arxiv.org/abs/2103.14625)
 
-<a href="https://youtu.be/uboTKqPNU5Y" target="_blank"><img src="https://i.imgur.com/wA5wudI.png" style="max-width:100%;"></a>
+<a href="https://zijie.wang/#dodrio-video" target="_blank"><img src="https://i.imgur.com/wA5wudI.png" style="max-width:100%;"></a>
 
 For more information, check out our manuscript:
 
@@ -54,13 +54,16 @@ Dodrio was created by
 ## Citation
 
 ```bibTeX
-@misc{wang2021dodrio,
-  title={Dodrio: Exploring Transformer Models with Interactive Visualization}, 
-  author={Zijie J. Wang and Robert Turko and Duen Horng Chau},
-  year={2021},
-  eprint={2103.14625},
-  archivePrefix={arXiv},
-  primaryClass={cs.CL}
+@article{wangDodrioExploringTransformer2021,
+  title = {Dodrio: {{Exploring Transformer Models}} with {{Interactive Visualization}}},
+  shorttitle = {Dodrio},
+  author = {Wang, Zijie J. and Turko, Robert and Chau, Duen Horng},
+  year = {2021},
+  month = mar,
+  url = {http://arxiv.org/abs/2103.14625},
+  archiveprefix = {arXiv},
+  eprint = {2103.14625},
+  journal = {arXiv:2103.14625}
 }
 ```
 
