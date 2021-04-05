@@ -915,7 +915,7 @@ if not trained_model:
 	else:
 	    best_model_w, best_perf = train_model(model, train_dl, dev_dl,
 	                                          optimizer, scheduler,
-	                                          epochs, 2, es)
+	                                          epochs, num_labels, es)
 
 	checkpoint = {
 	    'performance': best_perf,
