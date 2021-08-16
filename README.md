@@ -4,6 +4,7 @@ An interactive visualization system designed to help NLP researchers and practit
 
 [![build](https://github.com/poloclub/dodrio/workflows/build/badge.svg)](https://github.com/poloclub/dodrio/actions)
 [![arxiv badge](https://img.shields.io/badge/arXiv-2103.14625-red)](http://arxiv.org/abs/2103.14625)
+[![DOI:10.18653/v1/2021.acl-demo.16](https://img.shields.io/badge/DOI-10.18653%2Fv1%2F2021.acl--demo.16-blue)](https://doi.org/10.18653/v1/2021.acl-demo.16)
 
 <a href="https://youtu.be/qB-T9j7UTgE" target="_blank"><img src="https://i.imgur.com/wA5wudI.png" style="max-width:100%;"></a>
 
@@ -54,16 +55,16 @@ Dodrio was created by
 ## Citation
 
 ```bibTeX
-@article{wangDodrioExploringTransformer2021,
+@inproceedings{wangDodrioExploringTransformer2021,
   title = {Dodrio: {{Exploring Transformer Models}} with {{Interactive Visualization}}},
   shorttitle = {Dodrio},
+  booktitle = {Proceedings of the 59th {{Annual Meeting}} of the {{Association}} for {{Computational Linguistics}} and the 11th {{International Joint Conference}} on {{Natural Language Processing}}: {{System Demonstrations}}},
   author = {Wang, Zijie J. and Turko, Robert and Chau, Duen Horng},
   year = {2021},
-  month = mar,
-  url = {http://arxiv.org/abs/2103.14625},
-  archiveprefix = {arXiv},
-  eprint = {2103.14625},
-  journal = {arXiv:2103.14625}
+  pages = {132--141},
+  publisher = {{Association for Computational Linguistics}},
+  address = {{Online}},
+  language = {en}
 }
 ```
 
