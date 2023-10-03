@@ -1,7 +1,11 @@
 <script>
   import { onMount } from 'svelte';
-  import { lowerMapViewConfigStore, attentionHeadColorStore,
-    tooltipConfigStore, mapHeadStore } from './store';
+  import {
+    lowerMapViewConfigStore,
+    attentionHeadColorStore,
+    tooltipConfigStore,
+    mapHeadStore,
+  } from './store';
   import { createEventDispatcher } from 'svelte';
   import * as d3 from 'd3';
 
@@ -17,14 +21,16 @@
 
   // Tooltip variables
   let tooltipConfig = null;
-  tooltipConfigStore.subscribe(value => {tooltipConfig = value;});
+  tooltipConfigStore.subscribe((value) => {
+    tooltipConfig = value;
+  });
 
   let viewContainer = null;
-  let mapHead = {layer: 9, head: 8};
+  let mapHead = { layer: 9, head: 8 };
   let curLayer = 9;
   let curHead = 8;
 
-  let attentionHeadColors = new Map;
+  let attentionHeadColors = new Map();
 
   const red = d3.hcl(23, 85, 56);
   const purple = d3.hcl(328, 85, 56);
@@ -39,12 +45,12 @@
 
   let instanceViewConfig = undefined;
 
-  const SVGPadding = {top: 40, left: 10, right: 10, bottom: 3};
+  const SVGPadding = { top: 40, left: 10, right: 10, bottom: 3 };
 
   const ease = d3.easeCubicInOut;
 
   const round = (num, decimal) => {
-    return Math.round((num + Number.EPSILON) * (10 ** decimal)) / (10 ** decimal);
+    return Math.round((num + Number.EPSILON) * 10 ** decimal) / 10 ** decimal;
   };
 
   const padZeroLeft = (num, digit) => {
@@ -52,75 +58,90 @@
   };
 
   const createGraph = () => {
-
     const layerNum = attentions.length;
     const headNum = attentions[0].length;
     const layerNameWidth = 35;
     const headNameHeight = 17;
 
-    let availableWidth = SVGWidth - layerNameWidth - SVGPadding.left - SVGPadding.right;
-    let availableHeight = SVGHeight - SVGPadding.top - SVGPadding.bottom - headNameHeight;
+    let availableWidth =
+      SVGWidth - layerNameWidth - SVGPadding.left - SVGPadding.right;
+    let availableHeight =
+      SVGHeight - SVGPadding.top - SVGPadding.bottom - headNameHeight;
 
     let availableLength = Math.min(availableHeight, availableWidth);
     // console.log(SVGHeight, availableLength, availableWidth, availableHeight);
     const gridGap = 8;
 
-    const gridLength = Math.floor((availableHeight - (layerNum - 1) * gridGap) / layerNum);
+    const gridLength = Math.floor(
+      (availableHeight - (layerNum - 1) * gridGap) / layerNum
+    );
     const maxOutRadius = gridLength / 2;
     const minOutRadius = 3;
 
-    let adjustedRowGap = Math.floor((availableWidth - maxOutRadius - headNum * gridLength) / (layerNum - 1));
-    let adjustedColGap = Math.floor((availableHeight - layerNum * gridLength) / (layerNum - 1));
+    let adjustedRowGap = Math.floor(
+      (availableWidth - maxOutRadius - headNum * gridLength) / (layerNum - 1)
+    );
+    let adjustedColGap = Math.floor(
+      (availableHeight - layerNum * gridLength) / (layerNum - 1)
+    );
 
-    svg = d3.select(svg)
+    svg = d3
+      .select(svg)
       .attr('width', availableWidth + layerNameWidth)
       .attr('height', availableHeight + headNameHeight);
 
     // Add a border
-    svg.append('rect')
+    svg
+      .append('rect')
       .attr('class', 'border-rect')
       .attr('width', availableLength)
       .attr('height', availableLength)
       .style('stroke', 'black')
       .style('fill', 'none');
 
-    let donutGroup = svg.append('g')
+    let donutGroup = svg
+      .append('g')
       .attr('class', 'donut-group')
-      .attr('transform', `translate(${SVGPadding.left + maxOutRadius + layerNameWidth},
-        ${maxOutRadius + headNameHeight})`);
-    
+      .attr(
+        'transform',
+        `translate(${SVGPadding.left + maxOutRadius + layerNameWidth},
+        ${maxOutRadius + headNameHeight})`
+      );
+
     // Create color scale
-    let hueScale = d3.scaleLinear()
+    let hueScale = d3
+      .scaleLinear()
       .domain([-1, 0, 1])
       .range([red, purple, blue]);
 
-    let lightnessScale = d3.scaleLinear()
-      .domain([0, 1])
-      .range([130, 40]);
+    let lightnessScale = d3.scaleLinear().domain([0, 1]).range([130, 40]);
 
     // Use square root scale
-    let outRadiusScale = d3.scaleLinear()
+    let outRadiusScale = d3
+      .scaleLinear()
       .domain([0, 1])
       .range([minOutRadius, maxOutRadius]);
 
-    let ringRadiusScale = d3.scaleLinear()
-      .domain([0, 1])
-      .range([4, 7]);
+    let ringRadiusScale = d3.scaleLinear().domain([0, 1]).range([4, 7]);
 
     let scales = {
       hueScale: hueScale,
       lightnessScale: lightnessScale,
       outRadiusScale: outRadiusScale,
-      ringRadiusScale: ringRadiusScale
+      ringRadiusScale: ringRadiusScale,
     };
 
-    let donuts = donutGroup.selectAll('g.donut')
+    let donuts = donutGroup
+      .selectAll('g.donut')
       .data(atlasData)
       .join('g')
       .attr('class', 'donut')
       .style('cursor', 'pointer')
-      .attr('transform', d => `translate(${d.head * (maxOutRadius * 2 + adjustedRowGap)},
-        ${(layerNum - d.layer - 1) * (maxOutRadius * 2 + adjustedColGap)})`);
+      .attr(
+        'transform',
+        (d) => `translate(${d.head * (maxOutRadius * 2 + adjustedRowGap)},
+        ${(layerNum - d.layer - 1) * (maxOutRadius * 2 + adjustedColGap)})`
+      );
 
     // Draw the donuts
     donuts.each((d, i, g) => drawDonut(d, i, g, scales));
@@ -129,8 +150,8 @@
     // console.log(attentionHeadColors);
     attentionHeadColorStore.set(attentionHeadColors);
 
-    donuts.on('mouseover',
-      (e, d) => {
+    donuts
+      .on('mouseover', (e, d) => {
         // Show the tooltip
         let node = e.currentTarget;
         let position = node.getBoundingClientRect();
@@ -143,9 +164,18 @@
         <div class='tooltip-tb' style='display: flex; flex-direction: column;
           justify-content: center; font-weight: 800;'>
           <div> Layer ${d.layer + 1} Head ${d.head + 1} </div>
-          <div style='font-size: 12px; opacity: 0.6;'> Semantic: ${round(d.semantic, 2)} </div>
-          <div style='font-size: 12px; opacity: 0.6;'> Syntactic ${round(d.syntactic, 2)} </div>
-          <div style='font-size: 12px; opacity: 0.6;'> Importance: ${round(d.confidence, 2)} </div>
+          <div style='font-size: 12px; opacity: 0.6;'> Semantic: ${round(
+            d.semantic,
+            2
+          )} </div>
+          <div style='font-size: 12px; opacity: 0.6;'> Syntactic ${round(
+            d.syntactic,
+            2
+          )} </div>
+          <div style='font-size: 12px; opacity: 0.6;'> Importance: ${round(
+            d.confidence,
+            2
+          )} </div>
         </div>
         `;
         tooltipConfig.width = 130;
@@ -159,9 +189,8 @@
         // Show the background rect
         let curDonut = d3.select(e.currentTarget);
 
-        if (!curDonut.classed('selected')){
-          curDonut.select('.donut-rect')
-            .style('opacity', 1);
+        if (!curDonut.classed('selected')) {
+          curDonut.select('.donut-rect').style('opacity', 1);
         }
       })
       .on('mouseleave', (e) => {
@@ -170,11 +199,9 @@
 
         // Hide the background rect
         let curDonut = d3.select(e.currentTarget);
-        if (!curDonut.classed('selected')){
-          curDonut.select('.donut-rect')
-            .style('opacity', 0);
+        if (!curDonut.classed('selected')) {
+          curDonut.select('.donut-rect').style('opacity', 0);
         }
-
       })
       .on('click', (e) => {
         let curDonut = d3.select(e.currentTarget);
@@ -183,21 +210,23 @@
         } else {
           // Restore the currently selected rect
           let preDonut = d3.select(
-            donutGroup.select(`#donut-rect-${curLayer}-${curHead}`)
-              .node().parentNode
+            donutGroup.select(`#donut-rect-${curLayer}-${curHead}`).node()
+              .parentNode
           );
 
-          preDonut.select('.donut-rect')
+          preDonut
+            .select('.donut-rect')
             .style('fill', 'hsl(0, 0%, 80%)')
             .style('opacity', 0);
-          
+
           preDonut.classed('selected', false);
 
           // Style the new rect
-          curDonut.select('.donut-rect')
+          curDonut
+            .select('.donut-rect')
             .style('fill', 'hsl(27, 47%, 13%)')
             .style('opacity', 1);
-          
+
           curDonut.classed('selected', true);
 
           curLayer = +curDonut.data()[0].layer;
@@ -210,46 +239,75 @@
       });
 
     // Draw horizontal lines between rows
-    donutGroup.selectAll('g.row-line-group')
-      .data(Array(layerNum - 1).fill(0).map( (_, i) => i))
+    donutGroup
+      .selectAll('g.row-line-group')
+      .data(
+        Array(layerNum - 1)
+          .fill(0)
+          .map((_, i) => i)
+      )
       .join('g')
       .attr('class', 'row-line-group')
       .append('path')
-      .attr('d', d => {
+      .attr('d', (d) => {
         return `M${-maxOutRadius}
-        ${(layerNum - d - 1 - 1/2) * (maxOutRadius * 2 + adjustedColGap)}
+        ${(layerNum - d - 1 - 1 / 2) * (maxOutRadius * 2 + adjustedColGap)}
         L${headNum * (maxOutRadius * 2 + adjustedRowGap) - maxOutRadius}
-        ${(layerNum - d - 1 - 1/2) * (maxOutRadius * 2 + adjustedColGap)}`;
+        ${(layerNum - d - 1 - 1 / 2) * (maxOutRadius * 2 + adjustedColGap)}`;
       })
       .style('stroke', 'hsla(0, 0%, 0%, 0.1)');
 
     // Draw the label names
-    let nameGroup = svg.append('g')
+    let nameGroup = svg
+      .append('g')
       .attr('class', 'name-group')
-      .attr('transform', `translate(${SVGPadding.left}, ${maxOutRadius + headNameHeight})`);
-    
-    nameGroup.selectAll('g.layer-name-group')
-      .data(Array(layerNum).fill(0).map( (_, i) => i))
+      .attr(
+        'transform',
+        `translate(${SVGPadding.left}, ${maxOutRadius + headNameHeight})`
+      );
+
+    nameGroup
+      .selectAll('g.layer-name-group')
+      .data(
+        Array(layerNum)
+          .fill(0)
+          .map((_, i) => i)
+      )
       .join('g')
       .attr('class', 'layer-name-group')
-      .attr('transform', d => `translate(${layerNameWidth - 5},
-        ${(layerNum - d - 1) * (maxOutRadius * 2 + adjustedColGap)})`)
+      .attr(
+        'transform',
+        (d) => `translate(${layerNameWidth - 5},
+        ${(layerNum - d - 1) * (maxOutRadius * 2 + adjustedColGap)})`
+      )
       .append('text')
-      .text(d => d > 0 ? d + 1 : `Layer ${d + 1}`);
-      
-    let headNameGroup = svg.append('g')
-      .attr('class', 'name-group')
-      .attr('transform', `translate(${SVGPadding.left + layerNameWidth + maxOutRadius},
-        ${5})`);
+      .text((d) => (d > 0 ? d + 1 : `Layer ${d + 1}`));
 
-    headNameGroup.selectAll('g.head-name-group')
-      .data(Array(layerNum).fill(0).map( (_, i) => i))
+    let headNameGroup = svg
+      .append('g')
+      .attr('class', 'name-group')
+      .attr(
+        'transform',
+        `translate(${SVGPadding.left + layerNameWidth + maxOutRadius},
+        ${5})`
+      );
+
+    headNameGroup
+      .selectAll('g.head-name-group')
+      .data(
+        Array(layerNum)
+          .fill(0)
+          .map((_, i) => i)
+      )
       .join('g')
       .attr('class', 'head-name-group')
-      .attr('transform', d => `translate(${d * (maxOutRadius * 2 + adjustedRowGap)},
-        ${0})`)
+      .attr(
+        'transform',
+        (d) => `translate(${d * (maxOutRadius * 2 + adjustedRowGap)},
+        ${0})`
+      )
       .append('text')
-      .text(d => d > 0 ? d + 1 : `Head ${d + 1}`);
+      .text((d) => (d > 0 ? d + 1 : `Head ${d + 1}`));
 
     // console.log(atlasData);
 
@@ -265,33 +323,33 @@
 
     // Highlight the initial selection
     let curDonut = d3.select(
-      donutGroup.select(`#donut-rect-${curLayer}-${curHead}`)
-        .node().parentNode
+      donutGroup.select(`#donut-rect-${curLayer}-${curHead}`).node().parentNode
     );
 
     // Style the new rect
-    curDonut.select('.donut-rect')
+    curDonut
+      .select('.donut-rect')
       .style('fill', 'hsl(27, 47%, 13%)')
       .style('opacity', 1);
-    
+
     curDonut.classed('selected', true);
   };
 
-  mapHeadStore.subscribe(value => {
+  mapHeadStore.subscribe((value) => {
     mapHead = value;
     // console.log(mapHead, curLayer, curHead);
 
     if (mapHead.layer !== curLayer || mapHead.head !== curHead) {
-
       let donutGroup = svg.select('g.donut-group');
 
       // Restore the currently selected rect
       let preDonut = d3.select(
-        donutGroup.select(`#donut-rect-${curLayer}-${curHead}`)
-          .node().parentNode
+        donutGroup.select(`#donut-rect-${curLayer}-${curHead}`).node()
+          .parentNode
       );
-      
-      preDonut.select('.donut-rect')
+
+      preDonut
+        .select('.donut-rect')
         .style('fill', 'hsl(0, 0%, 80%)')
         .style('opacity', 0);
 
@@ -301,15 +359,16 @@
       curHead = mapHead.head;
 
       let curDonut = d3.select(
-        donutGroup.select(`#donut-rect-${curLayer}-${curHead}`)
-          .node().parentNode
+        donutGroup.select(`#donut-rect-${curLayer}-${curHead}`).node()
+          .parentNode
       );
 
       // Style the new rect
-      curDonut.select('.donut-rect')
+      curDonut
+        .select('.donut-rect')
         .style('fill', 'hsl(27, 47%, 13%)')
         .style('opacity', 1);
-      
+
       curDonut.classed('selected', true);
     }
   });
@@ -323,11 +382,12 @@
 
     // Draw the background rect
     let maxLength = 2 * scales.outRadiusScale.range()[1];
-    donut.append('rect')
+    donut
+      .append('rect')
       .attr('class', 'donut-rect')
       .attr('id', `donut-rect-${d.layer}-${d.head}`)
-      .attr('x', - maxLength / 2)
-      .attr('y', - maxLength / 2)
+      .attr('x', -maxLength / 2)
+      .attr('y', -maxLength / 2)
       .attr('rx', 5)
       .attr('width', maxLength)
       .attr('height', maxLength)
@@ -336,7 +396,8 @@
 
     // Draw the rings
     // Arc's center is at (0, 0) on the local coordinate
-    let arc = d3.arc()
+    let arc = d3
+      .arc()
       .outerRadius(outRadius)
       .innerRadius(0)
       .startAngle(0)
@@ -348,7 +409,8 @@
     // Record the color
     attentionHeadColors.set([d.layer, d.head].toString(), color.formatHex());
 
-    donut.append('path')
+    donut
+      .append('path')
       .attr('class', 'donut-chart')
       .attr('d', arc)
       .style('fill', color);
@@ -357,12 +419,12 @@
     // Figure out the token positions
     let tokenPos = [];
     for (let i = 0; i < tokenSize; i++) {
-      let curAngle = -Math.PI / 2 + i * (Math.PI * 2 / tokenSize);
+      let curAngle = -Math.PI / 2 + i * ((Math.PI * 2) / tokenSize);
       tokenPos.push({
         x: Math.cos(curAngle) * inRadius,
         y: Math.sin(curAngle) * inRadius,
         token: d.token,
-        id: i
+        id: i,
       });
     }
   };
@@ -373,7 +435,7 @@
 
     // init atlas data
     atlasData = await d3.json(atlasFile);
-    
+
     // Init saliency data
     saliencies = await d3.json(saliencyFile);
     saliencies = saliencies[instanceID];
@@ -391,14 +453,15 @@
     }
   });
 
-  lowerMapViewConfigStore.subscribe(async value => {
-    if (value.compHeight !== undefined && value.compWidth !== undefined){
-      if (instanceViewConfig === undefined ||
+  lowerMapViewConfigStore.subscribe(async (value) => {
+    if (value.compHeight !== undefined && value.compWidth !== undefined) {
+      if (
+        instanceViewConfig === undefined ||
         (instanceViewConfig.compHeight !== value.compHeight &&
-        instanceViewConfig.compWidth !== value.compWidth)
-      ){
+          instanceViewConfig.compWidth !== value.compWidth)
+      ) {
         instanceViewConfig = value;
-        
+
         SVGWidth = instanceViewConfig.compWidth;
         SVGHeight = instanceViewConfig.compHeight;
 
@@ -415,11 +478,9 @@
       }
     }
   });
-
 </script>
 
-<style type='text/scss'>
-
+<style lang="scss">
   @import 'define';
 
   :global(.layer-name-group text) {
@@ -519,7 +580,7 @@
       height: 1.2em;
     }
   }
-  
+
   .color-legend {
     margin-left: 20px;
     display: flex;
@@ -528,41 +589,34 @@
       height: 22px;
     }
   }
-
 </style>
 
-<div class='atlas-view' bind:this={viewContainer}>
+<div class="atlas-view" bind:this={viewContainer}>
+  <div class="control-row">
+    <div class="lower-atlas-label">Attention Head Overview</div>
 
-  <div class='control-row'>
-
-    <div class='lower-atlas-label'>
-      Attention Head Overview
-    </div>
-
-    <div class='select-row'>
-      <div class='relation-container' on:click={() => dispatch('open')}>
-        <div class='expand-button'>
-          <div class='icon-wrapper'>
-            <img src='PUBLIC_URL/figures/expand-outline.svg' alt='expanding icon'>
+    <div class="select-row">
+      <div class="relation-container" on:click={() => dispatch('open')}>
+        <div class="expand-button">
+          <div class="icon-wrapper">
+            <img
+              src="PUBLIC_URL/figures/expand-outline.svg"
+              alt="expanding icon"
+            />
           </div>
           Show Detail
         </div>
       </div>
     </div>
 
-    <div class='color-legend'>
-      <img src='PUBLIC_URL/figures/color-legend.png' alt='expanding icon'>
+    <div class="color-legend">
+      <img src="PUBLIC_URL/figures/color-legend.png" alt="expanding icon" />
     </div>
-
   </div>
 
-
-  <div class='svg-container'>
-
-    <div class='atlas-svg-container'>
-      <svg class='atlas-svg' bind:this={svg}></svg>
+  <div class="svg-container">
+    <div class="atlas-svg-container">
+      <svg class="atlas-svg" bind:this={svg} />
     </div>
-
   </div>
-  
 </div>

@@ -6,11 +6,12 @@
 
   let matrixSVG = null;
   let matrixCanvas = null;
-  
+
   const imageLength = 100;
 
   const drawMatrix = () => {
-    let image = d3.select(matrixSVG)
+    let image = d3
+      .select(matrixSVG)
       .append('image')
       .attr('class', 'matrix-image')
       .attr('width', imageLength)
@@ -28,9 +29,10 @@
 
     const attentionLength = curAttention.length;
     let absMax = Math.max(Math.abs(attentionMin), Math.abs(attentionMax));
-   
+
     // console.log(38, absMax, attentionMin, attentionMax);
-    let colorScale = d3.scaleLinear()
+    let colorScale = d3
+      .scaleLinear()
       .domain([0, absMax])
       .range([d3.color('white'), d3.color('hsl(203, 70%, 52%)')]);
 
@@ -41,12 +43,17 @@
     bufferCanvas.height = attentionLength;
 
     // Fill image pixel array
-    let imageSingle = bufferContext.getImageData(0, 0, attentionLength, attentionLength);
+    let imageSingle = bufferContext.getImageData(
+      0,
+      0,
+      attentionLength,
+      attentionLength
+    );
     let imageSingleArray = imageSingle.data;
 
     // console.log(curAttention);
 
-    for (let i = 0; i < imageSingleArray.length; i+=4) {
+    for (let i = 0; i < imageSingleArray.length; i += 4) {
       let pixelIndex = Math.floor(i / 4);
       let row = Math.floor(pixelIndex / attentionLength);
       let column = pixelIndex % attentionLength;
@@ -62,9 +69,18 @@
 
     bufferContext.putImageData(imageSingle, 0, 0);
 
-    let matrixContext =  matrixCanvas.getContext('2d');
-    matrixContext.drawImage(bufferCanvas, 0, 0, attentionLength, attentionLength,
-      0, 0, imageLength, imageLength);
+    let matrixContext = matrixCanvas.getContext('2d');
+    matrixContext.drawImage(
+      bufferCanvas,
+      0,
+      0,
+      attentionLength,
+      attentionLength,
+      0,
+      0,
+      imageLength,
+      imageLength
+    );
 
     // console.log(attentionLength, imageSingleArray, attentionMax, attentionMin);
   };
@@ -74,15 +90,18 @@
   });
 </script>
 
-<style type='text/scss'>
-
+<style lang="scss">
   .matrix-canvas {
     border: 1px solid hsla(0, 0%, 0%, 0.1);
   }
-
 </style>
 
-<div class='small-matrix'>
+<div class="small-matrix">
   <!-- <svg class='matrix-svg' bind:this={matrixSVG} width=150 height=150></svg> -->
-  <canvas class='matrix-canvas' bind:this={matrixCanvas} width={imageLength} height={imageLength}></canvas>
+  <canvas
+    class="matrix-canvas"
+    bind:this={matrixCanvas}
+    width={imageLength}
+    height={imageLength}
+  />
 </div>

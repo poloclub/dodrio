@@ -5,7 +5,7 @@
   import SmallMatrix from './SmallMatrix.svelte';
   import GraphView from './GraphView.svelte';
   import * as d3 from 'd3';
-  
+
   export let width = 400;
 
   let saliencyDiv = null;
@@ -20,7 +20,7 @@
   let tooltipHtml = 'tooltip';
   let tooltipWidth = 65;
   let tooltipShow = false;
-  
+
   let svgWidth = 950;
   let svgHeight = 600;
 
@@ -31,25 +31,25 @@
     width: 20,
     height: 300,
     top: 5,
-    left: 30
+    left: 30,
   };
 
   let saliencySVGPadding = {
     top: 10,
     left: 10,
     right: 10,
-    bottom: 20
+    bottom: 20,
   };
 
   const tokenPadding = {
     left: 3,
     right: 2,
     top: 4,
-    bottom: 0
+    bottom: 0,
   };
 
   // HTML input
-  let saliencyKey = 'negative'
+  let saliencyKey = 'negative';
   let saliencies = null;
   let filename = 'saliency_list.json';
 
@@ -64,86 +64,93 @@
     reader.onload = async (evt) => {
       // Renew the data and frame count
       saliencies = await d3.json(evt.target.result);
-    }
+    };
     reader.readAsDataURL(file);
-  }
+  };
 
   const submitClicked = (evt) => {
     // Remove the preivious views
-    d3.select(saliencyDiv)
-      .selectAll('.token')
-      .remove();
+    d3.select(saliencyDiv).selectAll('.token').remove();
 
-    d3.select(saliencyRow)
-      .select('svg')
-      .remove();
+    d3.select(saliencyRow).select('svg').remove();
 
     drawSaliencies(saliencies, saliencyKey);
-  }
-  
+  };
+
   const drawSaliencyLegend = (saliencyRow, largestAbs) => {
     // Add a svg element
     let rightSVGHeight = +d3.select(saliencySVG).attr('height');
-    rightSVG = d3.select(saliencyRow)
+    rightSVG = d3
+      .select(saliencyRow)
       .append('svg')
       .attr('class', 'right-svg')
       .attr('height', rightSVGHeight)
       .attr('width', rightSVGWidth);
-    
+
     // Define the gradient
-    let legentGradientDef = rightSVG.append('defs')
+    let legentGradientDef = rightSVG
+      .append('defs')
       .append('linearGradient')
       .attr('x1', 0)
       .attr('y1', 1)
       .attr('x2', 0)
       .attr('y2', 0)
       .attr('id', 'legend-gradient');
-    
-    legentGradientDef.append('stop')
+
+    legentGradientDef
+      .append('stop')
       .attr('stop-color', '#eb2f06')
       .attr('offset', 0);
 
-    legentGradientDef.append('stop')
+    legentGradientDef
+      .append('stop')
       .attr('stop-color', '#ffffff')
       .attr('offset', 0.5);
-    
-    legentGradientDef.append('stop')
+
+    legentGradientDef
+      .append('stop')
       .attr('stop-color', '#4690C2')
       .attr('offset', 1);
-    
-    // Draw the legend
-    let legendGroup = rightSVG.append('g')
-      .attr('class', 'legend')
-      .attr('transform', `translate(${legendPos.left}, ${legendPos.top})`)
 
-    legendGroup.append('rect')
+    // Draw the legend
+    let legendGroup = rightSVG
+      .append('g')
+      .attr('class', 'legend')
+      .attr('transform', `translate(${legendPos.left}, ${legendPos.top})`);
+
+    legendGroup
+      .append('rect')
       .attr('x', 0)
       .attr('y', 0)
       .attr('width', legendPos.width)
       .attr('height', legendPos.height)
       .style('fill', 'url(#legend-gradient)')
       .style('stroke', 'black');
-    
+
     // Draw the legend axis
-    let legendScale = d3.scaleLinear()
+    let legendScale = d3
+      .scaleLinear()
       .domain([-largestAbs, largestAbs])
       .range([legendPos.height, 0])
       .nice();
-    
-    legendGroup.append("g")
+
+    legendGroup
+      .append('g')
       .attr('transform', `translate(${legendPos.width}, ${0})`)
-      .call(d3.axisRight(legendScale).ticks(10))
-  }
+      .call(d3.axisRight(legendScale).ticks(10));
+  };
 
   const enterHeatmap = () => {
     const buttonAnimationTime = 1000;
     const buttonAnimationEase = d3.easeCubicInOut;
-    let tokens = d3.select(saliencySVG)
+    let tokens = d3
+      .select(saliencySVG)
       .select('.text-group')
       .selectAll('.token');
-    
+
     // Hide the texts
-    tokens.select('.text-token')
+    tokens
+      .select('.text-token')
       .transition('text-opacity')
       .duration(buttonAnimationTime / 2)
       .ease(buttonAnimationEase)
@@ -153,82 +160,96 @@
       });
 
     let tileHeight = +tokens.select('.text-background').attr('height');
-    let containerWidth = svgWidth - saliencySVGPadding.left - saliencySVGPadding.right;
+    let containerWidth =
+      svgWidth - saliencySVGPadding.left - saliencySVGPadding.right;
     let tileGap = 3;
     let tileColumnNum = Math.floor(containerWidth / (tileHeight + tileGap));
     let tileNumRow = Math.floor(tokens.nodes().length / tileColumnNum) + 1;
 
     // To center the heatmap, we need to re-calculate the starting gap
-    let startSpace = (containerWidth - tileColumnNum * (tileHeight + tileGap) + tileGap) / 2;
+    let startSpace =
+      (containerWidth - tileColumnNum * (tileHeight + tileGap) + tileGap) / 2;
 
     // Move the rect positions and change their width
-    tokens.transition('button-animation')
-      .duration(buttonAnimationTime)
-      .ease(buttonAnimationEase)
-      .attr('transform', (_, i) => {
-      // Compute the current tile's location
-      let cur_r = Math.floor(i / tileColumnNum);
-      let cur_c = i % tileColumnNum;
-      return `translate(${startSpace + cur_c * (tileHeight + tileGap)},
-        ${cur_r * (tileHeight + tileGap)})`;
-    })
-
-    tokens.select('.text-background')
+    tokens
       .transition('button-animation')
       .duration(buttonAnimationTime)
       .ease(buttonAnimationEase)
-      .attr('width', function(){return +d3.select(this).attr('height')});
+      .attr('transform', (_, i) => {
+        // Compute the current tile's location
+        let cur_r = Math.floor(i / tileColumnNum);
+        let cur_c = i % tileColumnNum;
+        return `translate(${startSpace + cur_c * (tileHeight + tileGap)},
+        ${cur_r * (tileHeight + tileGap)})`;
+      });
+
+    tokens
+      .select('.text-background')
+      .transition('button-animation')
+      .duration(buttonAnimationTime)
+      .ease(buttonAnimationEase)
+      .attr('width', function () {
+        return +d3.select(this).attr('height');
+      });
 
     // Change the SVG height
-    let tempSVGHeight = saliencySVGPadding.top + saliencySVGPadding.bottom / 2 +
-        tileNumRow * (tileHeight + tileGap) - tileGap;
-    
+    let tempSVGHeight =
+      saliencySVGPadding.top +
+      saliencySVGPadding.bottom / 2 +
+      tileNumRow * (tileHeight + tileGap) -
+      tileGap;
+
     d3.select(saliencySVG)
       .transition('button-animation')
       .duration(buttonAnimationTime)
       .ease(buttonAnimationEase)
       .attr('height', tempSVGHeight);
-    
+
     d3.select(saliencySVG)
       .select('.svg-border-rect')
       .transition('button-animation')
       .duration(buttonAnimationTime)
       .ease(buttonAnimationEase)
       .attr('height', tempSVGHeight);
-    
-    rightSVG.transition('button-animation')
+
+    rightSVG
+      .transition('button-animation')
       .duration(buttonAnimationTime)
       .ease(buttonAnimationEase)
       .attr('height', tempSVGHeight);
-  }
-
+  };
 
   const exitHeatmap = (textTokenPositions, textTokenWidths) => {
     const buttonAnimationTime = 1000;
     const buttonAnimationEase = d3.easeCubicInOut;
-    let tokens = d3.select(saliencySVG)
+    let tokens = d3
+      .select(saliencySVG)
       .select('.text-group')
       .selectAll('.token');
-    
+
     // Show the texts
-    tokens.select('.text-token')
-      .style('visibility', 'visible');
+    tokens.select('.text-token').style('visibility', 'visible');
 
     // Restore the position of the text token
-    tokens.transition('button-animation')
+    tokens
+      .transition('button-animation')
       .duration(buttonAnimationTime)
       .ease(buttonAnimationEase)
       .attr('transform', (_, i) => {
         let curPos = textTokenPositions[i];
-        return `translate(${curPos.x}, ${curPos.y})`
+        return `translate(${curPos.x}, ${curPos.y})`;
       });
 
     // Restore text token rect width
-    tokens.select('.text-background')
+    tokens
+      .select('.text-background')
       .transition('button-animation')
       .duration(buttonAnimationTime)
       .ease(buttonAnimationEase)
-      .attr('width', (_, i) => textTokenWidths[i] + tokenPadding.left + tokenPadding.right);
+      .attr(
+        'width',
+        (_, i) => textTokenWidths[i] + tokenPadding.left + tokenPadding.right
+      );
 
     // Change the SVG height
     d3.select(saliencySVG)
@@ -236,28 +257,29 @@
       .duration(buttonAnimationTime)
       .ease(buttonAnimationEase)
       .attr('height', svgHeight);
-    
+
     d3.select(saliencySVG)
       .select('.svg-border-rect')
       .transition('button-animation')
       .duration(buttonAnimationTime)
       .ease(buttonAnimationEase)
       .attr('height', svgHeight);
-    
-    rightSVG.transition('button-animation')
+
+    rightSVG
+      .transition('button-animation')
       .duration(buttonAnimationTime)
       .ease(buttonAnimationEase)
       .attr('height', svgHeight);
-    
+
     // Show the texts
-    tokens.select('.text-token')
+    tokens
+      .select('.text-token')
       .transition('text-animation')
       .delay(buttonAnimationTime / 2)
       .duration(buttonAnimationTime / 2)
       .ease(buttonAnimationEase)
       .style('opacity', 1);
-  }
-
+  };
 
   const drawSaliencyControl = (textTokenPositions, textTokenWidths) => {
     if (rightSVG === null) {
@@ -265,7 +287,8 @@
     }
 
     let rectY = legendPos.top + legendPos.height + 10;
-    let heatmapButton = rightSVG.append('rect')
+    let heatmapButton = rightSVG
+      .append('rect')
       .attr('x', legendPos.left)
       .attr('y', rectY)
       .attr('class', 'rect-button')
@@ -275,7 +298,7 @@
       .style('fill', '#F5F5F5')
       .style('stroke-width', 1)
       .style('stroke', '#DBDBDB');
-    
+
     heatmapButton.on('mouseover', (event, d) => {
       let node = event.currentTarget;
       let button = d3.select(node);
@@ -296,9 +319,8 @@
         exitHeatmap(textTokenPositions, textTokenWidths);
         heatmapMode = false;
       }
-    })
-
-  }
+    });
+  };
 
   const drawSaliencies = (saliencies, key) => {
     if (saliencySVG === null) {
@@ -309,21 +331,26 @@
     // console.log(saliencyTokens);
 
     // Create a divering color scale from red to green
-    let largestAbs = d3.max(saliencyTokens.map(d => Math.abs(d[key])));
+    let largestAbs = d3.max(saliencyTokens.map((d) => Math.abs(d[key])));
     const tokenGap = 4;
     const rowGap = 30;
 
-    let colorScale = d3.scaleLinear()
+    let colorScale = d3
+      .scaleLinear()
       .domain([-largestAbs, 0, largestAbs])
       .range([d3.rgb('#eb2f06'), d3.rgb('#ffffff'), d3.rgb('#458FC1')]);
-    
-    let container = d3.select(saliencySVG)
+
+    let container = d3
+      .select(saliencySVG)
       .attr('height', svgHeight)
       .attr('width', svgWidth)
       .append('g')
       .attr('class', 'main-svg')
-      .attr('transform', `translate(${saliencySVGPadding.left}, ${saliencySVGPadding.top})`);
-    
+      .attr(
+        'transform',
+        `translate(${saliencySVGPadding.left}, ${saliencySVGPadding.top})`
+      );
+
     // Add svg border rect
     d3.select(saliencySVG)
       .append('rect')
@@ -332,34 +359,36 @@
       .attr('width', svgWidth)
       .style('stroke', 'black')
       .style('fill', 'none');
-    
-    // Add svg control buttons
-    
-    let containerWidth = svgWidth - saliencySVGPadding.left - saliencySVGPadding.right;
-    
-    let textGroup = container.append('g')
-      .attr('class', 'text-group');
 
-    let tokenGroups = textGroup.selectAll('g.token')
+    // Add svg control buttons
+
+    let containerWidth =
+      svgWidth - saliencySVGPadding.left - saliencySVGPadding.right;
+
+    let textGroup = container.append('g').attr('class', 'text-group');
+
+    let tokenGroups = textGroup
+      .selectAll('g.token')
       .data(saliencyTokens)
       .enter()
       .append('g')
       .attr('class', 'token')
       .attr('id', (_, i) => `token-${i}`);
 
-    let tokenTexts = tokenGroups.append('text')
+    let tokenTexts = tokenGroups
+      .append('text')
       .attr('class', 'text-token')
       .attr('x', tokenPadding.left)
       .attr('y', tokenPadding.top)
-      .text(d => d.token);
-    
+      .text((d) => d.token);
+
     // After the text elements are created, we need to query again to get the
     // length and width of these elements
     let textTokenWidths = {};
     let textTokenPositions = {};
     let textTokenHeight = null;
 
-    tokenTexts.each(function(_, i) {
+    tokenTexts.each(function (_, i) {
       let bbox = this.getBBox();
       textTokenWidths[i] = +Number(bbox.width).toFixed(2);
 
@@ -368,58 +397,76 @@
       }
     });
 
-    let tokenRects = tokenGroups.append('rect')
+    let tokenRects = tokenGroups
+      .append('rect')
       .attr('class', 'text-background')
-      .attr('width', (_, i) => textTokenWidths[i] + tokenPadding.left + tokenPadding.right)
+      .attr(
+        'width',
+        (_, i) => textTokenWidths[i] + tokenPadding.left + tokenPadding.right
+      )
       .attr('height', textTokenHeight + tokenPadding.top + tokenPadding.bottom)
-      .style('fill', d => colorScale(+d[key]))
+      .style('fill', (d) => colorScale(+d[key]))
       .lower();
 
     // Change the positions of tokens based on their width
-    let curPos = {x: 0, y: 0};
+    let curPos = { x: 0, y: 0 };
     let tokenNum = Object.keys(textTokenWidths).length;
 
     // Change the position of the text token
-    tokenGroups.each(function(_, i) {
-      d3.select(this)
-        .attr('transform', `translate(${curPos.x}, ${curPos.y})`);
-      
+    tokenGroups.each(function (_, i) {
+      d3.select(this).attr('transform', `translate(${curPos.x}, ${curPos.y})`);
+
       // Record the new position
-      textTokenPositions[i] = {x: curPos.x, y: curPos.y};
+      textTokenPositions[i] = { x: curPos.x, y: curPos.y };
 
       // Update the next position
-      let curLineLength = curPos.x + textTokenWidths[i] + tokenPadding.left +
-                          tokenPadding.right + tokenGap;
+      let curLineLength =
+        curPos.x +
+        textTokenWidths[i] +
+        tokenPadding.left +
+        tokenPadding.right +
+        tokenGap;
       if (i + 1 < tokenNum) {
         curLineLength += textTokenWidths[i + 1];
       }
 
       // Shift to next row if needed
       if (curLineLength > containerWidth) {
-        curPos.y += rowGap;  
+        curPos.y += rowGap;
         curPos.x = 0;
       } else {
-        curPos.x = curPos.x + textTokenWidths[i] + tokenPadding.left + tokenPadding.right + tokenGap;
+        curPos.x =
+          curPos.x +
+          textTokenWidths[i] +
+          tokenPadding.left +
+          tokenPadding.right +
+          tokenGap;
       }
     });
 
     // Resize the SVG based on the content height
-    svgHeight = (curPos.y + textTokenHeight + tokenPadding.top +
-                 tokenPadding.bottom + saliencySVGPadding.bottom);
+    svgHeight =
+      curPos.y +
+      textTokenHeight +
+      tokenPadding.top +
+      tokenPadding.bottom +
+      saliencySVGPadding.bottom;
     d3.select(saliencySVG)
       .attr('height', svgHeight)
       .select('.svg-border-rect')
       .attr('height', svgHeight);
-    
+
     // Mouseover function
     tokenGroups.on('mouseover', (event, d) => {
       let node = event.currentTarget;
       let curGroup = d3.select(node);
-      let curI = d3.select(node.parentNode).nodes().indexOf(event.currentTarget);
+      let curI = d3
+        .select(node.parentNode)
+        .nodes()
+        .indexOf(event.currentTarget);
 
       // Highlight the border
-      curGroup.select('.text-background')
-        .style('stroke', 'rgba(0, 0, 0, 1)')
+      curGroup.select('.text-background').style('stroke', 'rgba(0, 0, 0, 1)');
 
       // Show the tooltip
       tooltipShow = true;
@@ -432,25 +479,27 @@
       tooltipHtml = d3.format('.4f')(+d[key]);
       tooltipLeft = tooltipCenterX - tooltipWidth / 2;
       tooltipTop = tooltipCenterY;
-    })
+    });
 
     // Mouseleave function
     tokenGroups.on('mouseleave', (event, d) => {
       let node = event.currentTarget;
       let curGroup = d3.select(node);
-      let curI = d3.select(node.parentNode).nodes().indexOf(event.currentTarget);
+      let curI = d3
+        .select(node.parentNode)
+        .nodes()
+        .indexOf(event.currentTarget);
 
       // Dehighlight the border
-      curGroup.select('.text-background')
-        .style('stroke', 'none');
-      
+      curGroup.select('.text-background').style('stroke', 'none');
+
       // Hide the tooltip
       tooltipShow = false;
     });
 
     drawSaliencyLegend(saliencyRow, largestAbs);
     drawSaliencyControl(textTokenPositions, textTokenWidths);
-  }
+  };
 
   onMount(async () => {
     console.log('loading');
@@ -458,11 +507,10 @@
     console.log('loaded');
 
     drawSaliencies(saliencies, saliencyKey);
-  })
-
+  });
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   $light-gray: gray;
 
   .saliency-component {
@@ -515,44 +563,49 @@
     padding-bottom: 1.2em;
     margin-right: 10px;
   }
-
 </style>
 
-<div class='saliency-component' bind:this={saliencyComponent}>
-  <Tooltip bind:this={tooltip}
+<div class="saliency-component" bind:this={saliencyComponent}>
+  <Tooltip
+    bind:this={tooltip}
     left={tooltipLeft}
     top={tooltipTop}
-    tooltipHtml={tooltipHtml}
+    {tooltipHtml}
     width={tooltipWidth}
-    tooltipShow={tooltipShow}
+    {tooltipShow}
   />
 
   <GraphView />
   <SmallMatrix />
 
-  <div class='saliency-row' bind:this={saliencyRow}>
-    <svg class='saliency-svg' bind:this={saliencySVG}></svg>
+  <div class="saliency-row" bind:this={saliencyRow}>
+    <svg class="saliency-svg" bind:this={saliencySVG} />
   </div>
 
-
-  <div class='control-panel'>
+  <div class="control-panel">
     <button class="button" on:click={submitClicked}>Submit</button>
 
-    <input class="input" type="text" placeholder="Saliency Key"
-      bind:value={saliencyKey}>
+    <input
+      class="input"
+      type="text"
+      placeholder="Saliency Key"
+      bind:value={saliencyKey}
+    />
 
     <div class="file is-normal-small">
       <label class="file-label">
-        <input class="file-input is-normal-small" type="file" name="json"
-          accept='.json'
-          on:change={newJSONUploaded}>
+        <input
+          class="file-input is-normal-small"
+          type="file"
+          name="json"
+          accept=".json"
+          on:change={newJSONUploaded}
+        />
         <span class="file-cta is-normal-small no-top-border-radius">
           <span class="file-icon">
-            <i class="fas fa-upload"></i>
+            <i class="fas fa-upload" />
           </span>
-          <span class="file-label">
-            JSON
-          </span>
+          <span class="file-label"> JSON </span>
         </span>
       </label>
     </div>
@@ -566,8 +619,8 @@
       <TextClassificationStats
         trueLabel={saliencies.meta['true_label']}
         predictedLabel={saliencies.meta['predicted_label']}
-        softmaxScores={saliencies.meta['softmax_scores']}/>
+        softmaxScores={saliencies.meta['softmax_scores']}
+      />
     {/if}
   </div>
-  
 </div>

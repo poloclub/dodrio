@@ -1,7 +1,7 @@
 <script>
 </script>
 
-<style type='text/scss'>
+<style lang="scss">
   @import 'define';
 
   #header {
@@ -53,43 +53,35 @@
     align-items: center;
     color: white;
   }
-
 </style>
 
 <div id="header">
-
   <div id="logo">
-    <div id='logo-icon'>
-      <img src='PUBLIC_URL/figures/dodrio-logo.svg' alt='logo'>
+    <div id="logo-icon">
+      <img src="PUBLIC_URL/figures/dodrio-logo.svg" alt="logo" />
     </div>
-    <div id="logo-text">
-      Dodrio
-    </div>
-    
-    <div id='logo-tagline'>
-      Exploring transformer models in your browser! 
-    </div>
+    <div id="logo-text">Dodrio</div>
+
+    <div id="logo-tagline">Exploring transformer models in your browser!</div>
   </div>
 
   <div class="icons">
-  
     <a class="icon-a" target="_blank" href="https://arxiv.org/abs/2103.14625">
       <div class="icon" title="Research paper">
-        <i class="fas fa-file-pdf"></i>
+        <i class="fas fa-file-pdf" />
       </div>
     </a>
 
     <a target="_blank" href="https://youtu.be/uboTKqPNU5Y">
       <div class="icon" title="Demo video">
-        <i class="fab fa-youtube"></i>
+        <i class="fab fa-youtube" />
       </div>
     </a>
 
     <a target="_blank" href="https://github.com/poloclub/dodrio">
       <div class="icon" title="Open-source code">
-        <i class="fab fa-github"></i>
+        <i class="fab fa-github" />
       </div>
     </a>
-
   </div>
 </div>

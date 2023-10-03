@@ -12,11 +12,13 @@
   let markerDef = null;
 
   let attentionHeadColor = new Map();
-  attentionHeadColorStore.subscribe(value => {attentionHeadColor = value;});
+  attentionHeadColorStore.subscribe((value) => {
+    attentionHeadColor = value;
+  });
 
   let modalInfo = {};
 
-  sideStore.subscribe(value => {
+  sideStore.subscribe((value) => {
     modalInfo = value;
 
     if (modalInfo.attention != null) {
@@ -26,37 +28,47 @@
   });
 
   const drawDonut = (donut) => {
-    
-    let color = attentionHeadColor.get([modalInfo.layer, modalInfo.head].toString());
+    let color = attentionHeadColor.get(
+      [modalInfo.layer, modalInfo.head].toString()
+    );
 
-    svg.select('#atlas-side-arrow')
+    svg
+      .select('#atlas-side-arrow')
       .select('path')
       .attr('fill', color)
       .attr('stroke', color);
 
     // Pre-draw the text
-    let tempSVG = d3.select(document.body)
+    let tempSVG = d3
+      .select(document.body)
       .append('svg')
       .attr('height', 200)
       .attr('width', 200)
       .style('visibility', 'hidden');
 
-    const result = getTokenWidth(modalInfo.tokens.map(d => d.token), tempSVG, '0.9em');
-    const maxTextWidth = d3.max(Object.entries(result.textTokenWidths).map(d => d[1]));
+    const result = getTokenWidth(
+      modalInfo.tokens.map((d) => d.token),
+      tempSVG,
+      '0.9em'
+    );
+    const maxTextWidth = d3.max(
+      Object.entries(result.textTokenWidths).map((d) => d[1])
+    );
     let inRadius = svgVirtualLength / 2 - maxTextWidth;
-    
+
     tempSVG.remove();
 
     // Figure out the token positions
     let tokenPos = [];
     for (let i = 0; i < modalInfo.tokens.length; i++) {
-      let curAngle = -Math.PI / 2 + i * (Math.PI * 2 / modalInfo.tokens.length);
+      let curAngle =
+        -Math.PI / 2 + i * ((Math.PI * 2) / modalInfo.tokens.length);
       tokenPos.push({
         x: Math.cos(curAngle) * inRadius,
         y: Math.sin(curAngle) * inRadius,
         angle: curAngle,
         token: modalInfo.tokens[i].token,
-        id: i
+        id: i,
       });
     }
 
@@ -72,7 +84,7 @@
             source: i,
             target: j,
             attention: curAttention,
-            id: `${i}-${j}`
+            id: `${i}-${j}`,
           });
         }
       }
@@ -81,48 +93,52 @@
     links = links.sort((a, b) => b.attention - a.attention).slice(0, 150);
 
     // Define link width scale
-    let linkWidthScale = d3.scaleLinear()
-      .domain(d3.extent(links.map(d => d.attention)))
+    let linkWidthScale = d3
+      .scaleLinear()
+      .domain(d3.extent(links.map((d) => d.attention)))
       .range([0.5, 2]);
 
-    let linkOpacityScale = d3.scaleLinear()
+    let linkOpacityScale = d3
+      .scaleLinear()
       // .domain(d3.extent(links.map(d => d.attention)))
       .domain([0, 1])
       .range([0.1, 1]);
-    
+
     // Draw the texts (will re-draw again later after getting the optimal circle size)
-    let textTokenGroup = donut.append('g')
+    let textTokenGroup = donut
+      .append('g')
       .attr('class', 'token-text-group')
       .style('font-size', '0.9em')
       .style('cursor', 'default');
 
-    textTokenGroup.selectAll('text')
-      .data(tokenPos, d => d.id)
+    textTokenGroup
+      .selectAll('text')
+      .data(tokenPos, (d) => d.id)
       .join('text')
-      .attr('data-angle', d => d.angle)
-      .attr('transform', d => {
-        let degree = d.angle * 180 / Math.PI;
+      .attr('data-angle', (d) => d.angle)
+      .attr('transform', (d) => {
+        let degree = (d.angle * 180) / Math.PI;
         return `rotate(${degree})
           translate(${inRadius}, 0)
           rotate(${d.angle >= Math.PI / 2 ? 180 : 0})
         `;
       })
       .attr('dominant-baseline', 'middle')
-      .attr('x', d => d.angle < Math.PI / 2 ? 6 : -6)
-      .attr('text-anchor', d => d.angle < Math.PI / 2 ? 'start' : 'end')
-      .text(d => d.token);
+      .attr('x', (d) => (d.angle < Math.PI / 2 ? 6 : -6))
+      .attr('text-anchor', (d) => (d.angle < Math.PI / 2 ? 'start' : 'end'))
+      .text((d) => d.token);
 
     // Optimize the circle size (maximize the inner bbox)
     // Need to create a temp svg to work around the drawing delay
     let textClone = donut.select('.token-text-group').clone(true).remove();
 
-    tempSVG = d3.select(document.body)
+    tempSVG = d3
+      .select(document.body)
       .append('svg')
       .attr('viewBox', `0 0 ${svgVirtualLength} ${svgVirtualLength}`)
       .attr('width', svgLength)
       .attr('height', svgLength)
       .style('visibility', 'hidden');
-    
 
     tempSVG.append(() => textClone.node());
     let innerBox = tempSVG.select('.token-text-group').node().getBBox();
@@ -141,22 +157,24 @@
     // Figure out the token positions
     tokenPos = [];
     for (let i = 0; i < modalInfo.tokens.length; i++) {
-      let curAngle = -Math.PI / 2 + i * (Math.PI * 2 / modalInfo.tokens.length);
+      let curAngle =
+        -Math.PI / 2 + i * ((Math.PI * 2) / modalInfo.tokens.length);
       tokenPos.push({
         x: Math.cos(curAngle) * inRadius,
         y: Math.sin(curAngle) * inRadius,
         angle: curAngle,
         token: modalInfo.tokens[i].token,
-        id: i
+        id: i,
       });
     }
 
     // Draw invisible background for interaction
-    textTokenGroup.selectAll('rect')
-      .data(tokenPos, d => d.id)
+    textTokenGroup
+      .selectAll('rect')
+      .data(tokenPos, (d) => d.id)
       .join('rect')
-      .attr('transform', d => {
-        let degree = d.angle * 180 / Math.PI;
+      .attr('transform', (d) => {
+        let degree = (d.angle * 180) / Math.PI;
         return `rotate(${degree})
           translate(${inRadius}, 0)
         `;
@@ -168,17 +186,17 @@
       .style('fill', 'white')
       .style('opacity', 0)
       .on('mouseover', (e, d) => {
-        svg.select('#atlas-side-arrow')
-          .select('path')
-          .attr('opacity', 0.1);
+        svg.select('#atlas-side-arrow').select('path').attr('opacity', 0.1);
 
-        donut.select('.path-group')
+        donut
+          .select('.path-group')
           .selectAll('path.donut-link')
           .style('opacity', 0.1);
 
-        donut.select('.path-group')
+        donut
+          .select('.path-group')
           .selectAll('path.donut-link')
-          .filter(dd => {
+          .filter((dd) => {
             return dd.source === d.id || dd.target === d.id;
           })
           .attr('marker-end', 'url(#atlas-side-arrow-hover)')
@@ -188,46 +206,46 @@
           .raise();
       })
       .on('mouseleave', () => {
-        svg.select('#atlas-side-arrow')
-          .select('path')
-          .attr('opacity', null);
+        svg.select('#atlas-side-arrow').select('path').attr('opacity', null);
 
-        donut.select('.path-group')
+        donut
+          .select('.path-group')
           .selectAll('path.donut-link')
           .attr('marker-end', 'url(#atlas-side-arrow)')
           .style('stroke', color)
-          .style('stroke-width', d => linkWidthScale(d.attention))
+          .style('stroke-width', (d) => linkWidthScale(d.attention))
           .style('opacity', 1);
       });
 
     // Update text position
-    textTokenGroup.selectAll('text')
-      .data(tokenPos, d => d.id)
+    textTokenGroup
+      .selectAll('text')
+      .data(tokenPos, (d) => d.id)
       .join('text')
-      .attr('data-angle', d => d.angle)
-      .attr('transform', d => {
-        let degree = d.angle * 180 / Math.PI;
+      .attr('data-angle', (d) => d.angle)
+      .attr('transform', (d) => {
+        let degree = (d.angle * 180) / Math.PI;
         return `rotate(${degree})
           translate(${inRadius}, 0)
           rotate(${d.angle >= Math.PI / 2 ? 180 : 0})
         `;
       })
       .attr('dominant-baseline', 'middle')
-      .attr('x', d => d.angle < Math.PI / 2 ? 6 : -6)
-      .attr('text-anchor', d => d.angle < Math.PI / 2 ? 'start' : 'end')
-      .text(d => d.token)
+      .attr('x', (d) => (d.angle < Math.PI / 2 ? 6 : -6))
+      .attr('text-anchor', (d) => (d.angle < Math.PI / 2 ? 'start' : 'end'))
+      .text((d) => d.token)
       .on('mouseover', (e, d) => {
-        svg.select('#atlas-side-arrow')
-          .select('path')
-          .attr('opacity', 0.1);
+        svg.select('#atlas-side-arrow').select('path').attr('opacity', 0.1);
 
-        donut.select('.path-group')
+        donut
+          .select('.path-group')
           .selectAll('path.donut-link')
           .style('opacity', 0.1);
 
-        donut.select('.path-group')
+        donut
+          .select('.path-group')
           .selectAll('path.donut-link')
-          .filter(dd => {
+          .filter((dd) => {
             return dd.source === d.id || dd.target === d.id;
           })
           .attr('marker-end', 'url(#atlas-side-arrow-hover)')
@@ -237,75 +255,78 @@
           .raise();
       })
       .on('mouseleave', () => {
-        svg.select('#atlas-side-arrow')
-          .select('path')
-          .attr('opacity', null);
+        svg.select('#atlas-side-arrow').select('path').attr('opacity', null);
 
-        donut.select('.path-group')
+        donut
+          .select('.path-group')
           .selectAll('path.donut-link')
           .attr('marker-end', 'url(#atlas-side-arrow)')
           .style('stroke', color)
-          .style('stroke-width', d => linkWidthScale(d.attention))
+          .style('stroke-width', (d) => linkWidthScale(d.attention))
           .style('opacity', 1);
       });
 
     // Draw the links as bezier curves
-    donut.append('g')
+    donut
+      .append('g')
       .attr('class', 'path-group')
       .selectAll('path.donut-link')
-      .data(links, d => d.id)
+      .data(links, (d) => d.id)
       .join('path')
       .attr('class', 'donut-link')
       .attr('marker-end', 'url(#atlas-side-arrow)')
-      .attr('d', d => {
+      .attr('d', (d) => {
         let source = tokenPos[d.source];
         let target = tokenPos[d.target];
-        const center = {x: 0, y: 0};
+        const center = { x: 0, y: 0 };
         const radialCurveAlpha = 2 / 5;
-        
+
         // Two control points symmetric regarding the center point
         let controlP1 = {
           x: center.x + (source.x - center.x) * radialCurveAlpha,
-          y: center.y + (source.y - center.x) * radialCurveAlpha
+          y: center.y + (source.y - center.x) * radialCurveAlpha,
         };
 
         let controlP2 = {
           x: center.x + (target.x - center.x) * radialCurveAlpha,
-          y: center.y + (target.y - center.x) * radialCurveAlpha
+          y: center.y + (target.y - center.x) * radialCurveAlpha,
         };
-        
+
         return `M ${source.x},${source.y} C${controlP1.x}, ${controlP1.y},
           ${controlP2.x}, ${controlP2.y}, ${target.x},${target.y}`;
       })
       .style('fill', 'none')
       .style('stroke', color)
-      .style('stroke-width', d => linkWidthScale(d.attention))
-      .style('opacity', d => linkOpacityScale(d.attention));
-    
+      .style('stroke-width', (d) => linkWidthScale(d.attention))
+      .style('opacity', (d) => linkOpacityScale(d.attention));
+
     // Draw the circles
-    donut.append('g')
+    donut
+      .append('g')
       .attr('class', 'token-dot-group')
       .selectAll('circle.token-dot')
-      .data(tokenPos, d => d.id)
+      .data(tokenPos, (d) => d.id)
       .join('circle')
       .attr('class', 'token-dot')
-      .attr('cx', d => d.x)
-      .attr('cy', d => d.y)
+      .attr('cx', (d) => d.x)
+      .attr('cy', (d) => d.y)
       .attr('r', 1);
-
   };
 
   const drawRadial = () => {
-    svg.append('rect')
+    svg
+      .append('rect')
       .attr('width', svgVirtualLength)
       .attr('height', svgVirtualLength)
       .style('fill', 'hsla(0, 0%, 100%, 0)');
-    
-    donut = svg.append('g')
+
+    donut = svg
+      .append('g')
       .attr('class', 'donut')
       .attr('transform', 'translate(250, 250)');
 
-    markerDef = svg.append('defs')
+    markerDef = svg
+      .append('defs')
       .attr('id', 'atlas-side-arrow-def')
       .append('marker')
       .attr('id', 'atlas-side-arrow')
@@ -322,7 +343,8 @@
       .attr('stroke', 'gray')
       .attr('fill', 'gray');
 
-    markerDef = svg.append('defs')
+    markerDef = svg
+      .append('defs')
       .attr('id', 'atlas-side-arrow-def-hover')
       .append('marker')
       .attr('id', 'atlas-side-arrow-hover')
@@ -344,30 +366,31 @@
 
   onMount(() => {
     // Bind drag event
-    let container = d3.select(modalComponent)
-      .select('.svg-container');
+    let container = d3.select(modalComponent).select('.svg-container');
 
-    svg = container.select('svg.side-svg')
+    svg = container
+      .select('svg.side-svg')
       .attr('viewBox', `0 0 ${svgVirtualLength} ${svgVirtualLength}`)
       .attr('width', '100%')
       .attr('height', '100%');
 
     drawRadial();
-
   });
 
   const getColor = (layer, head) => {
-    if (attentionHeadColor == null || attentionHeadColor.has === undefined ||
-      !attentionHeadColor.has([layer, head].toString())) {
+    if (
+      attentionHeadColor == null ||
+      attentionHeadColor.has === undefined ||
+      !attentionHeadColor.has([layer, head].toString())
+    ) {
       return 'black';
     } else {
       return attentionHeadColor.get([layer, head].toString());
     }
   };
-
 </script>
 
-<style type='text/scss'>
+<style lang="scss">
   .atlas-side {
     width: 100%;
     height: 100%;
@@ -387,20 +410,17 @@
     cursor: default;
     pointer-events: none;
   }
-
 </style>
 
-
-<div class='atlas-side' bind:this={modalComponent}>
-
-  <div class='side-title'
-    style={`color: ${getColor(modalInfo.layer, modalInfo.head)}`}>
+<div class="atlas-side" bind:this={modalComponent}>
+  <div
+    class="side-title"
+    style={`color: ${getColor(modalInfo.layer, modalInfo.head)}`}
+  >
     Layer {modalInfo.layer + 1} Head {modalInfo.head + 1}
   </div>
 
-  <div class='svg-container'>
-    <svg class='side-svg'></svg>
+  <div class="svg-container">
+    <svg class="side-svg" />
   </div>
-
-
 </div>

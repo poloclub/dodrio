@@ -1,12 +1,21 @@
 <script>
   import { onMount } from 'svelte';
-  import { instanceViewConfigStore, hoverTokenStore,
-    wordToSubwordMapStore, tableModalStore, instanceIDStore, comparisonViewStore } from '../store';
+  import {
+    instanceViewConfigStore,
+    hoverTokenStore,
+    wordToSubwordMapStore,
+    tableModalStore,
+    instanceIDStore,
+    comparisonViewStore,
+  } from '../store';
   import { isSpecialToken, padZeroLeft } from './utils';
   import { drawParagraph } from './saliency-view';
   import { drawGraph } from './dependency-view';
   import RadialModal from './RadialModal.svelte';
-  import { drawDependencyComparison, removeDependencyComparison } from './comparison-view';
+  import {
+    drawDependencyComparison,
+    removeDependencyComparison,
+  } from './comparison-view';
   import { drawTree } from './tree-view';
   import { createEventDispatcher } from 'svelte';
   import * as d3 from 'd3';
@@ -43,56 +52,58 @@
   let inComparisonView = false;
   let comparisonViewConfig = {};
 
-  comparisonViewStore.subscribe(value => {
+  comparisonViewStore.subscribe((value) => {
     comparisonViewConfig = value;
     SVGHeight = comparisonViewConfig.height - 41;
 
     if (comparisonViewConfig.inComparison && !inComparisonView) {
       comparisonButtonClickedHandler();
-    } else if (!comparisonViewConfig.inComparison && inComparisonView){
+    } else if (!comparisonViewConfig.inComparison && inComparisonView) {
       comparisonButtonClickedHandler();
     }
   });
 
   // Table Modal info
   let tableModalInfo = null;
-  tableModalStore.subscribe(value => {tableModalInfo = value;});
+  tableModalStore.subscribe((value) => {
+    tableModalInfo = value;
+  });
 
-  const SVGPadding = {top: 10, left: 15, right: 15, bottom: 10};
-  const textTokenPadding = {top: 3, left: 3, right: 3, bottom: 3};
+  const SVGPadding = { top: 10, left: 15, right: 15, bottom: 10 };
+  const textTokenPadding = { top: 3, left: 3, right: 3, bottom: 3 };
 
   // Global stores
   let curHoverToken = null;
-  
+
   // Control panel variables
   const layoutOptions = {
     saliency: {
       value: 'saliency',
-      name: 'Saliency View'
+      name: 'Saliency View',
     },
     dependency: {
       value: 'dependency',
-      name: 'Dependency List'
+      name: 'Dependency List',
     },
     tree: {
       value: 'tree',
-      name: 'Dependency Tree'
-    } 
+      name: 'Dependency Tree',
+    },
   };
 
   const headListOptions = {
     syntactic: {
       value: 'syntactic',
-      name: 'syntactic correlations'
+      name: 'syntactic correlations',
     },
     semantic: {
       value: 'semantic',
-      name: 'semantic correlations '
+      name: 'semantic correlations ',
     },
     importance: {
       value: 'important',
-      name: 'importance scores'
-    } 
+      name: 'importance scores',
+    },
   };
 
   let dependencyViewInitialized = false;
@@ -117,9 +128,10 @@
 
   const ease = d3.easeCubicInOut;
   const animationTime = 300;
-  
+
   const bindSelect = () => {
-    let selectOption = d3.select('#instance-select')
+    let selectOption = d3
+      .select('#instance-select')
       .property('value', currentLayout.value);
 
     selectOption.on('change', () => {
@@ -127,118 +139,140 @@
 
       // Need to switch layout
       if (newLayoutValue !== currentLayout.value) {
-
-        switch(newLayoutValue) {
-        case 'saliency':
-          // Hide the old view
-          if (currentLayout.value === 'dependency' && dependencyViewInitialized) {
-            svg.select('g.token-group')
-              .style('display', 'none');
-          }
-
-          if (currentLayout.value === 'tree' && treeViewInitialized) {
-            svg.select('g.tree-group')
-              .style('display', 'none');
-          }
-
-          // Draw the new view
-          if (saliencyViewInitialized) {
-            svg.select('g.token-group-saliency')
-              .style('display', null);
-            svg.select('g.legend-group')
-              .style('display', null);
-          } else {
-            if (!SVGInitialized) {
-              initSVG();
+        switch (newLayoutValue) {
+          case 'saliency':
+            // Hide the old view
+            if (
+              currentLayout.value === 'dependency' &&
+              dependencyViewInitialized
+            ) {
+              svg.select('g.token-group').style('display', 'none');
             }
-            drawParagraph(saliencies, svg, SVGWidth, SVGPadding, textTokenPadding,
-              wordToSubwordMap, tokenNodeMouseover, tokenNodeMouseleave);
-            saliencyViewInitialized = true;
-          }
-          currentLayout = layoutOptions[newLayoutValue];
-          break;
 
-        case 'dependency':
-          console.log('change to dependency view');
-
-          // Hide the old view
-          if (currentLayout.value === 'tree' && treeViewInitialized) {
-            svg.select('g.tree-group')
-              .style('display', 'none');
-          }
-
-          if (currentLayout.value === 'saliency' && saliencyViewInitialized) {
-            svg.select('g.token-group-saliency')
-              .style('display', 'none');
-            svg.select('g.legend-group')
-              .style('display', 'none');
-          }
-
-          // Draw the new view
-          if (dependencyViewInitialized) {
-            svg.select('g.token-group')
-              .style('display', null);
-          } else {
-            if (!SVGInitialized) {
-              initSVG();
+            if (currentLayout.value === 'tree' && treeViewInitialized) {
+              svg.select('g.tree-group').style('display', 'none');
             }
-            let results = drawGraph(data, saliencies, wordToSubwordMap, svg, tokenXs,
-              textTokenPadding, SVGPadding, SVGHeight, tokenNodeMouseover,
-              tokenNodeMouseleave,initWordToSubwordMap);
 
-            tokenXs = results.tokenXs;
-            textTokenWidths = results.textTokenWidths;
-            dependencyViewInitialized = true;
-          }
-
-          currentLayout = layoutOptions[newLayoutValue];
-          break;
-
-        case 'tree':
-          console.log('change to tree view');
-
-          // Hide the old view
-          if (currentLayout.value === 'dependency' && dependencyViewInitialized) {
-            svg.select('g.token-group')
-              .style('display', 'none');
-          }
-
-          if (currentLayout.value === 'saliency' && saliencyViewInitialized) {
-            svg.select('g.token-group-saliency')
-              .style('display', 'none');
-            svg.select('g.legend-group')
-              .style('display', 'none');
-          }
-
-          // Draw the new view
-          if (treeViewInitialized) {
-            svg.select('g.tree-group')
-              .style('display', null);
-          } else {
-            if (!SVGInitialized) {
-              initSVG();
+            // Draw the new view
+            if (saliencyViewInitialized) {
+              svg.select('g.token-group-saliency').style('display', null);
+              svg.select('g.legend-group').style('display', null);
+            } else {
+              if (!SVGInitialized) {
+                initSVG();
+              }
+              drawParagraph(
+                saliencies,
+                svg,
+                SVGWidth,
+                SVGPadding,
+                textTokenPadding,
+                wordToSubwordMap,
+                tokenNodeMouseover,
+                tokenNodeMouseleave
+              );
+              saliencyViewInitialized = true;
             }
-            drawTree(data, saliencies, svg, SVGWidth, SVGHeight, SVGPadding,
-              tokenNodeMouseoverTree, tokenNodeMouseleave, textTokenPadding,
-              wordToSubwordMap, initWordToSubwordMap);
-            treeViewInitialized = true;
-          }
+            currentLayout = layoutOptions[newLayoutValue];
+            break;
 
-          currentLayout = layoutOptions[newLayoutValue];
-          break;
+          case 'dependency':
+            console.log('change to dependency view');
+
+            // Hide the old view
+            if (currentLayout.value === 'tree' && treeViewInitialized) {
+              svg.select('g.tree-group').style('display', 'none');
+            }
+
+            if (currentLayout.value === 'saliency' && saliencyViewInitialized) {
+              svg.select('g.token-group-saliency').style('display', 'none');
+              svg.select('g.legend-group').style('display', 'none');
+            }
+
+            // Draw the new view
+            if (dependencyViewInitialized) {
+              svg.select('g.token-group').style('display', null);
+            } else {
+              if (!SVGInitialized) {
+                initSVG();
+              }
+              let results = drawGraph(
+                data,
+                saliencies,
+                wordToSubwordMap,
+                svg,
+                tokenXs,
+                textTokenPadding,
+                SVGPadding,
+                SVGHeight,
+                tokenNodeMouseover,
+                tokenNodeMouseleave,
+                initWordToSubwordMap
+              );
+
+              tokenXs = results.tokenXs;
+              textTokenWidths = results.textTokenWidths;
+              dependencyViewInitialized = true;
+            }
+
+            currentLayout = layoutOptions[newLayoutValue];
+            break;
+
+          case 'tree':
+            console.log('change to tree view');
+
+            // Hide the old view
+            if (
+              currentLayout.value === 'dependency' &&
+              dependencyViewInitialized
+            ) {
+              svg.select('g.token-group').style('display', 'none');
+            }
+
+            if (currentLayout.value === 'saliency' && saliencyViewInitialized) {
+              svg.select('g.token-group-saliency').style('display', 'none');
+              svg.select('g.legend-group').style('display', 'none');
+            }
+
+            // Draw the new view
+            if (treeViewInitialized) {
+              svg.select('g.tree-group').style('display', null);
+            } else {
+              if (!SVGInitialized) {
+                initSVG();
+              }
+              drawTree(
+                data,
+                saliencies,
+                svg,
+                SVGWidth,
+                SVGHeight,
+                SVGPadding,
+                tokenNodeMouseoverTree,
+                tokenNodeMouseleave,
+                textTokenPadding,
+                wordToSubwordMap,
+                initWordToSubwordMap
+              );
+              treeViewInitialized = true;
+            }
+
+            currentLayout = layoutOptions[newLayoutValue];
+            break;
         }
-
       }
     });
   };
 
   const initSVG = () => {
-    svg = d3.select('svg.dependency-svg')
+    svg = d3
+      .select('svg.dependency-svg')
       .attr('width', SVGWidth)
       .attr('height', SVGHeight);
 
     // Add a border
-    svg.append('rect')
+    svg
+      .append('rect')
       .attr('class', 'border-rect')
       .attr('width', SVGWidth)
       .attr('height', SVGHeight)
@@ -248,7 +282,8 @@
     // Add arrow markers
     let arrowMarker = svg.append('defs');
 
-    arrowMarker.append('marker')
+    arrowMarker
+      .append('marker')
       .attr('id', 'dep-arrow')
       .attr('viewBox', [0, 0, 10, 10])
       .attr('refX', 0)
@@ -262,15 +297,17 @@
       .attr('d', 'M 0 0 L 10 5 L 0 10 z')
       .attr('stroke', linkColor)
       .attr('fill', linkColor);
-    
-    arrowMarker.clone(true)
+
+    arrowMarker
+      .clone(true)
       .select('marker')
       .attr('id', 'dep-arrow-hover')
       .select('path')
       .attr('stroke', linkHoverColor)
       .attr('fill', linkHoverColor);
 
-    arrowMarker.clone(true)
+    arrowMarker
+      .clone(true)
       .select('marker')
       .attr('id', 'dep-attention-arc-arrow')
       .select('path')
@@ -278,7 +315,8 @@
       .attr('refX', 2)
       .attr('fill', 'hsl(0, 0%, 10%)');
 
-    arrowMarker.clone(true)
+    arrowMarker
+      .clone(true)
       .select('marker')
       .attr('id', 'dep-attention-arrow')
       .select('path')
@@ -287,164 +325,196 @@
       .attr('fill', 'hsl(0, 0%, 80%)');
 
     // Create opacity gradient
-    let gradient = svg.append('defs')
+    let gradient = svg
+      .append('defs')
       .append('linearGradient')
       .attr('id', 'top-opacity-gradient')
       .attr('x2', '0%')
       .attr('y2', '100%');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 1)
       .style('stop-color', 'white')
       .attr('offset', '0');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 1)
       .style('stop-color', 'white')
       .attr('offset', '0.9');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 0)
       .style('stop-color', 'white')
       .attr('offset', '1');
 
-    gradient = svg.append('defs')
+    gradient = svg
+      .append('defs')
       .append('linearGradient')
       .attr('id', 'bottom-opacity-gradient')
       .attr('x2', '0%')
       .attr('y2', '100%');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 0)
       .style('stop-color', 'white')
       .attr('offset', '0');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 1)
       .style('stop-color', 'white')
       .attr('offset', '0.5');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 1)
       .style('stop-color', 'white')
       .attr('offset', '1');
 
     // Line gradient right to left
-    gradient = svg.append('defs')
+    gradient = svg
+      .append('defs')
       .append('linearGradient')
       .attr('id', 'link-opacity-gradient-rl');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 1)
       .style('stop-color', 'hsl(0, 0%, 90%)')
       .attr('offset', '0');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 1)
       .style('stop-color', 'hsl(0, 0%, 70%)')
       .attr('offset', '0.6');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 1)
       .style('stop-color', 'hsl(0, 0%, 20%)')
       .attr('offset', '1');
 
     // Line gradient left to right
-    gradient = svg.append('defs')
+    gradient = svg
+      .append('defs')
       .append('linearGradient')
       .attr('id', 'link-opacity-gradient-lr');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 1)
       .style('stop-color', 'hsl(0, 0%, 20%)')
       .attr('offset', '0');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 1)
       .style('stop-color', 'hsl(0, 0%, 70%)')
       .attr('offset', '0.4');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 1)
       .style('stop-color', 'hsl(0, 0%, 90%)')
       .attr('offset', '1');
 
     // Matched line gradient right to left
-    gradient = svg.append('defs')
+    gradient = svg
+      .append('defs')
       .append('linearGradient')
       .attr('id', 'matched-link-opacity-gradient-rl');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 1)
       .style('stop-color', linkHoverGradient1)
       .attr('offset', '0');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 1)
       .style('stop-color', linkHoverGradient2)
       .attr('offset', '0.6');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 1)
       .style('stop-color', linkHoverGradient3)
       .attr('offset', '1');
 
     // Matched line gradient left to right
-    gradient = svg.append('defs')
+    gradient = svg
+      .append('defs')
       .append('linearGradient')
       .attr('id', 'matched-link-opacity-gradient-lr');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 1)
       .style('stop-color', linkHoverGradient3)
       .attr('offset', '0');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 1)
       .style('stop-color', linkHoverGradient2)
       .attr('offset', '0.4');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 1)
       .style('stop-color', linkHoverGradient1)
       .attr('offset', '1');
 
     // Top line gradient right to left
-    gradient = svg.append('defs')
+    gradient = svg
+      .append('defs')
       .append('linearGradient')
       .attr('id', 'top-link-opacity-gradient-rl');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 0.8)
       .style('stop-color', 'hsl(0, 0%, 20%)')
       .attr('offset', '0');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 0.8)
       .style('stop-color', 'hsl(0, 0%, 70%)')
       .attr('offset', '0.3');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 0.8)
       .style('stop-color', 'hsl(0, 0%, 90%)')
       .attr('offset', '1');
 
     // Line gradient left to right
-    gradient = svg.append('defs')
+    gradient = svg
+      .append('defs')
       .append('linearGradient')
       .attr('id', 'top-link-opacity-gradient-lr');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 0.8)
       .style('stop-color', 'hsl(0, 0%, 90%)')
       .attr('offset', '0');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 0.8)
       .style('stop-color', 'hsl(0, 0%, 70%)')
       .attr('offset', '0.7');
 
-    gradient.append('stop')
+    gradient
+      .append('stop')
       .style('stop-opacity', 0.8)
       .style('stop-color', 'hsl(0, 0%, 20%)')
       .attr('offset', '1');
@@ -452,7 +522,7 @@
     SVGInitialized = true;
   };
 
-  const tokenNodeMouseover = e => {
+  const tokenNodeMouseover = (e) => {
     let curNode = d3.select(e.target);
     let nodeID = curNode.data()[0].id;
     hoverTokenStore.set(nodeID);
@@ -470,98 +540,120 @@
 
   const highLightNode = () => {
     // Cannot directly select class because some weird special character selector bug on firefox
-    svg.selectAll('.node')
-      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
+    svg
+      .selectAll('.node')
+      .filter((d, i, g) =>
+        d3.select(g[i]).attr('class').includes(`-${curHoverToken}`)
+      )
       .select('rect')
       .style('stroke', linkHoverColor)
       .style('stroke-width', 2);
-    
-    svg.selectAll('.arc-path')
+
+    svg
+      .selectAll('.arc-path')
       // TODO
       // .style('opacity', 0.2);
       .style('opacity', 0.8);
 
-    svg.selectAll('.arc-path')
-      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
+    svg
+      .selectAll('.arc-path')
+      .filter((d, i, g) =>
+        d3.select(g[i]).attr('class').includes(`-${curHoverToken}`)
+      )
       .classed('highlighted', true)
       .style('opacity', 1)
       .raise();
 
-    svg.selectAll('.node-clone')
-      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
+    svg
+      .selectAll('.node-clone')
+      .filter((d, i, g) =>
+        d3.select(g[i]).attr('class').includes(`-${curHoverToken}`)
+      )
       .select('rect')
       .style('stroke', linkHoverColor)
       .style('opacity', 1)
       .style('stroke-width', 2);
 
-    svg.selectAll('.matched-attention-path')
-      .classed('de-highlighted', true);
+    svg.selectAll('.matched-attention-path').classed('de-highlighted', true);
 
-    svg.selectAll('.attention-path')
-      .style('opacity', 0.2);
+    svg.selectAll('.attention-path').style('opacity', 0.2);
 
-    svg.selectAll('.attention-path')
-      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
+    svg
+      .selectAll('.attention-path')
+      .filter((d, i, g) =>
+        d3.select(g[i]).attr('class').includes(`-${curHoverToken}`)
+      )
       .classed('highlighted', true)
       .style('opacity', 1)
       .raise();
 
-    svg.selectAll('.attention-arc')
-      .style('opacity', 0.2);
+    svg.selectAll('.attention-arc').style('opacity', 0.2);
 
-    svg.selectAll('.attention-arc')
-      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
+    svg
+      .selectAll('.attention-arc')
+      .filter((d, i, g) =>
+        d3.select(g[i]).attr('class').includes(`-${curHoverToken}`)
+      )
       .classed('highlighted', true)
       .style('opacity', 0.9)
       .raise();
   };
 
   const deHighLightNode = () => {
-
     // TODO
     // return;
 
-    svg.selectAll('.node')
-      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
+    svg
+      .selectAll('.node')
+      .filter((d, i, g) =>
+        d3.select(g[i]).attr('class').includes(`-${curHoverToken}`)
+      )
       .select('rect')
       .style('stroke', 'hsl(180, 1%, 80%)')
       .style('stroke-width', 1);
 
-    svg.selectAll('.arc-path')
-      .style('opacity', null);
+    svg.selectAll('.arc-path').style('opacity', null);
 
-    svg.selectAll('.arc-path')
-      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
+    svg
+      .selectAll('.arc-path')
+      .filter((d, i, g) =>
+        d3.select(g[i]).attr('class').includes(`-${curHoverToken}`)
+      )
       .classed('highlighted', false);
 
-    svg.selectAll('.node-clone')
-      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
+    svg
+      .selectAll('.node-clone')
+      .filter((d, i, g) =>
+        d3.select(g[i]).attr('class').includes(`-${curHoverToken}`)
+      )
       .select('rect')
       .style('opacity', null)
       .style('stroke', 'none');
 
-    svg.selectAll('.matched-attention-path')
-      .classed('de-highlighted', false);
+    svg.selectAll('.matched-attention-path').classed('de-highlighted', false);
 
-    svg.selectAll('.attention-path')
-      .style('opacity', null);
+    svg.selectAll('.attention-path').style('opacity', null);
 
-    svg.selectAll('.attention-path')
-      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
+    svg
+      .selectAll('.attention-path')
+      .filter((d, i, g) =>
+        d3.select(g[i]).attr('class').includes(`-${curHoverToken}`)
+      )
       .classed('highlighted', false)
       .raise();
 
-    svg.selectAll('.attention-arc')
-      .style('opacity', 0.5);
+    svg.selectAll('.attention-arc').style('opacity', 0.5);
 
-    svg.selectAll('.attention-arc')
-      .filter((d, i, g) => d3.select(g[i]).attr('class').includes(`-${curHoverToken}`))
+    svg
+      .selectAll('.attention-arc')
+      .filter((d, i, g) =>
+        d3.select(g[i]).attr('class').includes(`-${curHoverToken}`)
+      )
       .classed('highlighted', false)
       .raise();
   };
 
   const initWordToSubwordMap = (tokens, saliencies) => {
-
     wordToSubwordMap = {};
     let j = 0;
     while (isSpecialToken(saliencies.tokens[j].token)) {
@@ -588,7 +680,7 @@
         j += 1;
       }
     }
-    
+
     // Update the store
     wordToSubwordMapStore.set(wordToSubwordMap);
 
@@ -605,7 +697,6 @@
   };
 
   const comparisonButtonClickedHandler = () => {
-
     svg.attr('height', SVGHeight);
 
     let topHeadMap = getInterestingHeads();
@@ -617,14 +708,43 @@
       inComparisonView = true;
       if (attentions == null) {
         initAttentionData(
-          `PUBLIC_URL/data/sst2-attention-data/attention-${padZeroLeft(instanceID, 4)}.json`
-        ).then(() => drawDependencyComparison(topHeadMap, svg, SVGPadding, data,
-          attentions, saliencies, SVGHeight, existingLinkSet, tokenXs,
-          textTokenPadding, textTokenWidths, wordToSubwordMap, initWordToSubwordMap));
+          `PUBLIC_URL/data/sst2-attention-data/attention-${padZeroLeft(
+            instanceID,
+            4
+          )}.json`
+        ).then(() =>
+          drawDependencyComparison(
+            topHeadMap,
+            svg,
+            SVGPadding,
+            data,
+            attentions,
+            saliencies,
+            SVGHeight,
+            existingLinkSet,
+            tokenXs,
+            textTokenPadding,
+            textTokenWidths,
+            wordToSubwordMap,
+            initWordToSubwordMap
+          )
+        );
       } else {
-        drawDependencyComparison(topHeadMap, svg, SVGPadding, data, attentions,
-          saliencies, SVGHeight, existingLinkSet, tokenXs, textTokenPadding,
-          textTokenWidths, wordToSubwordMap, initWordToSubwordMap);
+        drawDependencyComparison(
+          topHeadMap,
+          svg,
+          SVGPadding,
+          data,
+          attentions,
+          saliencies,
+          SVGHeight,
+          existingLinkSet,
+          tokenXs,
+          textTokenPadding,
+          textTokenWidths,
+          wordToSubwordMap,
+          initWordToSubwordMap
+        );
       }
     }
   };
@@ -641,19 +761,21 @@
     selectedRelations[curRel] = e.target.checked;
 
     // Hide/show corresponding links
-    svg.selectAll('.arc-path')
-      .filter(d => d.relation === curRel)
+    svg
+      .selectAll('.arc-path')
+      .filter((d) => d.relation === curRel)
       .style('visibility', selectedRelations[curRel] ? 'visible' : 'hidden');
 
     // Highlight/dehighlight corresponding attention predictions
-    svg.selectAll(`.matched-attention-path-${curRel}`)
+    svg
+      .selectAll(`.matched-attention-path-${curRel}`)
       .classed('matched-attention-path', selectedRelations[curRel]);
   };
 
   /**
    * Create a list of interesting heads based on their max accuracy on the selected
    * syntactic dependencies.
-  */
+   */
   const getInterestingHeads = () => {
     let topHeadMap = {};
 
@@ -669,10 +791,12 @@
       let topHeads = headOrder[key]['top_heads'];
 
       // Track the max accuracy
-      topHeads.forEach(d => {
+      topHeads.forEach((d) => {
         if (potentialHeads.has(d.head)) {
-          potentialHeads.set(d.head,
-            Math.max(d.acc, potentialHeads.get(d.head)));
+          potentialHeads.set(
+            d.head,
+            Math.max(d.acc, potentialHeads.get(d.head))
+          );
         } else {
           potentialHeads.set(d.head, d.acc);
         }
@@ -681,12 +805,12 @@
 
     // Sort the heads
     let sortedHeads = [...potentialHeads.entries()].sort((a, b) => b[1] - a[1]);
-    let sortedObjHeads = sortedHeads.map(d => ({
+    let sortedObjHeads = sortedHeads.map((d) => ({
       id: {
         layer: d[0][0],
-        head: d[0][1]
+        head: d[0][1],
       },
-      acc: d[1]
+      acc: d[1],
     }));
 
     topHeadMap.syntactic = sortedObjHeads;
@@ -695,34 +819,38 @@
     // Create a list of interesting heads based on the original order (semantic score
     // or the importance score)
     headOrder = headOrderMap.semantic;
-    sortedObjHeads = headOrder.map(d => ({
+    sortedObjHeads = headOrder.map((d) => ({
       id: {
         layer: d[1][0],
-        head: d[1][1]
+        head: d[1][1],
       },
-      score: d[0]
+      score: d[0],
     }));
 
     topHeadMap.semantic = sortedObjHeads;
 
     // Load the important list
     headOrder = headOrderMap.important;
-    sortedObjHeads = headOrder.map(d => ({
+    sortedObjHeads = headOrder.map((d) => ({
       id: {
         layer: d[1][0],
-        head: d[1][1]
+        head: d[1][1],
       },
-      score: d[0]
+      score: d[0],
     }));
 
     topHeadMap.important = sortedObjHeads;
 
     return topHeadMap;
-
   };
 
-  const initData = async (dependencyFile, saliencyFile, syntacticOrderFile,
-    semanticOrderFile, importantOrderFile) => {
+  const initData = async (
+    dependencyFile,
+    saliencyFile,
+    syntacticOrderFile,
+    semanticOrderFile,
+    importantOrderFile
+  ) => {
     // Init dependency data
     data = await d3.json(dependencyFile);
     data = data[instanceID];
@@ -733,7 +861,7 @@
     // Create a set of existing [parent, child] pairs
     existingLinkSet = new Map();
 
-    data.list.forEach(d => {
+    data.list.forEach((d) => {
       existingLinkSet.set(String([d.parent, d.child]), d.relation);
       if (relationCounter.has(d.relation)) {
         relationCounter.set(d.relation, relationCounter.get(d.relation) + 1);
@@ -743,7 +871,9 @@
         selectedRelations[d.relation] = true;
       }
     });
-    relationCounter = new Map([...relationCounter.entries()].sort((a, b) => b[1] - a[1]));
+    relationCounter = new Map(
+      [...relationCounter.entries()].sort((a, b) => b[1] - a[1])
+    );
     relations = [...relationCounter.entries()];
 
     // Init saliency data
@@ -758,7 +888,6 @@
 
     headOrderMap.important = await d3.json(importantOrderFile);
     headOrderMap.important = headOrderMap.important[instanceID];
-
   };
 
   const initAttentionData = async (attentionFile) => {
@@ -768,11 +897,13 @@
   onMount(async () => {
     // Load the dependency and saliency data
     if (data == null || saliencies == null) {
-      initData(dependencyDataFilepath,
+      initData(
+        dependencyDataFilepath,
         saliencyDataFilepath,
         syntacticHeadDataFilepath,
         semanticHeadDataFilepath,
-        importantHeadDataFilepath);
+        importantHeadDataFilepath
+      );
     }
 
     bindSelect();
@@ -780,47 +911,76 @@
 
   const createGraph = () => {
     let results = null;
-    switch(currentLayout.value) {
-    case 'saliency':
-      if (!SVGInitialized) {
-        initSVG();
-      }
-      drawParagraph(saliencies, svg, SVGWidth, SVGPadding, textTokenPadding,
-        wordToSubwordMap, tokenNodeMouseover, tokenNodeMouseleave);
-      saliencyViewInitialized = true;
-      break;
-    
-    case 'dependency':
-      if (!SVGInitialized) {
-        initSVG();
-      }
-      results = drawGraph(data, saliencies, wordToSubwordMap, svg, tokenXs,
-        textTokenPadding, SVGPadding, SVGHeight, tokenNodeMouseover,
-        tokenNodeMouseleave, initWordToSubwordMap);
-      tokenXs = results.tokenXs;
-      textTokenWidths = results.textTokenWidths;
+    switch (currentLayout.value) {
+      case 'saliency':
+        if (!SVGInitialized) {
+          initSVG();
+        }
+        drawParagraph(
+          saliencies,
+          svg,
+          SVGWidth,
+          SVGPadding,
+          textTokenPadding,
+          wordToSubwordMap,
+          tokenNodeMouseover,
+          tokenNodeMouseleave
+        );
+        saliencyViewInitialized = true;
+        break;
 
-      dependencyViewInitialized = true;
-      break;
+      case 'dependency':
+        if (!SVGInitialized) {
+          initSVG();
+        }
+        results = drawGraph(
+          data,
+          saliencies,
+          wordToSubwordMap,
+          svg,
+          tokenXs,
+          textTokenPadding,
+          SVGPadding,
+          SVGHeight,
+          tokenNodeMouseover,
+          tokenNodeMouseleave,
+          initWordToSubwordMap
+        );
+        tokenXs = results.tokenXs;
+        textTokenWidths = results.textTokenWidths;
 
-    case 'tree':
-      if (!SVGInitialized) {
-        initSVG();
-      }
-      drawTree(data, saliencies, svg, SVGWidth, SVGHeight, SVGPadding,
-        tokenNodeMouseoverTree, tokenNodeMouseleave, textTokenPadding, wordToSubwordMap,
-        initWordToSubwordMap);
-      treeViewInitialized = true;
-      break; 
+        dependencyViewInitialized = true;
+        break;
+
+      case 'tree':
+        if (!SVGInitialized) {
+          initSVG();
+        }
+        drawTree(
+          data,
+          saliencies,
+          svg,
+          SVGWidth,
+          SVGHeight,
+          SVGPadding,
+          tokenNodeMouseoverTree,
+          tokenNodeMouseleave,
+          textTokenPadding,
+          wordToSubwordMap,
+          initWordToSubwordMap
+        );
+        treeViewInitialized = true;
+        break;
     }
   };
 
-  instanceViewConfigStore.subscribe(async value => {
-    if (value.compHeight !== undefined && value.compWidth !== undefined){
-      if (instanceViewConfig === undefined ||
+  instanceViewConfigStore.subscribe(async (value) => {
+    if (value.compHeight !== undefined && value.compWidth !== undefined) {
+      if (
+        instanceViewConfig === undefined ||
         (instanceViewConfig.compHeight !== value.compHeight &&
-        instanceViewConfig.compWidth !== value.compWidth)
-      ){
+          instanceViewConfig.compWidth !== value.compWidth)
+      ) {
         instanceViewConfig = value;
 
         SVGWidth = instanceViewConfig.compWidth;
@@ -828,20 +988,21 @@
 
         // Load the dependency and saliency data
         if (data == null || saliencies == null) {
-          initData(dependencyDataFilepath,
+          initData(
+            dependencyDataFilepath,
             saliencyDataFilepath,
             syntacticHeadDataFilepath,
             semanticHeadDataFilepath,
-            importantHeadDataFilepath).then(createGraph);
+            importantHeadDataFilepath
+          ).then(createGraph);
         } else {
           createGraph();
         }
-
       }
     }
   });
 
-  instanceIDStore.subscribe(value => {
+  instanceIDStore.subscribe((value) => {
     // console.log('Instance changed!!');
     if (value !== instanceID) {
       svg.selectAll('*').remove();
@@ -859,18 +1020,20 @@
       saliencyViewInitialized = false;
       treeViewInitialized = false;
       instanceID = value;
-      initData(dependencyDataFilepath,
+      initData(
+        dependencyDataFilepath,
         saliencyDataFilepath,
         syntacticHeadDataFilepath,
         semanticHeadDataFilepath,
-        importantHeadDataFilepath).then(createGraph);
+        importantHeadDataFilepath
+      ).then(createGraph);
     }
-    
   });
-  
-  hoverTokenStore.subscribe(value => {
 
-    if (svg == null) {return;}
+  hoverTokenStore.subscribe((value) => {
+    if (svg == null) {
+      return;
+    }
 
     if (value != null) {
       // Highlight the corresponding node
@@ -881,13 +1044,10 @@
       deHighLightNode();
       curHoverToken = value;
     }
-
   });
-
 </script>
 
-<style type='text/scss'>
-
+<style lang="scss">
   @import '../define';
 
   .svg-container {
@@ -938,9 +1098,9 @@
 
   :global(.node-circle) {
     stroke: #fff;
-    stroke-width: 1.5; 
+    stroke-width: 1.5;
   }
-  
+
   :global(.text-token) {
     dominant-baseline: middle;
     text-anchor: middle;
@@ -949,7 +1109,10 @@
   }
 
   :global(.text-token-arc) {
-    @extend :global(.text-token);
+    dominant-baseline: middle;
+    text-anchor: middle;
+    cursor: default;
+    fill: black;
     dominant-baseline: hanging;
     text-anchor: start;
   }
@@ -1063,12 +1226,16 @@
     stroke-width: 2;
   }
 
-  :global(.matched-attention-path.attention-path--lr.de-highlighted.highlighted) {
+  :global(
+      .matched-attention-path.attention-path--lr.de-highlighted.highlighted
+    ) {
     stroke: url(#matched-link-opacity-gradient-lr);
     stroke-width: 2;
   }
 
-  :global(.matched-attention-path.attention-path--rl.de-highlighted.highlighted) {
+  :global(
+      .matched-attention-path.attention-path--rl.de-highlighted.highlighted
+    ) {
     stroke: url(#matched-link-opacity-gradient-rl);
     stroke-width: 2;
   }
@@ -1107,7 +1274,7 @@
 
     display: flex;
     flex-direction: row;
-    align-items: center;;
+    align-items: center;
     justify-content: flex-start;
 
     font-size: 0.9rem;
@@ -1130,7 +1297,7 @@
     height: 1.8em;
   }
 
-  .select:not(.is-multiple):not(.is-loading)::after{
+  .select:not(.is-multiple):not(.is-loading)::after {
     right: 0.8em;
     border-color: $brown-icon;
   }
@@ -1165,7 +1332,7 @@
       padding: 0 1em 0 0;
 
       &::after {
-        margin-top: -5px
+        margin-top: -5px;
       }
     }
 
@@ -1173,11 +1340,11 @@
       padding-right: 1em;
     }
 
-   &:not(.is-multiple):not(.is-loading)::after{
-    right: 0.3em;
-    border-color: $brown-icon;
-    margin-top: -0.3em;
-  }
+    &:not(.is-multiple):not(.is-loading)::after {
+      right: 0.3em;
+      border-color: $brown-icon;
+      margin-top: -0.3em;
+    }
   }
 
   .relation-checkboxes {
@@ -1187,17 +1354,17 @@
     width: 700px;
     padding: 5px 10px;
     cursor: default;
-    
+
     display: flex;
     flex-direction: row;
-    align-items: center;;
+    align-items: center;
     justify-content: flex-start;
     flex-wrap: wrap;
 
     font-size: 0.9rem;
     border-radius: 5px;
     border: 1px solid hsl(0, 0%, 93.3%);
-    box-shadow: 0 3px 3px hsla(0, 0%, 0%, 0.05);    
+    box-shadow: 0 3px 3px hsla(0, 0%, 0%, 0.05);
     background: hsla(0, 0%, 100%, 0.95);
   }
 
@@ -1256,16 +1423,16 @@
       border-radius: 2px;
       border-right: 0;
       border-top: 0;
-      content: " ";
+      content: ' ';
       display: block;
-      height: .625em;
+      height: 0.625em;
       margin-top: -0.3em;
       pointer-events: none;
       position: absolute;
       top: 50%;
       transform: rotate(225deg);
       transform-origin: center;
-      width: .625em;
+      width: 0.625em;
 
       border-color: $brown-icon;
       right: 0.9em;
@@ -1292,7 +1459,6 @@
     }
   }
 
-
   .hide {
     display: none;
   }
@@ -1308,35 +1474,27 @@
       height: 22px;
     }
   }
-
-
 </style>
 
-<div class='graph-view'>
-
-  <div class='panel-container'>
-
+<div class="graph-view">
+  <div class="panel-container">
     <!-- Control panel on top of the SVG -->
-    <div class='svg-control-panel'>
+    <div class="svg-control-panel">
+      <div class="dependency-label">Current Sentence</div>
 
-      <div class='dependency-label'>
-        Current Sentence
-      </div>
-
-      <div class='select-row select-row--edit'>
-        <div class='relation-container' on:click={editButtonClicked}>
-          <div class='comparison-button'>
-            <div class='icon-wrapper'>
-              <img src='PUBLIC_URL/figures/edit.svg' alt='editing icon'>
+      <div class="select-row select-row--edit">
+        <div class="relation-container" on:click={editButtonClicked}>
+          <div class="comparison-button">
+            <div class="icon-wrapper">
+              <img src="PUBLIC_URL/figures/edit.svg" alt="editing icon" />
             </div>
           </div>
         </div>
-
       </div>
 
-      <div class='select-row'>
-        <div class='select'>
-          <select name='instance-layout' id='instance-select'>
+      <div class="select-row">
+        <div class="select">
+          <select name="instance-layout" id="instance-select">
             {#each Object.values(layoutOptions) as opt}
               <option value={opt.value}>{opt.name}</option>
             {/each}
@@ -1344,73 +1502,71 @@
         </div>
       </div>
 
-      <div class='select-row' class:select-row--highlight={inComparisonView}>
-        <div class='relation-container' on:click={comparisonButtonClicked}>
-          <div class='comparison-button'>
-            Show Comparison
-          </div>
+      <div class="select-row" class:select-row--highlight={inComparisonView}>
+        <div class="relation-container" on:click={comparisonButtonClicked}>
+          <div class="comparison-button">Show Comparison</div>
         </div>
       </div>
 
-      <div class='select-row' class:select-row--highlight={showRelationCheckboxes}>
-        <div class='relation-container'
-          on:click={() => {showRelationCheckboxes = !showRelationCheckboxes;}}>
-          <div class='relation'>
-            Syntactic Relations
-          </div>
+      <div
+        class="select-row"
+        class:select-row--highlight={showRelationCheckboxes}
+      >
+        <div
+          class="relation-container"
+          on:click={() => {
+            showRelationCheckboxes = !showRelationCheckboxes;
+          }}
+        >
+          <div class="relation">Syntactic Relations</div>
         </div>
       </div>
 
-      <div class='gradient-guide'>
-        <img src='PUBLIC_URL/figures/gradient.png' alt='gradient guide'>
+      <div class="gradient-guide">
+        <img src="PUBLIC_URL/figures/gradient.png" alt="gradient guide" />
       </div>
 
       <!-- Control panel after syntactic relation item is selected -->
-      <div class='relation-checkboxes' class:hide={!showRelationCheckboxes}>
+      <div class="relation-checkboxes" class:hide={!showRelationCheckboxes}>
         {#each relations as entry}
-
           <label class="checkbox check-box-wrapper">
-            <input type="checkbox" on:change={checkboxChanged}
+            <input
+              type="checkbox"
+              on:change={checkboxChanged}
               bind:checked={selectedRelations[entry[0]]}
               data-rel={entry[0]}
-            >
+            />
             {entry[0]}
-            <span class='light-gray'>({entry[1]})</span>
+            <span class="light-gray">({entry[1]})</span>
           </label>
-            
         {/each}
       </div>
-
     </div>
-
   </div>
 
-  <div class='comparison-panel-container hide'>
-    <div class='comparison-control-panel'>
+  <div class="comparison-panel-container hide">
+    <div class="comparison-control-panel">
       <!-- <div class='comparison-name'>
         Dependency predicted by 5 attentions heads having the highest score.
       </div> -->
 
-      <div class='comparison-label' id='comparison-label-top'>
-        Dependencies predicted by attention heads with top 
+      <div class="comparison-label" id="comparison-label-top">
+        Dependencies predicted by attention heads with top
       </div>
 
-      <div class='select comparison-select'>
-        <select name='head-list' id='head-select'>
+      <div class="select comparison-select">
+        <select name="head-list" id="head-select">
           {#each Object.values(headListOptions) as opt}
             <option value={opt.value}>{opt.name}</option>
           {/each}
         </select>
       </div>
-
-
     </div>
   </div>
 
-  <div class='svg-container'>
-    <svg class='dependency-svg'></svg>
+  <div class="svg-container">
+    <svg class="dependency-svg" />
   </div>
-  
 </div>
 
 <RadialModal />

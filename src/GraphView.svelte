@@ -1,18 +1,23 @@
 <script>
-  import { graphViewConfigStore, hoverTokenStore, wordToSubwordMapStore,
-    instanceIDStore, mapHeadStore } from './store';
+  import {
+    graphViewConfigStore,
+    hoverTokenStore,
+    wordToSubwordMapStore,
+    instanceIDStore,
+    mapHeadStore,
+  } from './store';
   import * as d3 from 'd3';
   import { onMount } from 'svelte';
 
   export let attentionDataDir;
   export let saliencyDataFilepath;
-  
+
   // Shared states
   let graphViewCompConfig = undefined;
   let instanceID = 1562;
   let curLayer = 9;
   let curHead = 8;
-  let mapHead = {layer: 9, head: 8};
+  let mapHead = { layer: 9, head: 8 };
 
   let graphSVG = null;
   let graphData = null;
@@ -23,16 +28,16 @@
   let SVGHeight = undefined;
 
   let curHoverToken = null;
-  
+
   // View configs
-  const SVGPadding = {top: 3, left: 3, right: 3, bottom: 3};
+  const SVGPadding = { top: 3, left: 3, right: 3, bottom: 3 };
 
   const minNodeRadius = 19;
   const maxNodeRadius = 40;
 
   // const minNodeRadius = 10;
   // const maxNodeRadius = 20;
-  
+
   const radialRadius = 225;
   const radialCurveAlpha = 0.3;
 
@@ -48,7 +53,8 @@
   let weightThresholdMin = 0.02;
   let weightThresholdMax = 0.1;
   let weightThresholdSteps = 6;
-  let weightThresholdGap = (weightThresholdMax - weightThresholdMin) / (weightThresholdSteps - 1);
+  let weightThresholdGap =
+    (weightThresholdMax - weightThresholdMin) / (weightThresholdSteps - 1);
   let weightThreshold = weightThresholdMin + weightThresholdGap * curLinkI;
 
   let linkArrays = {};
@@ -74,16 +80,16 @@
   const layoutOptions = {
     force: {
       value: 'force',
-      name: 'Force Layout'
+      name: 'Force Layout',
     },
     radial: {
       value: 'radial',
-      name: 'Radial Layout'
+      name: 'Radial Layout',
     },
     grid: {
       value: 'grid',
-      name: 'Grid Layout'
-    } 
+      name: 'Grid Layout',
+    },
   };
 
   let config = {
@@ -91,7 +97,7 @@
     showHiddenLink: false,
     showHiddenNode: false,
     autoAttention: true,
-    defaultLayout: layoutOptions.radial
+    defaultLayout: layoutOptions.radial,
   };
 
   let forceStrength = {
@@ -99,21 +105,21 @@
       manyBody: -840,
       attention: 0.5,
       textOrder: 1.6,
-      collideRadius: 1
+      collideRadius: 1,
     },
     radial: {
       textOrder: 0.5,
-      radial: 1
+      radial: 1,
     },
     grid: {
-      collideRadius: 7
-    }
+      collideRadius: 7,
+    },
   };
 
   let currentLayout = config.defaultLayout;
 
   const round = (num, decimal) => {
-    return Math.round((num + Number.EPSILON) * (10 ** decimal)) / (10 ** decimal);
+    return Math.round((num + Number.EPSILON) * 10 ** decimal) / 10 ** decimal;
   };
 
   const padZeroLeft = (num, digit) => {
@@ -121,7 +127,6 @@
   };
 
   const drag = () => {
-  
     const dragstarted = (event) => {
       if (!event.active) simulation.alphaTarget(0.3).restart();
       event.subject.fx = event.subject.x;
@@ -137,19 +142,20 @@
         .attr('height', 5)
         .style('fill', 'white');
     };
-    
+
     const dragged = (event) => {
       event.subject.fx = event.x;
       event.subject.fy = event.y;
     };
-    
+
     const dragended = (event) => {
       if (!event.active) simulation.alphaTarget(0);
       // event.subject.fx = null;
       // event.subject.fy = null;
     };
-    
-    return d3.drag()
+
+    return d3
+      .drag()
       .on('start', dragstarted)
       .on('drag', dragged)
       .on('end', dragended);
@@ -164,18 +170,25 @@
     let width = SVGWidth - SVGPadding.left - SVGPadding.right;
     let height = SVGHeight - SVGPadding.top - SVGPadding.bottom;
 
-    const left = Math.max(SVGPadding.left + curRadius, Math.min(width - curRadius, d.x));
-    const top = Math.max(SVGPadding.top + curRadius, Math.min(height - curRadius, d.y));
+    const left = Math.max(
+      SVGPadding.left + curRadius,
+      Math.min(width - curRadius, d.x)
+    );
+    const top = Math.max(
+      SVGPadding.top + curRadius,
+      Math.min(height - curRadius, d.y)
+    );
 
     if (config.borderConstraint) {
-      return {top: top, left: left};
+      return { top: top, left: left };
     } else {
-      return {top: d.y, left: d.x};
+      return { top: d.y, left: d.x };
     }
   };
 
-  const bindSlider = (name, min, max, defaultValue, nodeRadiusScale=null) => {
-    let slider = d3.select(`#${name}`)
+  const bindSlider = (name, min, max, defaultValue, nodeRadiusScale = null) => {
+    let slider = d3
+      .select(`#${name}`)
       .property('value', ((defaultValue - min) / (max - min)) * 1000);
 
     slider.on('input', () => {
@@ -185,26 +198,29 @@
       forceStrength.force[name] = value;
 
       switch (name) {
-      case 'attention':
-        simulation.force('attentionLink').strength(value);
-        // Disable the auto attention
-        d3.select('#checkbox-auto-attention')
-          .property('checked', false);
-        config.autoAttention = false;
-        break;
-      case 'textOrder':
-        simulation.force('textLink').strength(d => d.target.index === 0 ? 0 : value);
-        break;
-      case 'manyBody':
-        simulation.force('charge').strength(value);
-        break;
-      case 'collideRadius':
-        simulation.force('collide').radius(d => nodeRadiusScale(d.saliency) + value);
-        break;
-      case 'threshold':
-        weightThreshold = weightThresholdMin + step * weightThresholdGap;
-        weightThresholdUpdated(step, nodeRadiusScale);
-        break;
+        case 'attention':
+          simulation.force('attentionLink').strength(value);
+          // Disable the auto attention
+          d3.select('#checkbox-auto-attention').property('checked', false);
+          config.autoAttention = false;
+          break;
+        case 'textOrder':
+          simulation
+            .force('textLink')
+            .strength((d) => (d.target.index === 0 ? 0 : value));
+          break;
+        case 'manyBody':
+          simulation.force('charge').strength(value);
+          break;
+        case 'collideRadius':
+          simulation
+            .force('collide')
+            .radius((d) => nodeRadiusScale(d.saliency) + value);
+          break;
+        case 'threshold':
+          weightThreshold = weightThresholdMin + step * weightThresholdGap;
+          weightThresholdUpdated(step, nodeRadiusScale);
+          break;
       }
 
       simulation.restart();
@@ -232,9 +248,9 @@
   };
 
   const bindSelect = (nodeRadiusScale) => {
-
     currentLayout = config.defaultLayout;
-    let selectOption = d3.select('#select-layout')
+    let selectOption = d3
+      .select('#select-layout')
       .property('value', config.defaultLayout.value);
 
     selectOption.on('change', () => {
@@ -243,25 +259,25 @@
       // Need to switch layout
       if (newLayoutValue !== currentLayout.value) {
         resetSimulation();
-        
-        switch(newLayoutValue) {
-        case 'force':
-          currentLayout = layoutOptions.force;
-          initForceSim(nodeRadiusScale);
-          simulation.alpha(1).restart();
-          break;
 
-        case 'radial':
-          currentLayout = layoutOptions.radial;
-          initRadialSim();
-          simulation.alpha(1).restart();
-          break;
+        switch (newLayoutValue) {
+          case 'force':
+            currentLayout = layoutOptions.force;
+            initForceSim(nodeRadiusScale);
+            simulation.alpha(1).restart();
+            break;
 
-        case 'grid':
-          currentLayout = layoutOptions.grid;
-          initGridSim();
-          simulation.alpha(1).restart();
-          break;
+          case 'radial':
+            currentLayout = layoutOptions.radial;
+            initRadialSim();
+            simulation.alpha(1).restart();
+            break;
+
+          case 'grid':
+            currentLayout = layoutOptions.grid;
+            initGridSim();
+            simulation.alpha(1).restart();
+            break;
         }
 
         updateNodeRadius(nodeRadiusScale);
@@ -271,12 +287,11 @@
   };
 
   const bindLayerHeadSelect = () => {
-
-    let layerSelectOption = d3.select('#select-layer')
+    let layerSelectOption = d3
+      .select('#select-layer')
       .property('value', curLayer);
 
-    let headSelectOption = d3.select('#select-head')
-      .property('value', curHead);
+    let headSelectOption = d3.select('#select-head').property('value', curHead);
 
     layerSelectOption.on('change', () => {
       let newLayerValue = layerSelectOption.property('value');
@@ -309,25 +324,21 @@
     });
   };
 
-  mapHeadStore.subscribe(value => {
+  mapHeadStore.subscribe((value) => {
     mapHead = value;
 
     if (mapHead.layer !== curLayer || mapHead.head !== curHead) {
       // console.log('change');
-      d3.select('#select-layer')
-        .property('value', mapHead.layer);
+      d3.select('#select-layer').property('value', mapHead.layer);
 
-      d3.select('#select-head')
-        .property('value', mapHead.head);
+      d3.select('#select-head').property('value', mapHead.head);
 
       curLayer = mapHead.layer;
       curHead = mapHead.head;
 
       updateLayerHead();
     }
-
   });
-  
 
   const updateNodeRadius = (nodeRadiusScale) => {
     d3.select(graphSVG)
@@ -336,60 +347,84 @@
       .transition('node-radius')
       .duration(animationTime)
       .ease(ease)
-      .attr('r', d => currentLayout.value === 'force' ?
-        nodeRadiusScale(+d.saliency) : minNodeRadius);
+      .attr('r', (d) =>
+        currentLayout.value === 'force'
+          ? nodeRadiusScale(+d.saliency)
+          : minNodeRadius
+      );
   };
 
   const initForceSim = (nodeRadiusScale) => {
     // Force 1 (ManyBody force)
-    simulation.force('charge', d3.forceManyBody()
-      .strength(forceStrength.force.manyBody)
+    simulation.force(
+      'charge',
+      d3.forceManyBody().strength(forceStrength.force.manyBody)
     );
 
     // Force 2 (Center force)
     simulation.force('center', d3.forceCenter(SVGWidth / 2, SVGHeight / 2));
 
     // Force 3 (Link force)
-    simulation.force('attentionLink', d3.forceLink(linkArrays[curLinkI].links)
-      .id(d => d.id)
+    simulation.force(
+      'attentionLink',
+      d3.forceLink(linkArrays[curLinkI].links).id((d) => d.id)
     );
-    
+
     // Force 4 (Text order link force)
-    simulation.force('textLink', d3.forceLink(linkArrays[curLinkI].hiddenLinks)
-      .id(d => d.id)
-      .strength(d => d.target.index === 0 ? 0 : forceStrength.force.textOrder)
+    simulation.force(
+      'textLink',
+      d3
+        .forceLink(linkArrays[curLinkI].hiddenLinks)
+        .id((d) => d.id)
+        .strength((d) =>
+          d.target.index === 0 ? 0 : forceStrength.force.textOrder
+        )
     );
-    
+
     // Force 5 (Collide force)
-    simulation.force('collide', d3.forceCollide()
-      .radius(d => nodeRadiusScale(d.saliency) + forceStrength.force.collideRadius)
+    simulation.force(
+      'collide',
+      d3
+        .forceCollide()
+        .radius(
+          (d) => nodeRadiusScale(d.saliency) + forceStrength.force.collideRadius
+        )
     );
   };
 
   const initRadialSim = () => {
     // Force 1 (Tex order link force)
-    simulation.force('textLink', d3.forceLink(linkArrays[curLinkI].hiddenLinks)
-      .id(d => d.id)
-      .strength(forceStrength.radial.textOrder)
+    simulation.force(
+      'textLink',
+      d3
+        .forceLink(linkArrays[curLinkI].hiddenLinks)
+        .id((d) => d.id)
+        .strength(forceStrength.radial.textOrder)
     );
 
     // Force 2 (Custom radial force)
-    simulation.force('posY', d3.forceY()
-      .y((d, i) => {
-        let curLen = originalNodes.filter(d => !d.hidden).length;
-        let curAngle = -Math.PI / 2 + i * (Math.PI * 2 / curLen);
-        return SVGHeight / 2 + Math.sin(curAngle) * radialRadius;
-      })
-      .strength(forceStrength.radial.radial)
+    simulation.force(
+      'posY',
+      d3
+        .forceY()
+        .y((d, i) => {
+          let curLen = originalNodes.filter((d) => !d.hidden).length;
+          let curAngle = -Math.PI / 2 + i * ((Math.PI * 2) / curLen);
+          return SVGHeight / 2 + Math.sin(curAngle) * radialRadius;
+        })
+        .strength(forceStrength.radial.radial)
     );
 
-    simulation.force('posX', d3.forceX()
-      .x((d, i) => {
-        let curLen = originalNodes.filter(d => !d.hidden).length;
-        let curAngle = -Math.PI / 2 + i * (Math.PI * 2 / curLen);
-        return SVGWidth / 2 + Math.cos(curAngle) * radialRadius;
-      })
-      .strength(forceStrength.radial.radial)
+    simulation.force(
+      'posX',
+      d3
+        .forceX()
+        .x((d, i) => {
+          let curLen = originalNodes.filter((d) => !d.hidden).length;
+          let curAngle = -Math.PI / 2 + i * ((Math.PI * 2) / curLen);
+          return SVGWidth / 2 + Math.cos(curAngle) * radialRadius;
+        })
+        .strength(forceStrength.radial.radial)
     );
   };
 
@@ -397,14 +432,18 @@
     let curGridRowSize = gridRowSize;
     let gridColumnSize = Math.ceil(tokenSize / curGridRowSize);
 
-    let rowLength = gridRowSize * 2 * minNodeRadius + (gridRowSize - 1) * gridColumnGap;
-    let columnLength = gridColumnSize * 2 * minNodeRadius + (gridColumnSize - 1) * gridRowGap;
+    let rowLength =
+      gridRowSize * 2 * minNodeRadius + (gridRowSize - 1) * gridColumnGap;
+    let columnLength =
+      gridColumnSize * 2 * minNodeRadius + (gridColumnSize - 1) * gridRowGap;
 
     // Check if we need to increase the row size
     while (columnLength > SVGHeight) {
       curGridRowSize = gridRowSize + 1;
-      rowLength = gridRowSize * 2 * minNodeRadius + (gridRowSize - 1) * gridColumnGap;
-      columnLength = gridColumnSize * 2 * minNodeRadius + (gridColumnSize - 1) * gridRowGap;
+      rowLength =
+        gridRowSize * 2 * minNodeRadius + (gridRowSize - 1) * gridColumnGap;
+      columnLength =
+        gridColumnSize * 2 * minNodeRadius + (gridColumnSize - 1) * gridRowGap;
 
       if (rowLength > SVGWidth) {
         console.log('Failed to initialize grid layout');
@@ -414,40 +453,59 @@
 
     let xs = Math.floor((SVGWidth - rowLength) / 2);
     let ys = Math.floor((SVGHeight - columnLength) / 2);
-    
+
     // Force 3 (Grid force)
-    simulation.force('grid', d3.forceLink(linkArrays[curLinkI].gridLinks)
-      .iterations(80)
-      .distance(50)
-      .id(d => d.id)
+    simulation.force(
+      'grid',
+      d3
+        .forceLink(linkArrays[curLinkI].gridLinks)
+        .iterations(80)
+        .distance(50)
+        .id((d) => d.id)
     );
 
     // Force 4 (Orientation force)
-    simulation.force('posX', d3.forceX()
-      .x((d, i) => xs + (i % gridRowSize) * (2 * minNodeRadius + gridColumnGap) + minNodeRadius)
-      .strength(d => d.id === undefined ? 0 : 1)
+    simulation.force(
+      'posX',
+      d3
+        .forceX()
+        .x(
+          (d, i) =>
+            xs +
+            (i % gridRowSize) * (2 * minNodeRadius + gridColumnGap) +
+            minNodeRadius
+        )
+        .strength((d) => (d.id === undefined ? 0 : 1))
     );
 
-    simulation.force('posY', d3.forceY()
-      .y((d, i) => ys + Math.floor(i / gridRowSize) * (2 * minNodeRadius + gridRowGap) + minNodeRadius)
-      .strength(d => d.id === undefined ? 0 : 1)
+    simulation.force(
+      'posY',
+      d3
+        .forceY()
+        .y(
+          (d, i) =>
+            ys +
+            Math.floor(i / gridRowSize) * (2 * minNodeRadius + gridRowGap) +
+            minNodeRadius
+        )
+        .strength((d) => (d.id === undefined ? 0 : 1))
     );
   };
 
   const initCurrentSim = (nodeRadiusScale) => {
-    switch(currentLayout.value) {
-    case 'force':
-      initForceSim(nodeRadiusScale);
-      break;
-    case 'radial':
-      initRadialSim();
-      break;
-    case 'grid':
-      initGridSim();
-      break;
+    switch (currentLayout.value) {
+      case 'force':
+        initForceSim(nodeRadiusScale);
+        break;
+      case 'radial':
+        initRadialSim();
+        break;
+      case 'grid':
+        initGridSim();
+        break;
     }
   };
-  
+
   const tickLinkForce = (d, nodeRadiusScale) => {
     const sCoord = borderConstraint(d[0], nodeRadiusScale);
     const tCoord = borderConstraint(d[1], nodeRadiusScale);
@@ -456,30 +514,45 @@
       const iCoord = borderConstraint(d[2], nodeRadiusScale);
 
       // Shorten the distance from source to intermediate point
-      let interLen = Math.sqrt((tCoord.left - iCoord.left) ** 2 +
-        (tCoord.top - iCoord.top) ** 2) - nodeRadiusScale(d[0].saliency);
+      let interLen =
+        Math.sqrt(
+          (tCoord.left - iCoord.left) ** 2 + (tCoord.top - iCoord.top) ** 2
+        ) - nodeRadiusScale(d[0].saliency);
 
-      iCoord.left = tCoord.left + (iCoord.left - tCoord.left) / interLen * 80;
-      iCoord.top = tCoord.top + (iCoord.top - tCoord.top) / interLen * 80;
+      iCoord.left = tCoord.left + ((iCoord.left - tCoord.left) / interLen) * 80;
+      iCoord.top = tCoord.top + ((iCoord.top - tCoord.top) / interLen) * 80;
 
       // Need to handle the arc manually if there is a self loop
       const iVec = [iCoord.left - sCoord.left, iCoord.top - sCoord.top];
-      const iVecNorm = Math.sqrt((iVec[0] ** 2 + iVec[1] ** 2));
+      const iVecNorm = Math.sqrt(iVec[0] ** 2 + iVec[1] ** 2);
 
       // Rotate 90 degree
       // Normalized the rotate direction, use alpha to control magnitude
       const alpha = 50;
-      const iVecClock90 = [-iVec[1] / iVecNorm * alpha, iVec[0] / iVecNorm * alpha];
-      const iVecCounterClock90 = [iVec[1] / iVecNorm * alpha, -iVec[0] / iVecNorm * alpha];
+      const iVecClock90 = [
+        (-iVec[1] / iVecNorm) * alpha,
+        (iVec[0] / iVecNorm) * alpha,
+      ];
+      const iVecCounterClock90 = [
+        (iVec[1] / iVecNorm) * alpha,
+        (-iVec[0] / iVecNorm) * alpha,
+      ];
 
-      const leftControl = [sCoord.left + iVec[0] + iVecClock90[0],
-        sCoord.top + iVec[1] + iVecClock90[1]];
-      const rightControl = [sCoord.left + iVec[0] + iVecCounterClock90[0],
-        sCoord.top + iVec[1] + iVecCounterClock90[1]];
+      const leftControl = [
+        sCoord.left + iVec[0] + iVecClock90[0],
+        sCoord.top + iVec[1] + iVecClock90[1],
+      ];
+      const rightControl = [
+        sCoord.left + iVec[0] + iVecCounterClock90[0],
+        sCoord.top + iVec[1] + iVecCounterClock90[1],
+      ];
 
       // We need to shorten the path to leave space for arrow
-      let halfLen = Math.sqrt((tCoord.left - rightControl[0]) ** 2 + (tCoord.top - rightControl[1]) ** 2);
-      let theta = (nodeRadiusScale(d[0].saliency) + 10)/ halfLen;
+      let halfLen = Math.sqrt(
+        (tCoord.left - rightControl[0]) ** 2 +
+          (tCoord.top - rightControl[1]) ** 2
+      );
+      let theta = (nodeRadiusScale(d[0].saliency) + 10) / halfLen;
       let modTCoord = {
         left: tCoord.left + (rightControl[0] - tCoord.left) * theta,
         top: tCoord.top + (rightControl[1] - tCoord.top) * theta,
@@ -487,20 +560,44 @@
 
       // Draw a bezier curve with two control points (which are left and right
       // perpendicular to the self loop node -> intermediate node vector)
-      return 'M' + sCoord.left + ',' + sCoord.top
-        + 'C' + leftControl[0] + ',' + leftControl[1]
-        + ' ' + rightControl[0] + ',' + rightControl[1]
-        + ' ' + modTCoord.left + ',' + modTCoord.top;
-
+      return (
+        'M' +
+        sCoord.left +
+        ',' +
+        sCoord.top +
+        'C' +
+        leftControl[0] +
+        ',' +
+        leftControl[1] +
+        ' ' +
+        rightControl[0] +
+        ',' +
+        rightControl[1] +
+        ' ' +
+        modTCoord.left +
+        ',' +
+        modTCoord.top
+      );
     } else {
       // We need to shorten the path to leave space for arrow
-      let vecLen = Math.sqrt((tCoord.left - sCoord.left) ** 2 + (tCoord.top - sCoord.top) ** 2);
+      let vecLen = Math.sqrt(
+        (tCoord.left - sCoord.left) ** 2 + (tCoord.top - sCoord.top) ** 2
+      );
       let theta = (nodeRadiusScale(d[1].saliency) + 10) / vecLen;
       let modTCoord = {
-        left: tCoord.left + (sCoord.left  - tCoord.left) * theta,
+        left: tCoord.left + (sCoord.left - tCoord.left) * theta,
         top: tCoord.top + (sCoord.top - tCoord.top) * theta,
       };
-      return 'M' + sCoord.left + ',' + sCoord.top + 'L' + modTCoord.left + ',' + modTCoord.top;
+      return (
+        'M' +
+        sCoord.left +
+        ',' +
+        sCoord.top +
+        'L' +
+        modTCoord.left +
+        ',' +
+        modTCoord.top
+      );
     }
   };
 
@@ -514,9 +611,9 @@
     const sCoord = borderConstraint(d[0], nodeRadiusScale);
     const tCoord = borderConstraint(d[1], nodeRadiusScale);
 
-    let source = {x: sCoord.left, y: sCoord.top};
-    let target = {x: tCoord.left, y: tCoord.top};
-    let center = {x: SVGWidth / 2, y: SVGHeight / 2 + 40};
+    let source = { x: sCoord.left, y: sCoord.top };
+    let target = { x: tCoord.left, y: tCoord.top };
+    let center = { x: SVGWidth / 2, y: SVGHeight / 2 + 40 };
 
     // We need to shorten the path to leave space for arrow
     let theta = 1 - (minNodeRadius + 10) / radialRadius;
@@ -529,28 +626,30 @@
       x: center.x + (source.x - center.x) * theta,
       y: center.y + (source.y - center.y) * theta,
     };
-    
+
     // Two control points symmetric regarding the center point
     let controlP1 = {
       x: center.x + (modSource.x - center.x) * radialCurveAlpha,
-      y: center.y + (modSource.y - center.x) * radialCurveAlpha
+      y: center.y + (modSource.y - center.x) * radialCurveAlpha,
     };
 
     let controlP2 = {
       x: center.x + (modTarget.x - center.x) * radialCurveAlpha,
-      y: center.y + (modTarget.y - center.x) * radialCurveAlpha
+      y: center.y + (modTarget.y - center.x) * radialCurveAlpha,
     };
 
     return `M ${modSource.x},${modSource.y} C${controlP1.x}, ${controlP1.y},
       ${controlP2.x}, ${controlP2.y}, ${modTarget.x},${modTarget.y}`;
   };
-  
+
   const tickLinkGrid = (d, nodeRadiusScale) => {
     const sCoord = borderConstraint(d[0], nodeRadiusScale);
     const tCoord = borderConstraint(d[1], nodeRadiusScale);
 
     // We need to shorten the path to leave space for arrow
-    let halfLen = Math.sqrt((tCoord.left - sCoord.left) ** 2 + (tCoord.top - sCoord.top) ** 2);
+    let halfLen = Math.sqrt(
+      (tCoord.left - sCoord.left) ** 2 + (tCoord.top - sCoord.top) ** 2
+    );
 
     let theta = (minNodeRadius + 10) / halfLen;
     let modTCoord = {
@@ -558,34 +657,45 @@
       top: tCoord.top + (sCoord.top - tCoord.top) * theta,
     };
 
-    return 'M' + sCoord.left + ',' + sCoord.top
-      + 'L' + modTCoord.left + ',' + modTCoord.top;
+    return (
+      'M' +
+      sCoord.left +
+      ',' +
+      sCoord.top +
+      'L' +
+      modTCoord.left +
+      ',' +
+      modTCoord.top
+    );
   };
 
   const weightThresholdUpdated = (step) => {
     curLinkI = step;
 
     // Update the svg
-    let linkLines = d3.select(graphSVG)
+    let linkLines = d3
+      .select(graphSVG)
       .select('g.attention-link-group')
       .selectAll('path.link')
-      .data(linkArrays[curLinkI].biLinks, d => `${d[0].id}-${d[1].id}`);
+      .data(linkArrays[curLinkI].biLinks, (d) => `${d[0].id}-${d[1].id}`);
 
     // Enter
-    linkLines.enter()
+    linkLines
+      .enter()
       .append('path')
       .attr('marker-end', 'url(#arrow)')
       .attr('class', 'link')
-      .attr('id', d => `link-${d[0].id}-${d[1].id}`)
+      .attr('id', (d) => `link-${d[0].id}-${d[1].id}`)
       .style('stroke', 'hsl(150, 74%, 51%)')
-      .style('stroke-width', d => linkWidth(d.attention))
+      .style('stroke-width', (d) => linkWidth(d.attention))
       .transition()
       .duration(animationTime * 3)
       .ease(ease)
       .style('stroke', linkColor);
-    
+
     // Exit
-    linkLines.exit()
+    linkLines
+      .exit()
       .style('stroke', 'hsl(349, 81%, 57%)')
       .transition()
       .duration(animationTime * 3)
@@ -594,7 +704,7 @@
       .on('end', (d, i, g) => {
         d3.select(g[i]).remove();
       });
-    
+
     // Update the simulation
     simulation.nodes(linkArrays[curLinkI].nodes);
     simulation.alpha(1).restart();
@@ -602,7 +712,7 @@
 
   // Create related link arrays (hiddenLinks, biLinks, and gridLinks)
   const createGraphLinks = (curLinks, nodeByID, nodeIndexArray) => {
-    curLinks = curLinks.map(d => Object.create(d));
+    curLinks = curLinks.map((d) => Object.create(d));
     let curNodes = originalNodes.slice();
 
     // Add text order hidden links
@@ -610,7 +720,7 @@
     for (let i = 0; i < curNodes.length - 1; i++) {
       let hiddenLink = {
         source: +curNodes[i].id,
-        target: +curNodes[i + 1].id
+        target: +curNodes[i + 1].id,
       };
       curHiddenLinks.push(hiddenLink);
     }
@@ -618,15 +728,15 @@
     // Add a connection between the first and last token
     curHiddenLinks.push({
       source: +curNodes[curNodes.length - 1].id,
-      target: curNodes[0].id
+      target: curNodes[0].id,
     });
 
-    curHiddenLinks = curHiddenLinks.map(d => Object.create(d));
+    curHiddenLinks = curHiddenLinks.map((d) => Object.create(d));
 
     // Add intermediate nodes to create bezier curves
     let curBiLinks = [];
 
-    curLinks.forEach(d => {
+    curLinks.forEach((d) => {
       let source = nodeByID.get(d.source);
       let target = nodeByID.get(d.target);
       let curBilink = [source, target];
@@ -639,7 +749,7 @@
 
         // We cannot keep creating new intermediate nodes (need to be the same
         // object for each source across different threshold)
-        let intermediate = {hidden: true};
+        let intermediate = { hidden: true };
 
         if (intermediateNodeMap.has(source)) {
           intermediate = intermediateNodeMap.get(source);
@@ -649,9 +759,7 @@
 
         curBilink.push(intermediate);
         curNodes.push(intermediate);
-        curLinks.push(
-          {source: intermediate, target: source}
-        );
+        curLinks.push({ source: intermediate, target: source });
       }
 
       curBiLinks.push(curBilink);
@@ -661,11 +769,17 @@
     let curGridLinks = [];
     nodeIndexArray.sort((a, b) => +a - +b);
     for (let i = 0; i < curNodes.length; i++) {
-      if (i % gridRowSize !== gridRowSize - 1 & nodeByID.has(i + 1)) {
-        curGridLinks.push({source: nodeByID.get(i), target: nodeByID.get(i + 1)});
+      if ((i % gridRowSize !== gridRowSize - 1) & nodeByID.has(i + 1)) {
+        curGridLinks.push({
+          source: nodeByID.get(i),
+          target: nodeByID.get(i + 1),
+        });
       }
       if (nodeByID.has(i + gridRowSize)) {
-        curGridLinks.push({source: nodeByID.get(i), target: nodeByID.get(i + gridRowSize)});
+        curGridLinks.push({
+          source: nodeByID.get(i),
+          target: nodeByID.get(i + gridRowSize),
+        });
       }
     }
 
@@ -674,12 +788,20 @@
       hiddenLinks: curHiddenLinks,
       biLinks: curBiLinks,
       gridLinks: curGridLinks,
-      nodes: curNodes
+      nodes: curNodes,
     };
   };
 
-  const graphNodeDoubleClickHandler = (e, nodeGroup, linkLineGroup, nodeIndexArray,
-    nodeIndices, nodeRadiusScale, nodeByID, simulation) => {
+  const graphNodeDoubleClickHandler = (
+    e,
+    nodeGroup,
+    linkLineGroup,
+    nodeIndexArray,
+    nodeIndices,
+    nodeRadiusScale,
+    nodeByID,
+    simulation
+  ) => {
     let curNode = d3.select(e.target);
     let curID = curNode.data()[0].id;
 
@@ -691,23 +813,31 @@
     }
 
     // Remove the node element on screen
-    nodeGroup.selectAll('g.node')
-      .data(linkArrays[curLinkI].nodes.filter(d => d.id !== undefined), d => d.id)
+    nodeGroup
+      .selectAll('g.node')
+      .data(
+        linkArrays[curLinkI].nodes.filter((d) => d.id !== undefined),
+        (d) => d.id
+      )
       .exit()
       .remove();
 
     // Delete all links connecting to this node
     for (let i = linkArrays[curLinkI].biLinks.length - 1; i >= 0; i--) {
-      if (linkArrays[curLinkI].biLinks[i][0].id === curID |
-        linkArrays[curLinkI].biLinks[i][1].id === curID) {
+      if (
+        (linkArrays[curLinkI].biLinks[i][0].id === curID) |
+        (linkArrays[curLinkI].biLinks[i][1].id === curID)
+      ) {
         linkArrays[curLinkI].biLinks.splice(i, 1);
       }
     }
 
     // Delete all attention links connecting to this node
     for (let i = linkArrays[curLinkI].links.length - 1; i >= 0; i--) {
-      if (linkArrays[curLinkI].links[i].source.id === curID |
-        linkArrays[curLinkI].links[i].target.id === curID) {
+      if (
+        (linkArrays[curLinkI].links[i].source.id === curID) |
+        (linkArrays[curLinkI].links[i].target.id === curID)
+      ) {
         linkArrays[curLinkI].links.splice(i, 1);
       }
     }
@@ -718,9 +848,11 @@
         linkArrays[curLinkI].hiddenLinks.splice(i, 1);
       } else if (linkArrays[curLinkI].hiddenLinks[i].target.id === curID) {
         if (i + 1 < linkArrays[curLinkI].hiddenLinks.length) {
-          linkArrays[curLinkI].hiddenLinks[i].target = linkArrays[curLinkI].hiddenLinks[i + 1].source;
+          linkArrays[curLinkI].hiddenLinks[i].target =
+            linkArrays[curLinkI].hiddenLinks[i + 1].source;
         } else {
-          linkArrays[curLinkI].hiddenLinks[i].target = linkArrays[curLinkI].hiddenLinks[0].source;
+          linkArrays[curLinkI].hiddenLinks[i].target =
+            linkArrays[curLinkI].hiddenLinks[0].source;
         }
       }
     }
@@ -728,24 +860,34 @@
     // Need to reconstruct the grid links
     linkArrays[curLinkI].gridLinks = [];
     nodeIndices = new Set();
-    linkArrays[curLinkI].nodes.forEach(d => {if (d.id !== undefined) nodeIndices.add(+d.id);});
+    linkArrays[curLinkI].nodes.forEach((d) => {
+      if (d.id !== undefined) nodeIndices.add(+d.id);
+    });
     nodeIndexArray = Array.from(nodeIndices);
     nodeIndexArray.sort((a, b) => +a - +b);
 
     for (let i = 0; i < nodeIndexArray.length - 1; i++) {
       let curI = nodeIndexArray[i];
-      if (i % gridRowSize !== gridRowSize - 1 & nodeByID.has(nodeIndexArray[i + 1])) {
-        linkArrays[curLinkI].gridLinks.push({source: nodeByID.get(curI),
-          target: nodeByID.get(nodeIndexArray[i + 1])});
+      if (
+        (i % gridRowSize !== gridRowSize - 1) &
+        nodeByID.has(nodeIndexArray[i + 1])
+      ) {
+        linkArrays[curLinkI].gridLinks.push({
+          source: nodeByID.get(curI),
+          target: nodeByID.get(nodeIndexArray[i + 1]),
+        });
       }
       if (nodeByID.has(nodeIndexArray[i + gridRowSize])) {
-        linkArrays[curLinkI].gridLinks.push({source: nodeByID.get(curI),
-          target: nodeByID.get(nodeIndexArray[i + gridRowSize])});
+        linkArrays[curLinkI].gridLinks.push({
+          source: nodeByID.get(curI),
+          target: nodeByID.get(nodeIndexArray[i + gridRowSize]),
+        });
       }
     }
 
-    linkLineGroup.selectAll('path.link')
-      .data(linkArrays[curLinkI].biLinks, d => `${d[0].id}-${d[1].id}`)
+    linkLineGroup
+      .selectAll('path.link')
+      .data(linkArrays[curLinkI].biLinks, (d) => `${d[0].id}-${d[1].id}`)
       .exit()
       .remove();
 
@@ -756,36 +898,43 @@
   const simulationTick = (nodeRadiusScale) => {
     // console.log('Tick');
 
-    let linkLines = d3.select(graphSVG)
+    let linkLines = d3
+      .select(graphSVG)
       .select('g.attention-link-group')
       .selectAll('path.link');
 
     // Update the attention links
     switch (currentLayout.value) {
-    case 'force':
-      linkLines.attr('d', d => tickLinkForce(d, nodeRadiusScale));
-      break;
-    case 'radial':
-      linkLines.attr('d', d => tickLinkRadial(d, nodeRadiusScale));
-      break;
-    case 'grid':
-      linkLines.attr('d', d => tickLinkGrid(d, nodeRadiusScale));
-      break;
-    default:
-      console.log('Unexpected case.');
+      case 'force':
+        linkLines.attr('d', (d) => tickLinkForce(d, nodeRadiusScale));
+        break;
+      case 'radial':
+        linkLines.attr('d', (d) => tickLinkRadial(d, nodeRadiusScale));
+        break;
+      case 'grid':
+        linkLines.attr('d', (d) => tickLinkGrid(d, nodeRadiusScale));
+        break;
+      default:
+        console.log('Unexpected case.');
     }
 
     // Update the nodes
     d3.select(graphSVG)
       .select('g.node-group')
       .selectAll('g.node')
-      .attr('transform', d => tickNodeForce(d, nodeRadiusScale));
+      .attr('transform', (d) => tickNodeForce(d, nodeRadiusScale));
   };
 
-  const drawSaliencyLegend = (legendGroup, legendPos, largestAbs,
-    leftColor='#eb2f06', rightColor='#4690C2') => {
+  const drawSaliencyLegend = (
+    legendGroup,
+    legendPos,
+    largestAbs,
+    leftColor = '#eb2f06',
+    rightColor = '#4690C2'
+  ) => {
     // Define the gradient
-    let legendGradientDef = legendGroup.append('defs')
+    let legendGradientDef = legendGroup
+      .append('defs')
       .append('linearGradient')
       .attr('x1', 0)
       .attr('y1', 1)
@@ -793,15 +942,18 @@
       .attr('y2', 0)
       .attr('id', 'legend-gradient-graph');
 
-    legendGradientDef.append('stop')
+    legendGradientDef
+      .append('stop')
       .attr('stop-color', leftColor)
       .attr('offset', 0);
 
-    legendGradientDef.append('stop')
+    legendGradientDef
+      .append('stop')
       .attr('stop-color', rightColor)
       .attr('offset', 1);
 
-    legendGroup.append('rect')
+    legendGroup
+      .append('rect')
       .attr('x', 0)
       .attr('y', 0)
       .attr('width', legendPos.width)
@@ -810,16 +962,19 @@
       .style('stroke', 'black');
 
     // Draw the legend axis
-    let legendScale = d3.scaleLinear()
+    let legendScale = d3
+      .scaleLinear()
       .domain([0, largestAbs])
       .range([legendPos.height, 0])
       .nice();
 
-    legendGroup.append('g')
+    legendGroup
+      .append('g')
       .attr('transform', `translate(${legendPos.width}, ${0})`)
       .call(d3.axisRight(legendScale).ticks(5));
 
-    legendGroup.append('text')
+    legendGroup
+      .append('text')
       .attr('x', 0)
       .attr('y', legendPos.height + 8)
       .style('font-size', '12px')
@@ -833,12 +988,12 @@
     let svg = d3.select(graphSVG);
 
     // Map nodes and links to arrays of objects
-    let nodes = graphData.nodes.map(d => Object.create(d));
+    let nodes = graphData.nodes.map((d) => Object.create(d));
     nodes.sort((a, b) => +a.id - +b.id);
-    
+
     // Give each saliency token a unique name
     let tokenCount = {};
-    nodes.forEach(d => {
+    nodes.forEach((d) => {
       let curCount = 0;
       if (tokenCount[d.token] === undefined) {
         tokenCount[d.token] = curCount + 1;
@@ -853,16 +1008,19 @@
 
     // Maintain a set of all existing node indices
     let nodeIndices = new Set();
-    graphData.nodes.forEach(d => nodeIndices.add(+d.id));
+    graphData.nodes.forEach((d) => nodeIndices.add(+d.id));
     let nodeIndexArray = Array.from(nodeIndices);
 
-    let nodeByID = new Map(nodes.map(d => [d.id, d]));
+    let nodeByID = new Map(nodes.map((d) => [d.id, d]));
 
     // Create link arrays at different range steps
     linkArrays = {};
-    for (let i  = 0; i < weightThresholdSteps; i++) {
-      let curWeightThreshold = round(weightThresholdMin + i * weightThresholdGap, 2);
-      let links = graphData.links.filter(d => d.weight > curWeightThreshold);
+    for (let i = 0; i < weightThresholdSteps; i++) {
+      let curWeightThreshold = round(
+        weightThresholdMin + i * weightThresholdGap,
+        2
+      );
+      let links = graphData.links.filter((d) => d.weight > curWeightThreshold);
       let linkResult = createGraphLinks(links, nodeByID, nodeIndexArray);
 
       linkArrays[i] = {
@@ -870,59 +1028,67 @@
         hiddenLinks: linkResult.hiddenLinks.slice(),
         biLinks: linkResult.biLinks.slice(),
         gridLinks: linkResult.gridLinks.slice(),
-        nodes: linkResult.nodes.slice()
+        nodes: linkResult.nodes.slice(),
       };
     }
 
     // Create a scale for the node radius
-    let allSaliencyScores = nodes.map(d => +d.saliency);
+    let allSaliencyScores = nodes.map((d) => +d.saliency);
     // console.log(d3.extent(allSaliencyScores));
-    nodeRadiusScale = d3.scaleLinear()
+    nodeRadiusScale = d3
+      .scaleLinear()
       .domain(d3.extent(allSaliencyScores))
       .range([minNodeRadius, maxNodeRadius])
       .unknown(0)
       .nice();
-    
+
     // Create a scale for the node color
     let largestAbs = d3.max(allSaliencyScores.map(Math.abs));
     let rightColor = '#E50035';
     let leftColor = '#ffffff';
 
-    let nodeSaliencyColorScale = d3.scaleLinear()
+    let nodeSaliencyColorScale = d3
+      .scaleLinear()
       .domain([0, largestAbs])
       .range([d3.rgb(leftColor), d3.rgb(rightColor)])
       .unknown(d3.rgb('white'));
 
     // Create a scale for link stroke width
-    let attentionWeights = linkArrays[0].links.map(d => +d.weight);
-    linkWidth = d3.scaleLinear()
+    let attentionWeights = linkArrays[0].links.map((d) => +d.weight);
+    linkWidth = d3
+      .scaleLinear()
       .domain(d3.extent(attentionWeights))
       .range([0.5, 3])
       .nice();
 
     // Add attention links
-    let linkLineGroup = svg.append('g')
+    let linkLineGroup = svg
+      .append('g')
       .attr('class', 'attention-link-group')
       .attr('stroke', linkColor);
 
-    linkLineGroup.selectAll('path.link')
-      .data(linkArrays[curLinkI].biLinks, d => `${d[0].id}-${d[1].id}`)
+    linkLineGroup
+      .selectAll('path.link')
+      .data(linkArrays[curLinkI].biLinks, (d) => `${d[0].id}-${d[1].id}`)
       .join('path')
       .attr('class', 'link')
-      .attr('id', d => `link-${d[0].name}-${d[1].name}`)
+      .attr('id', (d) => `link-${d[0].name}-${d[1].name}`)
       .attr('marker-end', 'url(#arrow)')
-      .style('stroke-width', d => linkWidth(d.attention));
+      .style('stroke-width', (d) => linkWidth(d.attention));
 
     // Add token nodes
-    let nodeGroup = svg.append('g')
-      .attr('class', 'node-group');
+    let nodeGroup = svg.append('g').attr('class', 'node-group');
 
-    let nodeGroups = nodeGroup.selectAll('g.node')
+    let nodeGroups = nodeGroup
+      .selectAll('g.node')
       // Need to filter out intermediate nodes
-      .data(linkArrays[curLinkI].nodes.filter(d => d.id !== undefined), d => d.id)
+      .data(
+        linkArrays[curLinkI].nodes.filter((d) => d.id !== undefined),
+        (d) => d.id
+      )
       .join('g')
       .attr('class', 'node')
-      .attr('id', d => `node-${d.name}`)
+      .attr('id', (d) => `node-${d.name}`)
       .attr('transform', `translate(${SVGWidth / 2}, ${SVGHeight / 2})`)
       .call(drag())
       // Hover over effect
@@ -947,61 +1113,88 @@
           d3.select(e.target.parentNode)
             .selectAll('rect.fixed-marker')
             .remove();
-          
+
           simulation.alpha(0.2).restart();
         }
       })
       // Double click to remove the node
-      .on('dblclick', e => graphNodeDoubleClickHandler(
-        e, nodeGroup, linkLineGroup, nodeIndexArray, nodeIndices,
-        nodeRadiusScale, nodeByID, simulation
-      ));
+      .on('dblclick', (e) =>
+        graphNodeDoubleClickHandler(
+          e,
+          nodeGroup,
+          linkLineGroup,
+          nodeIndexArray,
+          nodeIndices,
+          nodeRadiusScale,
+          nodeByID,
+          simulation
+        )
+      );
 
     // Add circle to each node
     // Create a color scale to represent the text order
-    let colorScale = d3.scaleLinear()
+    let colorScale = d3
+      .scaleLinear()
       .domain(d3.extent(nodeIndices))
       .range([d3.rgb('#D4E5F4'), d3.rgb('#1E6CB0')]);
-    
-    nodeGroups.append('circle')
+
+    nodeGroups
+      .append('circle')
       .attr('class', 'node-circle')
-      .attr('r', d => currentLayout.value === 'force' ?
-        nodeRadiusScale(+d.saliency) : minNodeRadius)
+      .attr('r', (d) =>
+        currentLayout.value === 'force'
+          ? nodeRadiusScale(+d.saliency)
+          : minNodeRadius
+      )
       // .style('fill', d => colorScale(d.id))
-      .style('fill', d => nodeSaliencyColorScale(+d.saliency))
+      .style('fill', (d) => nodeSaliencyColorScale(+d.saliency))
       .style('opacity', 1)
       .clone(true)
-      .attr('r', d => currentLayout.value === 'force' ?
-        nodeRadiusScale(+d.saliency) : minNodeRadius)
+      .attr('r', (d) =>
+        currentLayout.value === 'force'
+          ? nodeRadiusScale(+d.saliency)
+          : minNodeRadius
+      )
       .style('fill', linkHoverColor)
       .attr('class', 'shadow-circle');
 
     // Create legend for the saliency map view
-    let legendGroup = svg.append('g')
+    let legendGroup = svg
+      .append('g')
       .attr('class', 'legend-group')
-      .attr('transform', `translate(${SVGPadding.left + 3}, ${SVGHeight - 130})`);
+      .attr(
+        'transform',
+        `translate(${SVGPadding.left + 3}, ${SVGHeight - 130})`
+      );
 
-    let legendPos = {width: 10, height: 100};
+    let legendPos = { width: 10, height: 100 };
 
-    drawSaliencyLegend(legendGroup, legendPos, largestAbs, leftColor, rightColor);
-    
+    drawSaliencyLegend(
+      legendGroup,
+      legendPos,
+      largestAbs,
+      leftColor,
+      rightColor
+    );
+
     // Add token text to each node
-    let texts = nodeGroups.append('text')
+    let texts = nodeGroups
+      .append('text')
       .attr('class', 'node-text')
       .style('font-weight', 600)
-      .text(d => d.token);
+      .text((d) => d.token);
 
-    texts.filter(d => d3.hcl(nodeSaliencyColorScale(+d.saliency)).l < 66)
+    texts
+      .filter((d) => d3.hcl(nodeSaliencyColorScale(+d.saliency)).l < 66)
       .clone(true)
       .lower()
       .style('stroke-linejoin', 'round')
       .attr('stroke-width', 4)
       .attr('stroke', 'white');
-    
+
     nodeGroups.selectAll('circle').lower();
 
-    nodeGroups.append('title')
-      .text(d => d.token);
+    nodeGroups.append('title').text((d) => d.token);
 
     // Define the force
     // Use the min threshold to init the simulation (it includes the most hidden nodes)
@@ -1015,16 +1208,16 @@
       simulation.alpha(1).restart();
     }
 
-    switch(currentLayout.value) {
-    case 'force':
-      initForceSim(nodeRadiusScale);
-      break;
-    case 'radial':
-      initRadialSim();
-      break;
-    case 'grid':
-      initGridSim();
-      break;
+    switch (currentLayout.value) {
+      case 'force':
+        initForceSim(nodeRadiusScale);
+        break;
+      case 'radial':
+        initRadialSim();
+        break;
+      case 'grid':
+        initGridSim();
+        break;
     }
 
     // Simulation tick updates
@@ -1037,12 +1230,14 @@
     // Filter the links based on the weight
     // weightThreshold = 0.05;
 
-    let svg = d3.select(graphSVG)
+    let svg = d3
+      .select(graphSVG)
       .attr('width', SVGWidth)
       .attr('height', SVGHeight);
 
     // Add a border
-    svg.append('rect')
+    svg
+      .append('rect')
       .attr('class', 'border-rect')
       .attr('width', SVGWidth)
       .attr('height', SVGHeight)
@@ -1050,7 +1245,8 @@
       .style('fill', 'none');
 
     // Add arrow markers
-    svg.append('defs')
+    svg
+      .append('defs')
       .append('marker')
       .attr('id', 'arrow')
       .attr('viewBox', [0, 0, 10, 10])
@@ -1065,9 +1261,10 @@
       .attr('d', 'M 0 0 L 10 5 L 0 10 z')
       .attr('stroke', linkColor)
       .attr('fill', linkColor);
-    
+
     // Create a different arrow marked used when user hovers over a node
-    svg.append('defs')
+    svg
+      .append('defs')
       .append('marker')
       .attr('id', 'arrow-hover')
       .attr('viewBox', [0, 0, 10, 10])
@@ -1089,8 +1286,20 @@
     bindSlider('attention', 0, 10, forceStrength.force.attention);
     bindSlider('textOrder', 0, 10, forceStrength.force.textOrder);
     bindSlider('manyBody', -2000, 0, forceStrength.force.manyBody);
-    bindSlider('collideRadius', 0, 20, forceStrength.force.collideRadius, nodeRadiusScale);
-    bindSlider('threshold', weightThresholdMin, weightThresholdMax, weightThreshold, nodeRadiusScale);
+    bindSlider(
+      'collideRadius',
+      0,
+      20,
+      forceStrength.force.collideRadius,
+      nodeRadiusScale
+    );
+    bindSlider(
+      'threshold',
+      weightThresholdMin,
+      weightThresholdMax,
+      weightThreshold,
+      nodeRadiusScale
+    );
 
     bindSelect(nodeRadiusScale);
 
@@ -1098,21 +1307,13 @@
     bindLayerHeadSelect();
   };
 
-
   const updateLayerHead = () => {
-
     // Remove nodes and links
-    d3.select(graphSVG)
-      .select('g.node-group')
-      .remove();
-    
-    d3.select(graphSVG)
-      .select('g.attention-link-group')
-      .remove();
-    
-    d3.select(graphSVG)
-      .select('g.legend-group')
-      .remove();
+    d3.select(graphSVG).select('g.node-group').remove();
+
+    d3.select(graphSVG).select('g.attention-link-group').remove();
+
+    d3.select(graphSVG).select('g.legend-group').remove();
 
     // Update the graph data
     graphData = createGraphData(curLayer, curHead);
@@ -1125,7 +1326,8 @@
     if (tokenID == null) {
       return null;
     } else {
-      return tokenID.replace(/\./g, '\\.')
+      return tokenID
+        .replace(/\./g, '\\.')
         .replace(/,/g, '\\,')
         .replace(/#/g, '')
         .replace(/\[/g, '\\[')
@@ -1134,7 +1336,6 @@
   };
 
   const highLightLink = (hoverToken) => {
-
     d3.select(graphSVG)
       .select('.attention-link-group')
       .selectAll('path.link')
@@ -1145,32 +1346,38 @@
     d3.select(graphSVG)
       .select('.attention-link-group')
       .selectAll('path.link')
-      .filter((d, i, g) => d3.select(g[i]).attr('id').includes(`-${hoverToken}`))
+      .filter((d, i, g) =>
+        d3.select(g[i]).attr('id').includes(`-${hoverToken}`)
+      )
       .attr('marker-end', 'url(#arrow-hover)')
       .classed('highlighted', true)
       .style('stroke', null)
       .style('stroke-width', 2)
       .style('opacity', 0.8)
       .raise();
-      // TODO
-      // .style('opacity', 0.9)
-      // .style('stroke-width', 2)
-      // .raise();
+    // TODO
+    // .style('opacity', 0.9)
+    // .style('stroke-width', 2)
+    // .raise();
 
     d3.select(graphSVG)
       .select('.node-group')
       .selectAll('.node')
-      .filter((d, i, g) => d3.select(g[i]).attr('id').includes(`-${hoverToken}`))
+      .filter((d, i, g) =>
+        d3.select(g[i]).attr('id').includes(`-${hoverToken}`)
+      )
       .raise()
       .select('.shadow-circle')
-      .attr('r', d => currentLayout.value === 'force' ?
-        nodeRadiusScale(+d.saliency) + 5 : minNodeRadius + 5)
+      .attr('r', (d) =>
+        currentLayout.value === 'force'
+          ? nodeRadiusScale(+d.saliency) + 5
+          : minNodeRadius + 5
+      )
       .style('stroke', 'white')
       .style('stroke-width', 1.5);
   };
 
   const dehighlightLink = (hoverToken) => {
-
     // TODO
     // return;
     // if (hoverToken.includes('jagged')) {
@@ -1185,20 +1392,27 @@
     d3.select(graphSVG)
       .select('.attention-link-group')
       .selectAll('path.link')
-      .filter((d, i, g) => d3.select(g[i]).attr('id').includes(`-${hoverToken}`))
+      .filter((d, i, g) =>
+        d3.select(g[i]).attr('id').includes(`-${hoverToken}`)
+      )
       .classed('highlighted', false)
       .attr('marker-end', 'url(#arrow)')
       .style('stroke', linkColor)
-      .style('stroke-width', d => linkWidth(d.attention))
+      .style('stroke-width', (d) => linkWidth(d.attention))
       .style('opacity', null);
 
     d3.select(graphSVG)
       .select('.node-group')
       .selectAll('.node')
-      .filter((d, i, g) => d3.select(g[i]).attr('id').includes(`-${hoverToken}`))
+      .filter((d, i, g) =>
+        d3.select(g[i]).attr('id').includes(`-${hoverToken}`)
+      )
       .select('.shadow-circle')
-      .attr('r', d => currentLayout.value === 'force' ?
-        nodeRadiusScale(+d.saliency) : minNodeRadius)
+      .attr('r', (d) =>
+        currentLayout.value === 'force'
+          ? nodeRadiusScale(+d.saliency)
+          : minNodeRadius
+      )
       .style('stroke', null)
       .style('stroke-width', null)
       .lower();
@@ -1206,15 +1420,16 @@
 
   const createGraphData = (layer, head) => {
     let curAttention = attentionData[layer][head];
-    let curAttentionData = {'nodes': [], 'links': []};
-    let curPredictedLabel = saliencyData[String(instanceID)]['meta']['predicted_label'];
+    let curAttentionData = { nodes: [], links: [] };
+    let curPredictedLabel =
+      saliencyData[String(instanceID)]['meta']['predicted_label'];
 
     // Add nodes
     saliencyData[String(instanceID)]['tokens'].forEach((d, i) => {
       curAttentionData.nodes.push({
         token: d.token,
         saliency: d[curPredictedLabel],
-        id: i
+        id: i,
       });
     });
 
@@ -1224,7 +1439,7 @@
         curAttentionData.links.push({
           source: i,
           target: j,
-          weight: curAttention[i][j]
+          weight: curAttention[i][j],
         });
       }
     }
@@ -1240,28 +1455,34 @@
     }
   };
 
-  hoverTokenStore.subscribe(value => {
-
+  hoverTokenStore.subscribe((value) => {
     if (value != null) {
       curHoverToken = value;
 
       // Check if the coming word has split subwords in graph vis
-      if (wordToSubwordMap[curHoverToken.replace(/(.*)-\d*/, '$1')] !== undefined) {
-        wordToSubwordMap[curHoverToken.replace(/(.*)-\d*/, '$1')].forEach(t => {
-          highLightLink(t);
-        });
+      if (
+        wordToSubwordMap[curHoverToken.replace(/(.*)-\d*/, '$1')] !== undefined
+      ) {
+        wordToSubwordMap[curHoverToken.replace(/(.*)-\d*/, '$1')].forEach(
+          (t) => {
+            highLightLink(t);
+          }
+        );
       } else {
         highLightLink(curHoverToken);
       }
-      
     } else {
-
       if (curHoverToken != null) {
         // Check if the coming word has split subwords in graph vis
-        if (wordToSubwordMap[curHoverToken.replace(/(.*)-\d*/, '$1')] !== undefined) {
-          wordToSubwordMap[curHoverToken.replace(/(.*)-\d*/, '$1')].forEach(t => {
-            dehighlightLink(t);
-          });
+        if (
+          wordToSubwordMap[curHoverToken.replace(/(.*)-\d*/, '$1')] !==
+          undefined
+        ) {
+          wordToSubwordMap[curHoverToken.replace(/(.*)-\d*/, '$1')].forEach(
+            (t) => {
+              dehighlightLink(t);
+            }
+          );
         } else {
           dehighlightLink(curHoverToken);
         }
@@ -1269,7 +1490,6 @@
 
       curHoverToken = value;
     }
-
   });
 
   const renderGraph = async () => {
@@ -1277,7 +1497,9 @@
 
     // Load data from files if they have not been loaded
     if (attentionData == null) {
-      attentionData = await d3.json(attentionDataDir + `attention-${padZeroLeft(instanceID, 4)}.json`);
+      attentionData = await d3.json(
+        attentionDataDir + `attention-${padZeroLeft(instanceID, 4)}.json`
+      );
     }
     if (saliencyData == null) {
       saliencyData = await d3.json(saliencyDataFilepath);
@@ -1293,9 +1515,11 @@
     drawGraph();
   };
 
-  onMount(async() => {
+  onMount(async () => {
     if (attentionData == null) {
-      attentionData = await d3.json(attentionDataDir + `attention-${padZeroLeft(instanceID, 4)}.json`);
+      attentionData = await d3.json(
+        attentionDataDir + `attention-${padZeroLeft(instanceID, 4)}.json`
+      );
     }
 
     if (saliencyData == null) {
@@ -1312,12 +1536,13 @@
     mounted = true;
   });
 
-  graphViewConfigStore.subscribe(value => {
-    if (value.compHeight !== undefined && value.compWidth !== undefined){
-      if (graphViewCompConfig === undefined ||
+  graphViewConfigStore.subscribe((value) => {
+    if (value.compHeight !== undefined && value.compWidth !== undefined) {
+      if (
+        graphViewCompConfig === undefined ||
         (graphViewCompConfig.compHeight !== value.compHeight &&
-        graphViewCompConfig.compWidth !== value.compWidth)
-      ){
+          graphViewCompConfig.compWidth !== value.compWidth)
+      ) {
         // Update the height and width
         graphViewCompConfig = value;
         SVGHeight = graphViewCompConfig.compHeight;
@@ -1327,14 +1552,13 @@
     }
   });
 
-  wordToSubwordMapStore.subscribe(value => {
+  wordToSubwordMapStore.subscribe((value) => {
     wordToSubwordMap = value;
   });
 
-  instanceIDStore.subscribe(value => {
+  instanceIDStore.subscribe((value) => {
     // console.log('Instance changed!!');
     if (value !== instanceID) {
-
       d3.select(graphSVG).selectAll('*').remove();
 
       attentionData = null;
@@ -1344,13 +1568,10 @@
 
       renderGraph();
     }
-    
   });
-
-
 </script>
 
-<style type="text/scss">
+<style lang="scss">
   @import 'define';
 
   .graph-view {
@@ -1362,9 +1583,9 @@
 
   :global(.node-circle) {
     stroke: #fff;
-    stroke-width: 1.5; 
+    stroke-width: 1.5;
   }
-  
+
   :global(.node-text) {
     dominant-baseline: middle;
     text-anchor: middle;
@@ -1390,7 +1611,7 @@
     font-size: 1.3rem;
     margin: 5px 20px 0 20px;
   }
-  
+
   .svg-container {
     position: relative;
   }
@@ -1404,7 +1625,7 @@
 
     display: flex;
     flex-direction: column;
-    align-items: center;;
+    align-items: center;
     justify-content: flex-start;
 
     font-size: 0.9em;
@@ -1565,25 +1786,19 @@
     background: change-color($brown-icon, $alpha: 0.2);
     color: change-color($brown-icon, $lightness: 40%);
   }
-
 </style>
 
-
-<div class='graph-view'>
-
-  <div class='svg-container'>
-
-    <div class='graph-label'>
-      Semantic Attention Graph
-    </div>
+<div class="graph-view">
+  <div class="svg-container">
+    <div class="graph-label">Semantic Attention Graph</div>
 
     <!-- Control panel on top of the SVG -->
-    <div class='svg-control-panel'>
-      <div class='name'>
+    <div class="svg-control-panel">
+      <div class="name">
         <div>
-          Layer 
-          <div class='select select-num-div'>
-            <select name='layer' class='select-num' id='select-layer'>
+          Layer
+          <div class="select select-num-div">
+            <select name="layer" class="select-num" id="select-layer">
               {#each [...Array(12).keys()] as num}
                 <option value={num}>{num + 1}</option>
               {/each}
@@ -1593,119 +1808,145 @@
 
         <div>
           Head
-          <div class='select select-num-div'>
-            <select name='layer' class='select-num' id='select-head'>
+          <div class="select select-num-div">
+            <select name="layer" class="select-num" id="select-head">
               {#each [...Array(12).keys()] as num}
                 <option value={num}>{num + 1}</option>
               {/each}
             </select>
           </div>
         </div>
-
       </div>
 
-      <div class='sep-line-horizontal'></div>
+      <div class="sep-line-horizontal" />
 
-      <div class='select-row'>
-
-        <div class='setting-icon'
+      <div class="select-row">
+        <div
+          class="setting-icon"
           on:click={settingIconClicked}
           class:active={settingIconActive}
         >
-          <i class="fas fa-sliders-h"></i>
+          <i class="fas fa-sliders-h" />
         </div>
 
-        <div class='sep-line-vertical'></div>
+        <div class="sep-line-vertical" />
 
-        <div class='select'>
-          <select name='layout' id='select-layout'>
+        <div class="select">
+          <select name="layout" id="select-layout">
             {#each Object.values(layoutOptions) as opt}
               <option value={opt.value}>{opt.name}</option>
             {/each}
           </select>
         </div>
-
       </div>
 
       <!-- Slider panel -->
-      <div class='slider-container'
-        class:active={settingIconActive}
-      >
-        <div class='sep-line-horizontal longer-line'></div>
+      <div class="slider-container" class:active={settingIconActive}>
+        <div class="sep-line-horizontal longer-line" />
 
-        <div class='slider-title'>Edge Force</div>
+        <div class="slider-title">Edge Force</div>
 
-        <div class='sep-line-horizontal'></div>
+        <div class="sep-line-horizontal" />
 
-        <div class='slider'>
-
-          <div class='slider-text'>
-            <label for='attention'>Attention</label>
-            <div class='slider-value'>
-              {config.autoAttention ? 'auto' : round(forceStrength.force.attention, 2)}
+        <div class="slider">
+          <div class="slider-text">
+            <label for="attention">Attention</label>
+            <div class="slider-value">
+              {config.autoAttention
+                ? 'auto'
+                : round(forceStrength.force.attention, 2)}
             </div>
           </div>
 
-          <input type="range" min="0" max="1000" value="500" class="slider" id="attention">
+          <input
+            type="range"
+            min="0"
+            max="1000"
+            value="500"
+            class="slider"
+            id="attention"
+          />
         </div>
 
-        <div class='slider'>
-
-          <div class='slider-text'>
-            <label for='textOrder'>Text Order</label>
-            <div class='slider-value'>
+        <div class="slider">
+          <div class="slider-text">
+            <label for="textOrder">Text Order</label>
+            <div class="slider-value">
               {round(forceStrength.force.textOrder, 2)}
             </div>
           </div>
 
-          <input type="range" min="0" max="1000" value="500" class="slider" id="textOrder">
+          <input
+            type="range"
+            min="0"
+            max="1000"
+            value="500"
+            class="slider"
+            id="textOrder"
+          />
         </div>
 
-        <div class='slider'>
-
-          <div class='slider-text'>
-            <label for='manyBody'>ManyBody</label>
-            <div class='slider-value'>
+        <div class="slider">
+          <div class="slider-text">
+            <label for="manyBody">ManyBody</label>
+            <div class="slider-value">
               {round(forceStrength.force.manyBody, 2)}
             </div>
           </div>
 
-          <input type="range" min="0" max="1000" value="500" class="slider" id="manyBody">
+          <input
+            type="range"
+            min="0"
+            max="1000"
+            value="500"
+            class="slider"
+            id="manyBody"
+          />
         </div>
 
-        <div class='slider'>
-
-          <div class='slider-text'>
-            <label for='collide'>Node Distance</label>
-            <div class='slider-value'>
+        <div class="slider">
+          <div class="slider-text">
+            <label for="collide">Node Distance</label>
+            <div class="slider-value">
               {round(forceStrength.force.collideRadius, 2)}
             </div>
           </div>
 
-          <input type="range" min="0" max="1000" value="500" class="slider" id="collideRadius">
+          <input
+            type="range"
+            min="0"
+            max="1000"
+            value="500"
+            class="slider"
+            id="collideRadius"
+          />
         </div>
 
-        <div class='slider-title'>Edge Threshold</div>
+        <div class="slider-title">Edge Threshold</div>
 
-        <div class='sep-line-horizontal'></div>
+        <div class="sep-line-horizontal" />
 
-        <div class='slider'>
-
-          <div class='slider-text'>
-            <label for='threshold'>Attention > </label>
-            <div class='slider-value'>
+        <div class="slider">
+          <div class="slider-text">
+            <label for="threshold">Attention > </label>
+            <div class="slider-value">
               {round(weightThreshold, 2)}
             </div>
           </div>
 
-          <input type="range" min="0" max="1000" value="500" step="200" class="slider" id="threshold">
+          <input
+            type="range"
+            min="0"
+            max="1000"
+            value="500"
+            step="200"
+            class="slider"
+            id="threshold"
+          />
         </div>
-        
       </div>
-
     </div>
 
-    <svg class='graph-svg' bind:this={graphSVG}></svg>
+    <svg class="graph-svg" bind:this={graphSVG} />
   </div>
-
 </div>

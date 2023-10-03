@@ -8,18 +8,28 @@
   import LowerAtlas from './LowerAtlas.svelte';
   import TableModal from './TableModal.svelte';
   import Article from './article/Article.svelte';
-  import { graphViewConfigStore, instanceViewConfigStore,
-    mapViewConfigStore, lowerMapViewConfigStore, comparisonViewStore,
-    tooltipConfigStore, sideStore } from './store';
+  import {
+    graphViewConfigStore,
+    instanceViewConfigStore,
+    mapViewConfigStore,
+    lowerMapViewConfigStore,
+    comparisonViewStore,
+    tooltipConfigStore,
+    sideStore,
+  } from './store';
   import { onMount } from 'svelte';
   import * as d3 from 'd3';
 
   const attentionDataDir = 'PUBLIC_URL/data/sst2-attention-data/';
   const dependencyDataFilepath = 'PUBLIC_URL/data/sst2-dependencies.json';
-  const syntacticHeadDataFilepath = 'PUBLIC_URL/data/sst2-sorted-syntactic-heads.json';
-  const semanticHeadDataFilepath = 'PUBLIC_URL/data/sst2-sorted-saliency-heads.json';
-  const importantHeadDataFilepath = 'PUBLIC_URL/data/sst2-sorted-confidence-heads.json';
-  const saliencyDataFilepath = 'PUBLIC_URL/data/sst2-saliency-list-grad-l1.json';
+  const syntacticHeadDataFilepath =
+    'PUBLIC_URL/data/sst2-sorted-syntactic-heads.json';
+  const semanticHeadDataFilepath =
+    'PUBLIC_URL/data/sst2-sorted-saliency-heads.json';
+  const importantHeadDataFilepath =
+    'PUBLIC_URL/data/sst2-sorted-confidence-heads.json';
+  const saliencyDataFilepath =
+    'PUBLIC_URL/data/sst2-saliency-list-grad-l1.json';
   const atlasDataFilepath = 'PUBLIC_URL/data/sst2-atlas.json';
   const embeddingDataFilepath = 'PUBLIC_URL/data/embedding-list-sst2.json';
   const tableDataFilepath = 'PUBLIC_URL/data/table-list-sst2.json';
@@ -34,7 +44,7 @@
   let buttonDown = true;
   let downButtonPos = {
     width: 50,
-    height: 20
+    height: 20,
   };
 
   let tooltipConfig = {
@@ -44,43 +54,47 @@
     top: 0,
     width: 80,
     maxWidth: 80,
-    fontSize: '1em'
+    fontSize: '1em',
   };
 
-  tooltipConfigStore.subscribe(value => {tooltipConfig = value;});
+  tooltipConfigStore.subscribe((value) => {
+    tooltipConfig = value;
+  });
 
   let sideInfo = {};
-  sideStore.subscribe(value => {sideInfo = value;});
+  sideStore.subscribe((value) => {
+    sideInfo = value;
+  });
 
   let lowerContainerDIV = null;
   let graphViewDIV = null;
   let graphViewConfig = {
     compWidth: null,
-    compHeight: null
+    compHeight: null,
   };
-  
+
   let originalInstanceViewHeight = null;
   let instanceViewDIV = null;
   let instanceViewConfig = {
     compWidth: null,
-    compHeight: null
+    compHeight: null,
   };
 
   let comparisonViewConfig = {};
-  comparisonViewStore.subscribe(value => {
+  comparisonViewStore.subscribe((value) => {
     comparisonViewConfig = value;
   });
 
   let mapViewDIV = null;
   let mapViewConfig = {
     compWidth: null,
-    compHeight: null
+    compHeight: null,
   };
 
   let lowerMapViewDIV = null;
   let lowerMapViewConfig = {
     compWidth: null,
-    compHeight: null
+    compHeight: null,
   };
 
   /**
@@ -95,12 +109,10 @@
    * Close the large map view.
    */
   const atlasClosed = () => {
+    d3.select(mapViewDIV).select('.legend-container').style('display', 'none');
 
-    d3.select(mapViewDIV)
-      .select('.legend-container')
-      .style('display', 'none');
-
-    let svg =  d3.select(mapViewDIV)
+    let svg = d3
+      .select(mapViewDIV)
       .select('.atlas-svg-container')
       .style('width', '100%')
       .style('height', '100%')
@@ -109,13 +121,14 @@
     atlasSVGWidth = svg.attr('width');
     atlasSVGHeight = svg.attr('height');
 
-    svg.attr('width', null)
+    svg
+      .attr('width', null)
       .attr('height', null)
       .style('padding-top', '36px')
       .style('padding-left', '8px')
       .style('width', '100%')
       .style('height', '100%');
-    
+
     mapViewDIV.style['width'] = `${lowerMapViewConfig.compWidth}px`;
     mapViewDIV.style['height'] = `${lowerMapViewConfig.compHeight}px`;
     mapViewDIV.style['opacity'] = 0;
@@ -126,9 +139,7 @@
       mapViewDIV.style['width'] = '1000px';
       mapViewDIV.style['height'] = '100%';
 
-      d3.select(mapViewDIV)
-        .select('.legend-container')
-        .style('display', null);
+      d3.select(mapViewDIV).select('.legend-container').style('display', null);
 
       d3.select(mapViewDIV)
         .select('.atlas-svg-container')
@@ -149,23 +160,29 @@
   };
 
   const downButtonClicked = () => {
-
     // Enter comparison view
     if (buttonDown) {
       instanceViewDIV.style.height = '100%';
       lowerContainerDIV.style.bottom = `-${graphViewConfig.compHeight - 10}px`;
-      downButton.style.top = `${originalInstanceViewHeight + headerHeight
-        - downButtonPos.height / 2 + graphViewConfig.compHeight - 10}px`;
+      downButton.style.top = `${
+        originalInstanceViewHeight +
+        headerHeight -
+        downButtonPos.height / 2 +
+        graphViewConfig.compHeight -
+        10
+      }px`;
 
-      comparisonViewConfig.height = Math.floor(instanceViewDIV.clientHeight) - 5;
+      comparisonViewConfig.height =
+        Math.floor(instanceViewDIV.clientHeight) - 5;
       comparisonViewConfig.inComparison = true;
       comparisonViewStore.set(comparisonViewConfig);
     } else {
       // Exit comparison view
       instanceViewDIV.style.height = '34%';
       lowerContainerDIV.style.bottom = '0px';
-      downButton.style.top = `${originalInstanceViewHeight + headerHeight
-        - downButtonPos.height / 2}px`;
+      downButton.style.top = `${
+        originalInstanceViewHeight + headerHeight - downButtonPos.height / 2
+      }px`;
 
       comparisonViewConfig.height = originalInstanceViewHeight - 5;
       comparisonViewConfig.inComparison = false;
@@ -178,8 +195,13 @@
   const comparisonOpenHandler = () => {
     instanceViewDIV.style.height = '100%';
     lowerContainerDIV.style.bottom = `-${graphViewConfig.compHeight - 10}px`;
-    downButton.style.top = `${originalInstanceViewHeight + headerHeight
-      - downButtonPos.height / 2 + graphViewConfig.compHeight - 10}px`;
+    downButton.style.top = `${
+      originalInstanceViewHeight +
+      headerHeight -
+      downButtonPos.height / 2 +
+      graphViewConfig.compHeight -
+      10
+    }px`;
     buttonDown = false;
 
     comparisonViewConfig.height = Math.floor(instanceViewDIV.clientHeight) - 5;
@@ -190,8 +212,9 @@
   const comparisonCloseHandler = () => {
     instanceViewDIV.style.height = '34%';
     lowerContainerDIV.style.bottom = '0px';
-    downButton.style.top = `${originalInstanceViewHeight + headerHeight
-      - downButtonPos.height / 2}px`;
+    downButton.style.top = `${
+      originalInstanceViewHeight + headerHeight - downButtonPos.height / 2
+    }px`;
     buttonDown = true;
 
     comparisonViewConfig.height = originalInstanceViewHeight - 5;
@@ -206,7 +229,8 @@
 
     instanceViewConfig.compWidth = Math.floor(instanceViewDIV.clientWidth);
     // Need to offset the horizontal scroll bar height
-    instanceViewConfig.compHeight = Math.floor(instanceViewDIV.clientHeight) - 5;
+    instanceViewConfig.compHeight =
+      Math.floor(instanceViewDIV.clientHeight) - 5;
     instanceViewConfigStore.set(instanceViewConfig);
     originalInstanceViewHeight = Math.floor(instanceViewDIV.clientHeight);
 
@@ -226,24 +250,28 @@
 
     // Position the down button
     // console.log(headerHeight, downButtonPos.height);
-    downButton.style.top = `${Math.floor(instanceViewDIV.clientHeight) + headerHeight
-      - downButtonPos.height / 2}px`;
-    downButton.style.left = `${graphViewConfig.compWidth - downButtonPos.width / 2}px`;
+    downButton.style.top = `${
+      Math.floor(instanceViewDIV.clientHeight) +
+      headerHeight -
+      downButtonPos.height / 2
+    }px`;
+    downButton.style.left = `${
+      graphViewConfig.compWidth - downButtonPos.width / 2
+    }px`;
     downButton.style.width = `${downButtonPos.width}px`;
     downButton.style.height = `${downButtonPos.height}px`;
     downButton.style.visibility = 'visible';
   });
-
 </script>
 
-<style type='text/scss'>
+<style lang="scss">
   @import 'define';
 
   .dodrio-vis {
     overflow: hidden;
     border-bottom: 1px solid hsla(0, 0%, 0%, 0.2);
   }
-  
+
   .main-content {
     border-bottom: solid 1px $gray-border;
     height: min(800px, calc(100vh - 50px));
@@ -258,7 +286,7 @@
     // width: min(700px, 80%);
     height: 100%;
     display: flex;
-    overflow:scroll;
+    overflow: scroll;
     flex-direction: column;
     box-sizing: border-box;
   }
@@ -327,7 +355,8 @@
     overflow: hidden;
     z-index: 11;
     padding: 10px 0 0 10px;
-    transition: width 500ms ease-in-out, height 500ms ease-in-out, opacity 500ms ease-in-out;
+    transition: width 500ms ease-in-out, height 500ms ease-in-out,
+      opacity 500ms ease-in-out;
   }
 
   .atlas-sidebar {
@@ -346,7 +375,8 @@
   }
 
   :global(.atlas-container.closed) {
-    transition: right 700ms ease-in-out, background-color 100ms ease-in-out 600ms;
+    transition: right 700ms ease-in-out,
+      background-color 100ms ease-in-out 600ms;
   }
 
   .down-button {
@@ -365,7 +395,7 @@
     transition: background 300ms ease-in-out, top 300ms ease-in-out;
 
     &:hover {
-      background: change-color($brown-icon, $lightness:90%);
+      background: change-color($brown-icon, $lightness: 90%);
     }
   }
 
@@ -387,74 +417,93 @@
   .up-down {
     transform: rotate(180deg);
   }
-
 </style>
 
-<div class='main'>
-
-  <div class='dodrio-vis'>
+<div class="main">
+  <div class="dodrio-vis">
     <Header />
 
-    <Tooltip bind:this={tooltip}/>
-  
-    <div class='main-content'>
-      <div class='select-container'>
+    <Tooltip bind:this={tooltip} />
 
-      </div>
+    <div class="main-content">
+      <div class="select-container" />
 
-      <div class='attention-container'>
+      <div class="attention-container">
         <!-- Instance View -->
-        <div class='instance-container' bind:this={instanceViewDIV}>
-          <Dependency dependencyDataFilepath={dependencyDataFilepath}
-            saliencyDataFilepath={saliencyDataFilepath}
-            attentionDataDir={attentionDataDir}
-            syntacticHeadDataFilepath={syntacticHeadDataFilepath}
-            semanticHeadDataFilepath={semanticHeadDataFilepath}
-            importantHeadDataFilepath={importantHeadDataFilepath}
-            on:close={comparisonCloseHandler} on:open={comparisonOpenHandler}/>
+        <div class="instance-container" bind:this={instanceViewDIV}>
+          <Dependency
+            {dependencyDataFilepath}
+            {saliencyDataFilepath}
+            {attentionDataDir}
+            {syntacticHeadDataFilepath}
+            {semanticHeadDataFilepath}
+            {importantHeadDataFilepath}
+            on:close={comparisonCloseHandler}
+            on:open={comparisonOpenHandler}
+          />
         </div>
 
-        
-        <div class='lower-container' bind:this={lowerContainerDIV}>
+        <div class="lower-container" bind:this={lowerContainerDIV}>
           <!-- Graph View -->
-          <div class='graph-container' bind:this={graphViewDIV} >
-            <GraphView attentionDataDir={attentionDataDir} saliencyDataFilepath={saliencyDataFilepath}/>
+          <div class="graph-container" bind:this={graphViewDIV}>
+            <GraphView {attentionDataDir} {saliencyDataFilepath} />
           </div>
 
-          <div class='lower-atlas-container' bind:this={lowerMapViewDIV}>
-            <LowerAtlas attentionDataDir={attentionDataDir} saliencyDataFilepath={saliencyDataFilepath}
-                        atlasDataFilepath={atlasDataFilepath} on:open={atlasOpened}/>
+          <div class="lower-atlas-container" bind:this={lowerMapViewDIV}>
+            <LowerAtlas
+              {attentionDataDir}
+              {saliencyDataFilepath}
+              {atlasDataFilepath}
+              on:open={atlasOpened}
+            />
           </div>
         </div>
-
 
         <!-- Map view -->
-        <div class='atlas-container' style='visibility=hidden' bind:this={mapViewDIV}>
-          <Atlas attentionDataDir={attentionDataDir} saliencyDataFilepath={saliencyDataFilepath}
-                atlasDataFilepath={atlasDataFilepath} on:close={atlasClosed}/>
+        <div
+          class="atlas-container"
+          style="visibility=hidden"
+          bind:this={mapViewDIV}
+        >
+          <Atlas
+            {attentionDataDir}
+            {saliencyDataFilepath}
+            {atlasDataFilepath}
+            on:close={atlasClosed}
+          />
         </div>
 
-        <div class='atlas-sidebar' class:hidden={!sideInfo.show}>
+        <div class="atlas-sidebar" class:hidden={!sideInfo.show}>
           <AtlasSide />
         </div>
-
       </div>
 
-      <TableModal tableDataFilepath={tableDataFilepath} embeddingDataFilepath={embeddingDataFilepath}
-                  on:xClicked={() => {}} on:urlTyped={() => {}}/>
+      <TableModal
+        {tableDataFilepath}
+        {embeddingDataFilepath}
+        on:xClicked={() => {}}
+        on:urlTyped={() => {}}
+      />
 
-      <div class='down-button' bind:this={downButton}>
-        <div class='icon-wrapper' on:click={downButtonClicked}>
-          <svg class='icon-down' class:up-down={!buttonDown} viewBox='0 0 512 512'>
-            <path fill='none' stroke='currentColor' stroke-linecap='round'
-              stroke-linejoin='round' stroke-width='80' d='M112 184l144 144 144-144'/>
+      <div class="down-button" bind:this={downButton}>
+        <div class="icon-wrapper" on:click={downButtonClicked}>
+          <svg
+            class="icon-down"
+            class:up-down={!buttonDown}
+            viewBox="0 0 512 512"
+          >
+            <path
+              fill="none"
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="80"
+              d="M112 184l144 144 144-144"
+            />
           </svg>
         </div>
       </div>
-
     </div>
-
   </div>
-  <Article/>
-
+  <Article />
 </div>

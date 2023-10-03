@@ -8,7 +8,7 @@
   const SVGWidth = 800;
   const SVGHeight = 800;
 
-  const SVGPadding = {top: 3, left: 3, right: 3, bottom: 3};
+  const SVGPadding = { top: 3, left: 3, right: 3, bottom: 3 };
 
   const minNodeRadius = 19;
   const maxNodeRadius = 40;
@@ -19,12 +19,12 @@
   const layoutOptions = {
     force: {
       value: 'force',
-      name: 'Force Layout'
+      name: 'Force Layout',
     },
     radial: {
       value: 'radial',
-      name: 'Radial Layout'
-    } 
+      name: 'Radial Layout',
+    },
   };
 
   let config = {
@@ -32,35 +32,35 @@
     showHiddenLink: false,
     showHiddenNode: false,
     autoAttention: true,
-    defaultLayout: layoutOptions.force
+    defaultLayout: layoutOptions.force,
   };
 
-  let forceStrength = {manyBody: 0, attention: 0, textOrder: 0};
+  let forceStrength = { manyBody: 0, attention: 0, textOrder: 0 };
 
   const round = (num, decimal) => {
-    return Math.round((num + Number.EPSILON) * (10 ** decimal)) / (10 ** decimal);
+    return Math.round((num + Number.EPSILON) * 10 ** decimal) / 10 ** decimal;
   };
 
   const drag = (simulation) => {
-  
     const dragstarted = (event) => {
       if (!event.active) simulation.alphaTarget(0.3).restart();
       event.subject.fx = event.subject.x;
       event.subject.fy = event.subject.y;
     };
-    
+
     const dragged = (event) => {
       event.subject.fx = event.x;
       event.subject.fy = event.y;
     };
-    
+
     const dragended = (event) => {
       if (!event.active) simulation.alphaTarget(0);
       event.subject.fx = null;
       event.subject.fy = null;
     };
-    
-    return d3.drag()
+
+    return d3
+      .drag()
       .on('start', dragstarted)
       .on('drag', dragged)
       .on('end', dragended);
@@ -75,19 +75,26 @@
     let width = SVGWidth - SVGPadding.left - SVGPadding.right;
     let height = SVGWidth - SVGPadding.top - SVGPadding.bottom;
 
-    const left = Math.max(SVGPadding.left + curRadius, Math.min(width - curRadius, d.x));
-    const top = Math.max(SVGPadding.top + curRadius, Math.min(height - curRadius, d.y));
+    const left = Math.max(
+      SVGPadding.left + curRadius,
+      Math.min(width - curRadius, d.x)
+    );
+    const top = Math.max(
+      SVGPadding.top + curRadius,
+      Math.min(height - curRadius, d.y)
+    );
 
     if (config.borderConstraint) {
-      return {top: top, left: left};
+      return { top: top, left: left };
     } else {
-      return {top: d.y, left: d.x};
+      return { top: d.y, left: d.x };
     }
   };
 
   const bindCheckBox = (simulation, links) => {
     // Border checkbox
-    let borderCheckBox = d3.select('#checkbox-border')
+    let borderCheckBox = d3
+      .select('#checkbox-border')
       .property('checked', config.borderConstraint);
 
     borderCheckBox.on('change', (event) => {
@@ -96,9 +103,10 @@
     });
 
     // Hidden links
-    let hiddenLinkCheckBox = d3.select('#checkbox-hidden-link')
+    let hiddenLinkCheckBox = d3
+      .select('#checkbox-hidden-link')
       .property('checked', config.showHiddenLink);
-    
+
     hiddenLinkCheckBox.on('change', (event) => {
       config.showHiddenLink = event.target.checked;
       d3.select(graphSVG)
@@ -111,9 +119,10 @@
     });
 
     // Hidden nodes
-    let hiddenNodeCheckBox = d3.select('#checkbox-hidden-node')
+    let hiddenNodeCheckBox = d3
+      .select('#checkbox-hidden-node')
       .property('checked', config.showHiddenNode);
-    
+
     hiddenNodeCheckBox.on('change', (event) => {
       config.showHiddenNode = event.target.checked;
       d3.select(graphSVG)
@@ -123,27 +132,36 @@
     });
 
     // Automatic attention link strength checkbox
-    let autoCheckBox = d3.select('#checkbox-auto-attention')
+    let autoCheckBox = d3
+      .select('#checkbox-auto-attention')
       .property('checked', config.autoAttention);
-    
+
     autoCheckBox.on('change', (event) => {
       config.autoAttention = event.target.checked;
 
       if (config.autoAttention) {
-        simulation.force('attentionLink', d3.forceLink(links)
-          .id(d => d.id));
+        simulation.force(
+          'attentionLink',
+          d3.forceLink(links).id((d) => d.id)
+        );
         simulation.alpha(0.3).restart();
       } else {
-        simulation.force('attentionLink')
-          .strength(forceStrength.attention);
+        simulation.force('attentionLink').strength(forceStrength.attention);
         simulation.alpha(0.3).restart();
       }
     });
-
   };
 
-  const bindSlider = (name, simulation, min, max, defaultValue, nodeRadiusScale=null) => {
-    let slider = d3.select(`#${name}`)
+  const bindSlider = (
+    name,
+    simulation,
+    min,
+    max,
+    defaultValue,
+    nodeRadiusScale = null
+  ) => {
+    let slider = d3
+      .select(`#${name}`)
       .property('value', ((defaultValue - min) / (max - min)) * 1000);
 
     slider.on('input', () => {
@@ -152,23 +170,24 @@
       forceStrength[name] = value;
 
       switch (name) {
-      case 'attention':
-        simulation.force('attentionLink').strength(value);
-        // Disable the auto attention
-        d3.select('#checkbox-auto-attention')
-          .property('checked', false);
-        config.autoAttention = false;
-        break;
-      case 'textOrder':
-        simulation.force('textLink').strength(value);
-        simulation.force('hiddenTextLink').strength(value);
-        break;
-      case 'manyBody':
-        simulation.force('charge').strength(value);
-        break;
-      case 'collide':
-        simulation.force('collide').radius(d => nodeRadiusScale(d.saliency) + value);
-        break;
+        case 'attention':
+          simulation.force('attentionLink').strength(value);
+          // Disable the auto attention
+          d3.select('#checkbox-auto-attention').property('checked', false);
+          config.autoAttention = false;
+          break;
+        case 'textOrder':
+          simulation.force('textLink').strength(value);
+          simulation.force('hiddenTextLink').strength(value);
+          break;
+        case 'manyBody':
+          simulation.force('charge').strength(value);
+          break;
+        case 'collide':
+          simulation
+            .force('collide')
+            .radius((d) => nodeRadiusScale(d.saliency) + value);
+          break;
       }
 
       simulation.restart();
@@ -184,12 +203,12 @@
   };
 
   const bindSelect = () => {
-    let selectOption = d3.select('#select-layout')
+    let selectOption = d3
+      .select('#select-layout')
       .property('value', config.defaultLayout.value);
 
     selectOption.on('change', () => {
       let newLayout = selectOption.property('value');
-
     });
   };
 
@@ -197,12 +216,14 @@
     // Filter the links based on the weight
     const weightThreshold = 0.05;
 
-    let svg = d3.select(graphSVG)
+    let svg = d3
+      .select(graphSVG)
       .attr('width', SVGWidth)
       .attr('height', SVGHeight);
 
     // Add a border
-    svg.append('rect')
+    svg
+      .append('rect')
       .attr('class', 'border-rect')
       .attr('width', SVGWidth)
       .attr('height', SVGHeight)
@@ -210,22 +231,22 @@
       .style('fill', 'none');
 
     // Create the data lists
-    let links = graphData.links.filter(d => d.weight > weightThreshold);
+    let links = graphData.links.filter((d) => d.weight > weightThreshold);
 
     // Map nodes and links to arrays of objects
-    let nodes = graphData.nodes.map(d => Object.create(d));
-    links = links.map(d => Object.create(d));
+    let nodes = graphData.nodes.map((d) => Object.create(d));
+    links = links.map((d) => Object.create(d));
 
     // Maintain a set of all existing node indices
     let nodeIndices = new Set();
-    graphData.nodes.forEach(d => nodeIndices.add(+d.id));
+    graphData.nodes.forEach((d) => nodeIndices.add(+d.id));
 
     // Add text order hidden links
     let hiddenLinks = [];
     for (let i = 0; i < nodes.length - 1; i++) {
       let hiddenLink = {
         source: +nodes[i].id,
-        target: +nodes[i + 1].id
+        target: +nodes[i + 1].id,
       };
       hiddenLinks.push(hiddenLink);
     }
@@ -233,69 +254,74 @@
     // Link the last token to the first token
     hiddenLinks.push({
       source: +nodes[nodes.length - 1].id,
-      target: nodes[0].id
+      target: nodes[0].id,
     });
 
-    hiddenLinks = hiddenLinks.map(d => Object.create(d));
-    
+    hiddenLinks = hiddenLinks.map((d) => Object.create(d));
+
     // console.log(nodes, links);
 
     // Add intermediate nodes to create bezier curves
-    let nodeByID = new Map(nodes.map(d => [d.id, d]));
+    let nodeByID = new Map(nodes.map((d) => [d.id, d]));
     let bilinks = [];
 
     // Add links between intermediate node and its previous token and afterward
     // token
     let hiddenTextOrderLinks = [];
 
-    links.forEach(d => {
+    links.forEach((d) => {
       let source = nodeByID.get(d.source);
       let target = nodeByID.get(d.target);
-      let intermediate = {hidden: true};
+      let intermediate = { hidden: true };
 
       let curBilink = [source, intermediate, target];
       curBilink.selfLoop = source === target;
-      
+
       //nodes.push(intermediate);
       links.push(
-        {source: source, target: intermediate},
-        {source: intermediate, target: target}
+        { source: source, target: intermediate },
+        { source: intermediate, target: target }
       );
 
       bilinks.push(curBilink);
 
       if (nodeIndices.has(d.source - 1)) {
-        hiddenTextOrderLinks.push(
-          {source: nodeByID.get(d.source - 1), target: intermediate}
-        );
+        hiddenTextOrderLinks.push({
+          source: nodeByID.get(d.source - 1),
+          target: intermediate,
+        });
       }
 
       if (nodeIndices.has(d.source + 1)) {
-        hiddenTextOrderLinks.push(
-          {source: intermediate, target: nodeByID.get(d.source + 1)}
-        );
+        hiddenTextOrderLinks.push({
+          source: intermediate,
+          target: nodeByID.get(d.source + 1),
+        });
       }
 
       if (nodeIndices.has(d.target - 1)) {
-        hiddenTextOrderLinks.push(
-          {source: nodeByID.get(d.target - 1), target: intermediate}
-        );
+        hiddenTextOrderLinks.push({
+          source: nodeByID.get(d.target - 1),
+          target: intermediate,
+        });
       }
 
       if (nodeIndices.has(d.target + 1)) {
-        hiddenTextOrderLinks.push(
-          {source: intermediate, target: nodeByID.get(d.target + 1)}
-        );
+        hiddenTextOrderLinks.push({
+          source: intermediate,
+          target: nodeByID.get(d.target + 1),
+        });
       }
     });
 
     // Create a scale for the node radius
-    let allSaliencyScores = nodes.map(d => +d.saliency);
-    let nodeRadiusScale = d3.scaleLinear()
+    let allSaliencyScores = nodes.map((d) => +d.saliency);
+    let nodeRadiusScale = d3
+      .scaleLinear()
       .domain(d3.extent(allSaliencyScores))
       .range([minNodeRadius, maxNodeRadius])
       .nice();
-    
+
     // Define the force
     let simulation = d3.forceSimulation(nodes);
     const initManyBodyStrength = -1400;
@@ -323,46 +349,54 @@
     //   .id(d => d.id)
     //   //.strength(initAttentionStrength)
     // );
-    
+
     // // Force 4 (Text order link force)
-    simulation.force('textLink', d3.forceLink(hiddenLinks)
-      .id(d => d.id)
-      .strength(initTextOrderStrength)
+    simulation.force(
+      'textLink',
+      d3
+        .forceLink(hiddenLinks)
+        .id((d) => d.id)
+        .strength(initTextOrderStrength)
     );
 
     // // Force 5 (Text order link force on hidden nodes)
     // simulation.force('hiddenTextLink', d3.forceLink(hiddenTextOrderLinks)
     //   .id(d => d.id)
     //   .strength(initTextOrderStrength)
-    // );    
-    
+    // );
+
     // Force 6 (Radial force)
     // simulation.force('radial', d3.forceRadial(300)
     //   .x(SVGWidth / 2)
     //   .y(SVGHeight / 2)
     //   .strength(initRadialStrength)
     // );
-  
+
     // Force 9 Custom radial force
     let nodeIndexArray = Array.from(nodeIndices);
 
-    let radialScale = d3.scaleLinear()
+    let radialScale = d3
+      .scaleLinear()
       .domain(d3.extent(nodeIndexArray))
-      .range([-Math.PI / 2, Math.PI * 3 / 2])
+      .range([-Math.PI / 2, (Math.PI * 3) / 2])
       .nice();
 
-
-
-    simulation.force('posY', d3.forceY()
-      .y(d => SVGWidth / 2 + Math.sin(radialScale(d.index)) * radialRadius)
-      .strength(radialStrength)
+    simulation.force(
+      'posY',
+      d3
+        .forceY()
+        .y((d) => SVGWidth / 2 + Math.sin(radialScale(d.index)) * radialRadius)
+        .strength(radialStrength)
     );
 
-    simulation.force('posX', d3.forceX()
-      .x(d => SVGWidth / 2 + Math.cos(radialScale(d.index)) * radialRadius)
-      .strength(radialStrength)
+    simulation.force(
+      'posX',
+      d3
+        .forceX()
+        .x((d) => SVGWidth / 2 + Math.cos(radialScale(d.index)) * radialRadius)
+        .strength(radialStrength)
     );
-    
+
     // Force 7 (Collide force)
     simulation.force('collide', d3.forceCollide().radius(minNodeRadius));
 
@@ -373,7 +407,8 @@
     // Add arrow markers
     const arrowBoxWidth = 20;
     const arrowBoxHeight = 20;
-    svg.append('defs')
+    svg
+      .append('defs')
       .append('marker')
       .attr('id', 'arrow')
       .attr('viewBox', [0, 0, arrowBoxWidth, arrowBoxHeight])
@@ -388,7 +423,8 @@
       .attr('fill', '#C2C2C2');
 
     // Add attention links
-    let linkLines = svg.append('g')
+    let linkLines = svg
+      .append('g')
       .attr('class', 'attention-link-group')
       .attr('stroke', '#C2C2C2')
       .selectAll('path')
@@ -398,7 +434,8 @@
       .attr('class', 'link');
 
     // Add hidden text order links
-    let textLinkLines = svg.append('g')
+    let textLinkLines = svg
+      .append('g')
       .attr('class', 'text-link-group')
       .style('visibility', config.showHiddenLink ? 'visible' : 'hidden')
       .style('stroke', 'red')
@@ -409,7 +446,8 @@
       .attr('class', 'link');
 
     // Add hidden text order links
-    let textHiddenLinkLines = svg.append('g')
+    let textHiddenLinkLines = svg
+      .append('g')
       .attr('class', 'text-hidden-link-group')
       .style('visibility', config.showHiddenLink ? 'visible' : 'hidden')
       .style('stroke', 'blue')
@@ -420,11 +458,12 @@
       .attr('class', 'link');
 
     // Add token nodes
-    let nodeGroups = svg.append('g')
+    let nodeGroups = svg
+      .append('g')
       .attr('class', 'node-group')
       .selectAll('g.node')
       // Need to filter out intermediate nodes
-      .data(nodes.filter(d => d.id !== undefined))
+      .data(nodes.filter((d) => d.id !== undefined))
       .join('g')
       .attr('class', 'node')
       .attr('transform', `translate(${SVGWidth / 2}, ${SVGHeight / 2})`)
@@ -432,35 +471,39 @@
 
     // Add circle to each node
     // Create a color scale to represent the text order
-    let colorScale = d3.scaleLinear()
+    let colorScale = d3
+      .scaleLinear()
       .domain(d3.extent(nodeIndices))
       .range([d3.rgb('#D4E5F4'), d3.rgb('#1E6CB0')]);
-    
-    nodeGroups.append('circle')
+
+    nodeGroups
+      .append('circle')
       .attr('class', 'node-circle')
       //.attr('r', d => nodeRadiusScale(+d.saliency))
       .attr('r', minNodeRadius)
-      .style('fill', d => colorScale(d.id));
-    
-    // Add token text to each node
-    nodeGroups.append('text')
-      .attr('class', 'node-text')
-      .text(d => d.token);
+      .style('fill', (d) => colorScale(d.id));
 
-    nodeGroups.append('title')
-      .text(d => d.token);
+    // Add token text to each node
+    nodeGroups
+      .append('text')
+      .attr('class', 'node-text')
+      .text((d) => d.token);
+
+    nodeGroups.append('title').text((d) => d.token);
 
     // Add hidden nodes
-    let hiddenNodeGroups = svg.append('g')
+    let hiddenNodeGroups = svg
+      .append('g')
       .attr('class', 'hidden-node-group')
       .style('visibility', config.showHiddenNode ? 'visible' : 'hidden')
       .selectAll('g.hidden-node')
       // Need to select intermediate nodes
-      .data(nodes.filter(d => d.id == undefined))
+      .data(nodes.filter((d) => d.id == undefined))
       .join('g')
       .attr('class', 'hidden-node');
 
-    hiddenNodeGroups.append('circle')
+    hiddenNodeGroups
+      .append('circle')
       .attr('class', 'hidden-node-circle')
       .attr('r', 3)
       .style('fill', 'lightgreen');
@@ -470,11 +513,11 @@
       // console.log('Tick');
 
       // Update the attention links
-      linkLines.attr('d', d => {
-        let source = {x: d[0].x, y: d[0].y};
-        let target = {x: d[2].x, y: d[2].y};
+      linkLines.attr('d', (d) => {
+        let source = { x: d[0].x, y: d[0].y };
+        let target = { x: d[2].x, y: d[2].y };
 
-        let center = {x: SVGWidth / 2, y: SVGHeight / 2};
+        let center = { x: SVGWidth / 2, y: SVGHeight / 2 };
 
         // We need to shorten the path to leave space for arrow
         let theta = 1 - minNodeRadius / radialRadius;
@@ -487,18 +530,18 @@
           x: center.x + (source.x - center.x) * theta,
           y: center.y + (source.y - center.y) * theta,
         };
-        
+
         let controlAlpha = 3 / 5;
 
         // Two control points symmetric regarding the center point
         let controlP1 = {
           x: center.x + (modSource.x - center.x) * controlAlpha,
-          y: center.y + (modSource.y - center.x) * controlAlpha
+          y: center.y + (modSource.y - center.x) * controlAlpha,
         };
 
         let controlP2 = {
           x: center.x + (modTarget.x - center.x) * controlAlpha,
-          y: center.y + (modTarget.y - center.x) * controlAlpha
+          y: center.y + (modTarget.y - center.x) * controlAlpha,
         };
 
         return `M ${modSource.x},${modSource.y} C${controlP1.x}, ${controlP1.y},
@@ -506,7 +549,7 @@
       });
 
       // Update the nodes
-      nodeGroups.attr('transform', d => {
+      nodeGroups.attr('transform', (d) => {
         // Maker sure the nodes are inside the box
         const coord = borderConstraint(d, nodeRadiusScale);
         return `translate(${coord.left}, ${coord.top})`;
@@ -514,7 +557,7 @@
 
       // Update the hidden nodes
       if (config.showHiddenNode) {
-        hiddenNodeGroups.attr('transform', d => {
+        hiddenNodeGroups.attr('transform', (d) => {
           // Maker sure the nodes are inside the box
           const coord = borderConstraint(d);
           return `translate(${coord.left}, ${coord.top})`;
@@ -524,25 +567,31 @@
       // Update the text links
       if (config.showHiddenLink) {
         textLinkLines
-          .attr('x1', d => borderConstraint(d.source, nodeRadiusScale).left)
-          .attr('y1', d => borderConstraint(d.source, nodeRadiusScale).top)
-          .attr('x2', d => borderConstraint(d.target, nodeRadiusScale).left)
-          .attr('y2', d => borderConstraint(d.target, nodeRadiusScale).top);
+          .attr('x1', (d) => borderConstraint(d.source, nodeRadiusScale).left)
+          .attr('y1', (d) => borderConstraint(d.source, nodeRadiusScale).top)
+          .attr('x2', (d) => borderConstraint(d.target, nodeRadiusScale).left)
+          .attr('y2', (d) => borderConstraint(d.target, nodeRadiusScale).top);
 
         textHiddenLinkLines
-          .attr('x1', d => borderConstraint(d.source, nodeRadiusScale).left)
-          .attr('y1', d => borderConstraint(d.source, nodeRadiusScale).top)
-          .attr('x2', d => borderConstraint(d.target, nodeRadiusScale).left)
-          .attr('y2', d => borderConstraint(d.target, nodeRadiusScale).top);
+          .attr('x1', (d) => borderConstraint(d.source, nodeRadiusScale).left)
+          .attr('y1', (d) => borderConstraint(d.source, nodeRadiusScale).top)
+          .attr('x2', (d) => borderConstraint(d.target, nodeRadiusScale).left)
+          .attr('y2', (d) => borderConstraint(d.target, nodeRadiusScale).top);
       }
-
     });
 
     // Register UI elements from the control panel
     bindSlider('attention', simulation, 0, 10, initAttentionStrength);
     bindSlider('textOrder', simulation, 0, 10, initTextOrderStrength);
     bindSlider('manyBody', simulation, -2000, 0, initManyBodyStrength);
-    bindSlider('collide', simulation, 0, 20, initCollideRadius, nodeRadiusScale);
+    bindSlider(
+      'collide',
+      simulation,
+      0,
+      20,
+      initCollideRadius,
+      nodeRadiusScale
+    );
 
     bindCheckBox(simulation, links);
 
@@ -558,8 +607,7 @@
   });
 </script>
 
-<style type="text/scss">
-
+<style lang="scss">
   .graph-view {
     display: flex;
     flex-direction: row;
@@ -591,9 +639,9 @@
 
   :global(.node-circle) {
     stroke: #fff;
-    stroke-width: 1.5; 
+    stroke-width: 1.5;
   }
-  
+
   :global(.node-text) {
     dominant-baseline: middle;
     text-anchor: middle;
@@ -604,67 +652,100 @@
   :global(.link) {
     fill: none;
   }
-
 </style>
 
-<div class='graph-view'>
-  <div class='control-panel'>
+<div class="graph-view">
+  <div class="control-panel">
     <!-- Sliders -->
-    <div class='slider'>
-      <label for='attention'>Attention Strength
-        [{config.autoAttention ? 'auto' : round(forceStrength.attention, 2)}]
+    <div class="slider">
+      <label for="attention"
+        >Attention Strength [{config.autoAttention
+          ? 'auto'
+          : round(forceStrength.attention, 2)}]
       </label>
-      <input type="range" min="0" max="1000" value="500" class="slider" id="attention">
+      <input
+        type="range"
+        min="0"
+        max="1000"
+        value="500"
+        class="slider"
+        id="attention"
+      />
     </div>
 
-    <div class='slider'>
-      <label for='textOrder'>Text Order Strength [{round(forceStrength.textOrder, 2)}]</label>
-      <input type="range" min="0" max="1000" value="500" class="slider" id="textOrder">
+    <div class="slider">
+      <label for="textOrder"
+        >Text Order Strength [{round(forceStrength.textOrder, 2)}]</label
+      >
+      <input
+        type="range"
+        min="0"
+        max="1000"
+        value="500"
+        class="slider"
+        id="textOrder"
+      />
     </div>
 
-    <div class='slider'>
-      <label for='manyBody'>ManyBody Strength [{round(forceStrength.manyBody, 2)}]</label>
-      <input type="range" min="0" max="1000" value="500" class="slider" id="manyBody">
+    <div class="slider">
+      <label for="manyBody"
+        >ManyBody Strength [{round(forceStrength.manyBody, 2)}]</label
+      >
+      <input
+        type="range"
+        min="0"
+        max="1000"
+        value="500"
+        class="slider"
+        id="manyBody"
+      />
     </div>
 
-    <div class='slider'>
-      <label for='collide'>Node Distance [{round(forceStrength.collide, 2)}]</label>
-      <input type="range" min="0" max="1000" value="500" class="slider" id="collide">
+    <div class="slider">
+      <label for="collide"
+        >Node Distance [{round(forceStrength.collide, 2)}]</label
+      >
+      <input
+        type="range"
+        min="0"
+        max="1000"
+        value="500"
+        class="slider"
+        id="collide"
+      />
     </div>
 
     <!-- Checkboxes -->
-    <div class='checkbox'>
-      <input type="checkbox" id="checkbox-auto-attention">
+    <div class="checkbox">
+      <input type="checkbox" id="checkbox-auto-attention" />
       <label for="checkbox-auto-attention">Auto attention strength </label>
     </div>
 
-    <div class='checkbox'>
-      <input type="checkbox" id="checkbox-hidden-link">
+    <div class="checkbox">
+      <input type="checkbox" id="checkbox-hidden-link" />
       <label for="checkbox-hidden-link">Show hidden link</label>
     </div>
 
-    <div class='checkbox'>
-      <input type="checkbox" id="checkbox-hidden-node">
+    <div class="checkbox">
+      <input type="checkbox" id="checkbox-hidden-node" />
       <label for="checkbox-hidden-node">Show hidden node</label>
     </div>
 
-    <div class='checkbox'>
-      <input type="checkbox" id="checkbox-border">
+    <div class="checkbox">
+      <input type="checkbox" id="checkbox-border" />
       <label for="checkbox-border">Border Constraint</label>
     </div>
-    
+
     <!-- Selection -->
-    <div class='select'>
-      <select name='layout' id='select-layout'>
-        <option value='force'>Force Layout</option>
-        <option value='radial'>Radial Layout</option>
+    <div class="select">
+      <select name="layout" id="select-layout">
+        <option value="force">Force Layout</option>
+        <option value="radial">Radial Layout</option>
       </select>
     </div>
-    
   </div>
 
-  <div class='svg-container'>
-    <svg class='graph-svg' bind:this={graphSVG}></svg>
+  <div class="svg-container">
+    <svg class="graph-svg" bind:this={graphSVG} />
   </div>
-  
 </div>
