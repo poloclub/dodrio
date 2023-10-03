@@ -7,3 +7,4 @@ package-lock.json
 .vercel
 deploy-gh-page.sh
 dist
+gh-page
