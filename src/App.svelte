@@ -7,15 +7,6 @@
   import RadialView from './RadialView.svelte';
 </script>
 
-<style>
-  .saliency {
-    display: flex;
-    width: 100%;
-    justify-content: space-around;
-    margin-top: 20px;
-  }
-</style>
-
 <svelte:head>
   <script
     type="module"
